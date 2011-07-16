@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="fill_parent"
+    android:layout_height="fill_parent"
+    >
+    
+    <LinearLayout android:id="@+id/login"
+                  android:layout_height="wrap_content"
+                  android:layout_width="match_parent"
+                  android:orientation="vertical">
+        <EditText android:id="@+id/userid_edittext"
+                  android:layout_height="wrap_content"
+                  android:layout_width="match_parent"
+                  android:inputType="number"
+                  android:digits="0123456789"
+                  android:hint="User ID">
+            <requestFocus></requestFocus>
+        </EditText>
+        <EditText android:id="@+id/apikey_edittext"
+                  android:layout_height="wrap_content"
+                  android:layout_width="match_parent"
+                  android:hint="API Key">
+        </EditText>
+        <LinearLayout android:id="@+id/linearLayout1" android:layout_height="wrap_content" android:layout_width="match_parent">
+            <Button android:text="Login" android:id="@+id/login" android:layout_weight="1" android:layout_width="fill_parent" android:layout_height="wrap_content"></Button>
+            <Button android:text="Create or Lookup Credentials" android:id="@+id/get_login_from_web" android:layout_weight="1" android:layout_width="fill_parent" android:layout_height="wrap_content"></Button>
+        </LinearLayout>
+    </LinearLayout>
+    
+    <Button android:text="Scan ISBN" android:id="@+id/scan_isbn" android:layout_width="wrap_content" android:layout_height="wrap_content"></Button>
+    <Button android:text="Get Groups" android:id="@+id/get_groups" android:layout_width="wrap_content" android:layout_height="wrap_content"></Button>
+</LinearLayout>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="hello">Hello World, Scan2ZoteroActivity!</string>
+    <string name="app_name">Scan2Zotero</string>
+    <string name="install_bs_title">Install barcode scanner?</string>
+    <string name="install_bs_msg">This feature requires a barcode scanner. Install the ZXing Barcode Scanner?</string>
+    <string name="install">Install</string>
+    <string name="cancel">Cancel</string>
+    <string name="save">Save</string>
+    <string name="userid_pref_key">userid</string>
+    <string name="apikey_pref_key">apikey</string>
+    <string name="proceed">Proceed</string>
+    <string name="redirect">You will be directed to the Zotero.org site to a create new API key or select an existing key from a list.</string>
+</resources>
