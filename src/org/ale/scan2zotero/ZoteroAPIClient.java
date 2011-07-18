@@ -3,6 +3,7 @@ package org.ale.scan2zotero;
 import java.net.URI;
 import java.net.URISyntaxException;
 
+import org.ale.scan2zotero.data.Account;
 import org.apache.http.HttpVersion;
 import org.apache.http.conn.scheme.PlainSocketFactory;
 import org.apache.http.conn.scheme.Scheme;
@@ -12,7 +13,6 @@ import org.apache.http.conn.ssl.SSLSocketFactory;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.apache.http.impl.conn.tsccm.ThreadSafeClientConnManager;
 import org.apache.http.params.BasicHttpParams;
-import org.apache.http.params.HttpConnectionParams;
 import org.apache.http.params.HttpParams;
 import org.apache.http.params.HttpProtocolParams;
 
@@ -29,9 +29,7 @@ public class ZoteroAPIClient {
 
     private static final String ZOTERO_BASE_URL = DEBUG ? "http://10.13.37.64/" : "https://api.zotero.org/";
 
-    private String mUserId;
-
-    private String mApiToken;
+    private Account mAccount;
 
     private String mPrefix;
 
@@ -50,17 +48,15 @@ public class ZoteroAPIClient {
 
         mRequestQueue = RequestQueue.getInstance();
     }
-    
-    protected ZoteroAPIClient(String userid, String token) {
+
+    protected ZoteroAPIClient(Account acct) {
         this();
         mPrefix = "/users/";
-        mUserId = userid;
-        mApiToken = token;
+        mAccount = acct;
     }
 
-    protected void setUserAndKey(String uid, String key){
-        mUserId = uid;
-        mApiToken = key;
+    protected void setAccount(Account acct){
+        mAccount = acct;
     }
     
     private HttpParams setupHttpParams(){
@@ -93,7 +89,7 @@ public class ZoteroAPIClient {
     protected void addItem(Handler resultHandler, String jsonContent){
         ZoteroAPIRequest r = new ZoteroAPIRequest(resultHandler, mHttpsClient, ZoteroAPIRequest.POST);
         try {
-            r.setURI(new URI(ZOTERO_BASE_URL + "/users/" + mUserId + "/items?key=" + mApiToken));
+            r.setURI(new URI(ZOTERO_BASE_URL + "/users/" + mAccount.getUid() + "/items?key=" + mAccount.getKey()));
         } catch (URISyntaxException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
@@ -104,16 +100,16 @@ public class ZoteroAPIClient {
     }
 
     protected void getUsersGroups(Handler resultHandler){
-        Uri.Builder ub = new Uri.Builder();
+/*        Uri.Builder ub = new Uri.Builder();
         ub.authority(ZOTERO_BASE_URL);
         ub.path("users");
-        ub.appendPath(mUserId);
+        ub.appendPath(mAccount.getUid());
         ub.appendPath("groups");
-        ub.appendQueryParameter("key", mApiToken);
-
+        ub.appendQueryParameter("key", mAccount.getKey());
+*/
         ZoteroAPIRequest r = new ZoteroAPIRequest(resultHandler, mHttpsClient, ZoteroAPIRequest.GET);
         try {
-            r.setURI(new URI(ZOTERO_BASE_URL + "users/" + mUserId + "/groups?key=" + mApiToken));
+            r.setURI(new URI(ZOTERO_BASE_URL + "users/" + mAccount.getUid() + "/groups?key=" + mAccount.getKey()));
         } catch (URISyntaxException e) {
             // TODO Auto-generated catch block
             e.printStackTrace();

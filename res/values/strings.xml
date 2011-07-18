@@ -1,14 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="hello">Hello World, Scan2ZoteroActivity!</string>
     <string name="app_name">Scan2Zotero</string>
     <string name="install_bs_title">Install barcode scanner?</string>
     <string name="install_bs_msg">This feature requires a barcode scanner. Install the ZXing Barcode Scanner?</string>
     <string name="install">Install</string>
     <string name="cancel">Cancel</string>
     <string name="save">Save</string>
-    <string name="userid_pref_key">userid</string>
-    <string name="apikey_pref_key">apikey</string>
-    <string name="proceed">Proceed</string>
-    <string name="redirect">You will be directed to the Zotero.org site to a create new API key or select an existing key from a list.</string>
+    <string name="proceed">Proceed</string><string name="userid_pref_key">userid</string>
+    <string name="apikey_pref_key">apikey</string><string name="firstrun_pref_key">firstrun</string><string name="alias_pref_key">alias</string><string name="savedkeys_pref_key">savedkeys</string>
+    <string name="redirect_title">Redirecting you to Zotero.org</string><string name="redirect">You will be directed to the Zotero.org site to a create new API key or select an existing key from a list.</string>
+    <string name="register">You will be directed to the Zotero.org site to register a new account.</string>
+    <string name="login_instructions">To use Scan2Zotero you need to enter your Zotero user ID and API key. These are different from your username and password, and allow you to finely control the level of access Scan2Zotero has to your library.</string>
+    <string name="zxing_pkg">com.google.zxing.client.android</string>
+    <string name="zxing_uri">market://search?q=pname:com.google.zxing.client.android</string>
+    <string name="zxing_intent_scan">com.google.zxing.client.android.SCAN</string>
 </resources>

@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen
-  xmlns:android="http://schemas.android.com/apk/res/android">
-    <EditTextPreference android:dialogMessage="Your Zotero User ID (different from username)" android:key="userid" android:title="User ID" android:dialogTitle="User ID" android:negativeButtonText="@string/cancel" android:positiveButtonText="@string/save"></EditTextPreference>
-    <EditTextPreference android:dialogTitle="API Key" android:negativeButtonText="@string/cancel" android:dialogMessage="Your Zotero API Key" android:positiveButtonText="@string/save" android:key="apikey" android:title="API Key"></EditTextPreference>
-    
-</PreferenceScreen>
