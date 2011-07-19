@@ -1,9 +1,9 @@
-package org.ale.scan2zotero;
+package org.ale.scan2zotero.web;
 
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
-import java.util.Random;
 
 import org.apache.http.HttpEntity;
 import org.apache.http.HttpResponse;
@@ -14,49 +14,37 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpPut;
 import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.entity.StringEntity;
 
-import android.net.Uri;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
-public class ZoteroAPIRequest implements Runnable {
-    private static final String CLASS_TAG = ZoteroAPIRequest.class.getCanonicalName();
+public class APIRequest implements Runnable {
 
-    protected static final int GET = 0;
-    protected static final int POST = 1;
-    protected static final int PUT = 2;
-    protected static final int DELETE = 3;
+    private static final String CLASS_TAG = APIRequest.class.getCanonicalName();
+    public static final int GET = 0;
+    public static final int POST = 1;
+    public static final int PUT = 2;
+    public static final int DELETE = 3;
 
-    protected static final int START = 0;
-    protected static final int FAILURE = 1;
-    protected static final int EXCEPTION = 2;
-    protected static final int SUCCESS = 3;
-    
-    private String mWriteToken;
-    
+    public static final int START = 0;
+    public static final int FAILURE = 1;
+    public static final int EXCEPTION = 2;
+    public static final int SUCCESS = 3;
+
     private HttpClient mHttpsClient;
-    
+
     private Handler mHandler;
-    
+
     private HttpRequestBase mRequest;
-    
-    private Uri mURI; 
-    
-    private String mContent;
-    
-    private String mContentType;
-    
-    public ZoteroAPIRequest(Handler handler, HttpClient client, int type){
-        // Make 16 hex character write token
-        Random rng = new Random();
-        mWriteToken = Integer.toHexString(rng.nextInt()) + Integer.toHexString(rng.nextInt());
+
+    public APIRequest(Handler handler, HttpClient client){
         mHandler = handler;
         mHttpsClient = client;
-        setRequestType(type);
     }
-    
-    private void setRequestType(int type){
+
+    public void setRequestType(int type){
         switch(type){
             case GET:
                 mRequest = new HttpGet();
@@ -64,29 +52,37 @@ public class ZoteroAPIRequest implements Runnable {
             case POST:
                 mRequest = new HttpPost();
                 break;
-            case PUT:
+            //case PUT:
                 //mRequest = new HttpPut();
-                break;
-            case DELETE:
+            //    break;
+            //case DELETE:
                 //mRequest = new HttpDelete();
-                break;
+            //    break;
         }
     }
-    
+
     public void setURI(URI uri) {
-        Log.d(CLASS_TAG, uri.toString());
         mRequest.setURI(uri);
     }
-    
-    public void setContent(String content, String contentType){
-        mContent = content;
-        mContentType = contentType;
+
+    public void addHeader(String name, String value){
+        mRequest.addHeader(name, value);
+    }
+
+    public void setContent(String content, String contentType) {
+        mRequest.setHeader("Content-Type", contentType);
+        //mRequest.setHeader("Content-Length", String.valueOf(content.length()));
+        try {
+            ((HttpPost)mRequest).setEntity(new StringEntity(content));
+        } catch (UnsupportedEncodingException e) {
+            Log.e(CLASS_TAG, "Problem encoding: "+content);
+        }
     }
 
     @Override
     public void run() {
         mHandler.sendMessage(
-                Message.obtain(mHandler, ZoteroAPIRequest.START, null));
+                Message.obtain(mHandler, APIRequest.START, null));
         HttpResponse response = null;
         try {
             response = mHttpsClient.execute(mRequest);
@@ -94,7 +90,7 @@ public class ZoteroAPIRequest implements Runnable {
             StatusLine status = response.getStatusLine();
             if(status.getStatusCode() != 200){
                 mHandler.sendMessage(
-                        Message.obtain(mHandler, ZoteroAPIRequest.FAILURE, status));
+                        Message.obtain(mHandler, APIRequest.FAILURE, status));
             }
             HttpEntity entity = response.getEntity();
             InputStream inputStream = entity.getContent();
@@ -111,12 +107,12 @@ public class ZoteroAPIRequest implements Runnable {
             // Return result from buffered stream
             String dataAsString = new String(content.toByteArray());
             mHandler.sendMessage(
-                    Message.obtain(mHandler, ZoteroAPIRequest.SUCCESS, dataAsString));
+                    Message.obtain(mHandler, APIRequest.SUCCESS, dataAsString));
         } catch (Exception e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
             mHandler.sendMessage(
-                    Message.obtain(mHandler, ZoteroAPIRequest.EXCEPTION, e));
+                    Message.obtain(mHandler, APIRequest.EXCEPTION, e));
             return;
         }
     }

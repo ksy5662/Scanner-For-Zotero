@@ -8,6 +8,38 @@ import android.net.Uri;
 import android.text.TextUtils;
 
 public class Util {
+    
+    public static final int SCAN_PARSE_FAILURE = -1;
+    public static final int SCAN_PARSE_ISSN = 977;
+    public static final int SCAN_PARSE_ISBN = 978;
+    
+    public static int parseBarcode(String content, String format){
+        if(format == "EAN_13"){
+            return Util.parseEAN13(content);
+        }else if(format == "CODE_128"){
+            return Util.parseCODE128(content);
+        }
+        return SCAN_PARSE_FAILURE;
+    }
+
+    public static int parseEAN13(String content){
+        if(content.length() == 13 && TextUtils.isDigitsOnly(content)){
+            if(content.startsWith("978") || content.startsWith("979")){
+                return SCAN_PARSE_ISBN;
+            }else if(content.startsWith("977")){
+                return SCAN_PARSE_ISSN;
+            }
+        }
+        return SCAN_PARSE_FAILURE;
+    }
+    
+    public static int parseCODE128(String content){
+        // A CODE_128 result may be an ISBN-10
+        if(content.length() == 10 && TextUtils.isDigitsOnly(content)){
+            return SCAN_PARSE_ISBN;
+        }
+        return SCAN_PARSE_FAILURE;
+    }
 
     /* Dialog for asking the user to install ZXing Scanner */
     protected static AlertDialog getZxingScanner(final Activity parent) {
@@ -38,7 +70,7 @@ public class Util {
                 if(i == DialogInterface.BUTTON_POSITIVE){
                     Intent intent = new Intent(parent, GetApiKeyActivity.class);
                     intent.putExtra(GetApiKeyActivity.LOGIN_TYPE, loginType);
-                    parent.startActivityForResult(intent, Scan2ZoteroActivity.RESULT_APIKEY);
+                    parent.startActivityForResult(intent, S2ZLoginActivity.RESULT_APIKEY);
                 }else{
                     dialog.dismiss();
                 }

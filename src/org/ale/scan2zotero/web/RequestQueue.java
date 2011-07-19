@@ -1,15 +1,17 @@
-package org.ale.scan2zotero;
+package org.ale.scan2zotero.web;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
 
 public class RequestQueue {
+
     private static final int CAPACITY = 5;
     
     private static RequestQueue instance;
     
-    private ArrayList<ZoteroAPIRequest> active =  new ArrayList<ZoteroAPIRequest>();
-    private LinkedList<ZoteroAPIRequest> queue = new LinkedList<ZoteroAPIRequest>();
+    private ArrayList<APIRequest> active =  new ArrayList<APIRequest>();
+
+    private LinkedList<APIRequest> queue = new LinkedList<APIRequest>();
 
     public static RequestQueue getInstance(){
         if(instance == null)
@@ -17,7 +19,7 @@ public class RequestQueue {
         return instance;
     }
 
-    protected void enqueue(ZoteroAPIRequest task){
+    protected void enqueue(APIRequest task){
         queue.add(task);
         if(active.size() < CAPACITY){
             startNext();
@@ -26,14 +28,14 @@ public class RequestQueue {
 
     private void startNext() {
         if(!queue.isEmpty()){
-            ZoteroAPIRequest next = queue.poll();
+            APIRequest next = queue.poll();
             active.add(next);
             Thread task = new Thread(next);
             task.start();
         }
     }
 
-    private void taskComplete(ZoteroAPIRequest task){
+    private void taskComplete(APIRequest task){
         active.remove(task);
         startNext();
     }

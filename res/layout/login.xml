@@ -1,0 +1,111 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                android:id="@+id/s2z_login"
+                android:layout_height="match_parent"
+                android:layout_width="match_parent"
+                android:orientation="vertical"
+                android:gravity="center">
+
+    <ImageView android:id="@+id/logo"
+               android:layout_height="wrap_content"
+               android:layout_width="match_parent"
+               android:src="@drawable/icon"
+                  android:paddingBottom="15dip"
+               android:gravity="center_horizontal"
+               android:layout_above="@+id/linearLayout1"/>
+
+    <TextView android:text="@string/login_instructions"
+                 android:id="@+id/login_instructions"
+              android:layout_width="wrap_content"
+              android:layout_height="wrap_content"
+              android:paddingLeft="30dip"
+                 android:paddingRight="30dip"
+                 android:paddingBottom="15dip"
+              android:textAppearance="?android:attr/textAppearanceSmall"/>
+
+    <LinearLayout android:id="@+id/choose_login_method"
+                  android:layout_height="wrap_content"
+                     android:layout_width="match_parent"
+                     android:orientation="vertical">
+
+        <TextView android:text="Already have a Zotero.org account?"
+                  android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                     android:paddingLeft="10dip"
+                     android:textColor="#FFF"
+                     android:background="#888"
+                  android:id="@+id/haveacct"
+                  android:textAppearance="?android:attr/textAppearanceSmall"/>
+
+        <Button android:text="Enter ID and Key manually" 
+                android:id="@+id/login_manually" 
+                android:layout_width="match_parent" 
+                android:layout_height="wrap_content"
+                android:paddingTop="10dip" />
+
+        <Button android:text="Get ID and Key from Zotero.org"
+                android:id="@+id/login_by_web"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:paddingBottom="10dip" />
+
+           <TextView android:text="New to Zotero?"
+                     android:layout_width="match_parent"
+                     android:layout_height="wrap_content"
+                     android:paddingLeft="10dip"
+                     android:textColor="#FFF"
+                     android:background="#888"
+                     android:id="@+id/newtozotero"
+                     android:textAppearance="?android:attr/textAppearanceSmall"/>
+
+        <Button android:text="Register a new Zotero account"
+                   android:id="@+id/register_new_account"
+                   android:layout_width="match_parent"
+                   android:layout_height="wrap_content"
+                   android:paddingTop="10dip" />
+
+           <Button android:text="Learn more"
+                   android:id="@+id/learn_more"
+                   android:layout_width="match_parent"
+                   android:layout_height="wrap_content" />
+    </LinearLayout>
+
+    <!-- Manual login -->
+       <LinearLayout android:id="@+id/edit_id_and_key"
+                 android:layout_height="wrap_content"
+                 android:layout_width="match_parent"
+                 android:orientation="vertical"
+                 android:visibility="invisible">
+        <EditText android:id="@+id/userid_edittext"
+                  android:layout_height="wrap_content"
+                  android:layout_width="match_parent"
+                  android:inputType="number"
+                  android:digits="0123456789"
+                  android:hint="User ID">
+        </EditText>
+        <EditText android:id="@+id/apikey_edittext"
+                  android:layout_height="wrap_content"
+                  android:layout_width="match_parent"
+                  android:hint="API Key">
+        </EditText>
+           <LinearLayout android:id="@+id/edit_id_and_key"
+                 android:layout_height="wrap_content"
+                 android:layout_width="match_parent"
+                 android:orientation="horizontal">
+
+           <CheckBox android:id="@+id/save_login" 
+                     android:text="Remember Me"
+                     android:checked="true"
+                     android:layout_width="wrap_content"
+                     android:layout_height="wrap_content" />
+           <Button android:text="Log in"
+                   android:id="@+id/login_submit"
+                   android:layout_width="wrap_content"
+                   android:layout_height="wrap_content" />
+           <Button android:text="Clear"
+                   android:id="@+id/login_cancel"
+                   android:layout_width="wrap_content"
+                   android:layout_height="wrap_content" />
+           </LinearLayout>
+    </LinearLayout>
+</LinearLayout>

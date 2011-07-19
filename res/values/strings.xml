@@ -14,4 +14,5 @@
     <string name="zxing_pkg">com.google.zxing.client.android</string>
     <string name="zxing_uri">market://search?q=pname:com.google.zxing.client.android</string>
     <string name="zxing_intent_scan">com.google.zxing.client.android.SCAN</string>
+    <string name="logged_in_pref_key">logged_in</string>
 </resources>
