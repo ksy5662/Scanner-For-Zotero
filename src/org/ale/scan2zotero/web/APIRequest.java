@@ -32,6 +32,8 @@ public class APIRequest implements Runnable {
     public static final int FAILURE = 1;
     public static final int EXCEPTION = 2;
     public static final int SUCCESS = 3;
+    public static final int FINISH = 4;
+
 
     private HttpClient mHttpsClient;
 
@@ -39,11 +41,18 @@ public class APIRequest implements Runnable {
 
     private HttpRequestBase mRequest;
 
+    private String mId;
+
     public APIRequest(Handler handler, HttpClient client){
         mHandler = handler;
         mHttpsClient = client;
     }
 
+    /* Returned with API response for handler to identify request */
+    public void setReturnIdentifier(String id){
+        mId = id;
+    }
+    
     public void setRequestType(int type){
         switch(type){
             case GET:
@@ -107,13 +116,30 @@ public class APIRequest implements Runnable {
             // Return result from buffered stream
             String dataAsString = new String(content.toByteArray());
             mHandler.sendMessage(
-                    Message.obtain(mHandler, APIRequest.SUCCESS, dataAsString));
+                    Message.obtain(mHandler, 
+                                   APIRequest.SUCCESS,
+                                   new APIResponse(mId, dataAsString)));
         } catch (Exception e) {
             // TODO Auto-generated catch block
             e.printStackTrace();
             mHandler.sendMessage(
-                    Message.obtain(mHandler, APIRequest.EXCEPTION, e));
-            return;
+                    Message.obtain(mHandler,
+                                   APIRequest.EXCEPTION,
+                                   new APIResponse(mId, e)));
+        } finally {
+            mHandler.sendMessage(
+                    Message.obtain(mHandler, APIRequest.FINISH, this));
         }
+    }
+    
+    public class APIResponse {
+        private String mId;
+        private Object mData;
+        public APIResponse(String id, Object data){
+            mId = id;
+            mData = data;
+        }
+        public String getId(){ return mId; }
+        public Object getData(){ return mData; }
     }
 }

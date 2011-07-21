@@ -9,9 +9,9 @@ public class RequestQueue {
     
     private static RequestQueue instance;
     
-    private ArrayList<APIRequest> active =  new ArrayList<APIRequest>();
+    private static ArrayList<APIRequest> active =  new ArrayList<APIRequest>();
 
-    private LinkedList<APIRequest> queue = new LinkedList<APIRequest>();
+    private static LinkedList<APIRequest> queue = new LinkedList<APIRequest>();
 
     public static RequestQueue getInstance(){
         if(instance == null)
@@ -19,7 +19,7 @@ public class RequestQueue {
         return instance;
     }
 
-    protected void enqueue(APIRequest task){
+    public void enqueue(APIRequest task){
         queue.add(task);
         if(active.size() < CAPACITY){
             startNext();
@@ -35,7 +35,7 @@ public class RequestQueue {
         }
     }
 
-    private void taskComplete(APIRequest task){
+    public void taskComplete(APIRequest task){
         active.remove(task);
         startNext();
     }

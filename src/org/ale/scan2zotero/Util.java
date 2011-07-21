@@ -6,6 +6,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.net.Uri;
 import android.text.TextUtils;
+import android.util.Log;
 
 public class Util {
     
@@ -14,9 +15,9 @@ public class Util {
     public static final int SCAN_PARSE_ISBN = 978;
     
     public static int parseBarcode(String content, String format){
-        if(format == "EAN_13"){
+        if(format.equals("EAN_13")){
             return Util.parseEAN13(content);
-        }else if(format == "CODE_128"){
+        }else if(format.equals("CODE_128")){
             return Util.parseCODE128(content);
         }
         return SCAN_PARSE_FAILURE;
@@ -39,6 +40,14 @@ public class Util {
             return SCAN_PARSE_ISBN;
         }
         return SCAN_PARSE_FAILURE;
+    }
+
+    public static boolean isbnMatch(String isbn1, String isbn2){
+        if(isbn1.length() == 13)
+            isbn1 = isbn1.substring(3, 12);
+        if(isbn2.length() == 13)
+            isbn2 = isbn2.substring(3,12);
+        return isbn1.equals(isbn2);
     }
 
     /* Dialog for asking the user to install ZXing Scanner */

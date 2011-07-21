@@ -1,23 +1,33 @@
 package org.ale.scan2zotero;
 
 import org.ale.scan2zotero.data.Account;
+import org.ale.scan2zotero.data.BibItem;
+import org.ale.scan2zotero.data.S2ZDatabase;
 import org.ale.scan2zotero.web.APIRequest;
 import org.ale.scan2zotero.web.GoogleBooksAPIClient;
+import org.ale.scan2zotero.web.RequestQueue;
 import org.ale.scan2zotero.web.ZoteroAPIClient;
+import org.ale.scan2zotero.web.APIRequest.APIResponse;
+import org.json.JSONObject;
 
 import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.database.Cursor;
+import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
+import android.view.ContextMenu;
+import android.view.ContextMenu.ContextMenuInfo;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
+import android.widget.ExpandableListView;
 
 public class S2ZMainActivity extends Activity {
 
@@ -27,6 +37,9 @@ public class S2ZMainActivity extends Activity {
 
     private ZoteroAPIClient mZAPI;
     private GoogleBooksAPIClient mBooksAPI;
+
+    private RequestQueue mRequestQueue;
+    private BibItemListAdapter mItemList;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -44,9 +57,18 @@ public class S2ZMainActivity extends Activity {
         }else{
             mZAPI = null;
         }
-        
+
         // Initialize Google Books API Client
         mBooksAPI = new GoogleBooksAPIClient(mGoogleBooksHandler);
+
+        mItemList = new BibItemListAdapter(S2ZMainActivity.this);
+        ExpandableListView explv = (ExpandableListView)findViewById(R.id.bib_items);
+        registerForContextMenu(explv);
+        explv.setAdapter(mItemList);
+
+        mItemList.fillFromDatabase();
+
+        mRequestQueue = RequestQueue.getInstance();
     }
 
     @Override
@@ -61,14 +83,21 @@ public class S2ZMainActivity extends Activity {
         S2ZMainActivity.this.startActivity(intent);
         finish();
     }
-    
+
+    public void gotBibInfo(JSONObject info){
+        // Fill in form from online info.
+        Log.d(CLASS_TAG, info.toString());
+        BibItem item = new BibItem(BibItem.TYPE_BOOK, info);
+        mItemList.addItem(item);
+    }
+
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
         inflater.inflate(R.menu.context_menu_main, menu);
         return true;
     }
-    
+
     @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle item selection
@@ -80,6 +109,28 @@ public class S2ZMainActivity extends Activity {
             return true;
         }
         return super.onOptionsItemSelected(item);
+    }
+
+    @Override
+    public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
+        super.onCreateContextMenu(menu, v, menuInfo);
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.bib_item_context_menu, menu);
+    }
+
+    @Override
+    public boolean onContextItemSelected(MenuItem item) {
+        ExpandableListView.ExpandableListContextMenuInfo info = 
+            (ExpandableListView.ExpandableListContextMenuInfo) item.getMenuInfo();
+        switch (item.getItemId()) {
+        case R.id.ctx_edit:
+            return true;
+        case R.id.ctx_delete:
+            mItemList.deleteItem((int) info.id);
+            return true;
+        default:
+            return super.onContextItemSelected(item);
+        }
     }
 
     public void onActivityResult(int requestCode, int resultCode, Intent intent) {
@@ -104,7 +155,7 @@ public class S2ZMainActivity extends Activity {
                 Log.d(CLASS_TAG, "Looking up ISSN:"+content);
                 break;
             default:
-                Log.d(CLASS_TAG, "Could not handle code:"+content+" of type "+format);
+                Log.d(CLASS_TAG, "Could not handle code: "+content+" of type "+format);
                 // XXX: Report scan failure
                 break;
         }
@@ -130,23 +181,21 @@ public class S2ZMainActivity extends Activity {
             mZAPI.getUsersGroups();
         }
     };
-    
 
     private final Handler mZoteroAPIHandler = new Handler(){
-        ProgressDialog dialog = null;
         public void handleMessage(Message msg){
             switch(msg.what){
             case APIRequest.START:
-                dialog = ProgressDialog.show(S2ZMainActivity.this, "", 
-                        "Fetching bibliographic information...", true);
                 break;
             case APIRequest.EXCEPTION:
-                if(dialog != null) dialog.dismiss();
                 ((Exception)msg.obj).printStackTrace();
                 break;
             case APIRequest.SUCCESS:
-                if(dialog != null) dialog.dismiss();
-                Log.d(CLASS_TAG, (String)msg.obj);
+                APIResponse resp = (APIResponse)msg.obj;
+                Log.d(CLASS_TAG, (String)resp.getData());
+                break;
+            case APIRequest.FINISH:
+                mRequestQueue.taskComplete((APIRequest) msg.obj);
                 break;
             }
         }
@@ -154,14 +203,27 @@ public class S2ZMainActivity extends Activity {
 
     private final Handler mGoogleBooksHandler = new Handler(){
         public void handleMessage(Message msg){
-            switch(msg.what){
+            switch(msg.what) {
             case APIRequest.START:
+                Log.d(CLASS_TAG, "START");
                 break;
             case APIRequest.EXCEPTION:
+                Log.d(CLASS_TAG, "EXCEPTION");
                 ((Exception)msg.obj).printStackTrace();
                 break;
             case APIRequest.SUCCESS:
-                Log.d(CLASS_TAG, (String)msg.obj);
+                Log.d(CLASS_TAG, "SUCCESS");
+                APIResponse resp = (APIResponse)msg.obj;
+                String isbn = resp.getId();
+                String jsonStr = (String) resp.getData();
+                Log.d(CLASS_TAG, (String) resp.getData());
+                JSONObject translated = GoogleBooksAPIClient
+                                            .translateJsonResponse(isbn, jsonStr);
+                gotBibInfo(translated);
+                break;
+            case APIRequest.FINISH:
+                Log.d(CLASS_TAG, "FINISHED");
+                mRequestQueue.taskComplete((APIRequest) msg.obj);
                 break;
             }
         }
