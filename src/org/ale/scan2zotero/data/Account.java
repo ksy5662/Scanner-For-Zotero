@@ -28,10 +28,8 @@ public class Account implements Parcelable, BaseColumns {
         this(p.readString(), p.readString(), p.readString());
     }
 
-    public boolean hasValidUserId(){
-        return !TextUtils.isEmpty(mUid) && 
-                TextUtils.isDigitsOnly(mUid) && 
-                Integer.parseInt(mUid) > 0;
+    public boolean hasValidUserId() {
+        return (mUid != null && mUid.length() == 6 && TextUtils.isDigitsOnly(mUid));
     }
 
     public boolean hasValidApiKey(){

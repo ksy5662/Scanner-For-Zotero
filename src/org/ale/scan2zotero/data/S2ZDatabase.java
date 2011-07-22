@@ -11,6 +11,7 @@ import android.database.sqlite.SQLiteDatabase;
 import android.database.sqlite.SQLiteOpenHelper;
 import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
+import android.text.TextUtils;
 
 public class S2ZDatabase extends ContentProvider {
 
@@ -73,23 +74,6 @@ public class S2ZDatabase extends ContentProvider {
     private DatabaseHelper mSQLiteHelper;
 
     @Override
-    public int delete(Uri uri, String selection, String[] selectionArgs) {
-        SQLiteDatabase db = mSQLiteHelper.getWritableDatabase();
-        String tbl;
-        switch(URI_MATCHER.match(uri)){
-            case ACCOUNT:
-                tbl = Account.TBL_NAME;
-                break;
-            case BIBINFO:
-                tbl = BibItem.TBL_NAME;
-                break;
-            default:
-                throw new IllegalArgumentException("Unknown URI " + uri);
-        }
-        return db.delete(tbl, selection, selectionArgs);
-    }
-
-    @Override
     public String getType(Uri uri) {
         int match = URI_MATCHER.match(uri);
         switch (match)
@@ -108,22 +92,40 @@ public class S2ZDatabase extends ContentProvider {
     }
 
     @Override
+    public boolean onCreate() {
+        mSQLiteHelper = new DatabaseHelper(getContext());
+        return true;
+    }
+
+    @Override
+    public Cursor query(Uri uri, String[] projection, String selection,
+                            String[] selectionArgs, String sortOrder) {
+
+        SQLiteQueryBuilder queryBuilder = new SQLiteQueryBuilder();
+
+        String tbl = getTable(uri);
+        queryBuilder.setTables(tbl);
+
+        String whereId = getWhere(uri);
+        if(!TextUtils.isEmpty(whereId)){
+            queryBuilder.appendWhere(whereId);
+        }
+
+        SQLiteDatabase db = mSQLiteHelper.getReadableDatabase();
+        Cursor cursor = queryBuilder.query(db, projection, selection,
+                                            selectionArgs, null, null,
+                                            sortOrder);
+        cursor.setNotificationUri(getContext().getContentResolver(), uri);
+        return cursor;
+    }
+
+    @Override
     public Uri insert(Uri uri, ContentValues content) {
         if(content == null)
             return null;
 
         SQLiteDatabase db = mSQLiteHelper.getWritableDatabase();
-        String tbl;
-        switch(URI_MATCHER.match(uri)){
-            case ACCOUNT:
-                tbl = Account.TBL_NAME;
-                break;
-            case BIBINFO:
-                tbl = BibItem.TBL_NAME;
-                break;
-            default:
-                throw new IllegalArgumentException("Unknown URI " + uri);
-        }
+        String tbl = getTable(uri);
 
         final long rowId = db.insert(tbl, null, content);
         if(rowId >=  0){
@@ -136,74 +138,70 @@ public class S2ZDatabase extends ContentProvider {
     }
 
     @Override
-    public boolean onCreate() {
-        mSQLiteHelper = new DatabaseHelper(getContext());
-        return true;
-    }
-
-    @Override
-    public Cursor query(Uri uri, String[] projection, String selection,
-                            String[] selectionArgs, String sortOrder) {
-
-        SQLiteQueryBuilder queryBuilder = new SQLiteQueryBuilder();
-
-        switch (URI_MATCHER.match(uri)){
-        case ACCOUNT:
-            queryBuilder.setTables(Account.TBL_NAME);
-            break;
-        case ACCOUNT_ID:
-            queryBuilder.setTables(Account.TBL_NAME);
-            queryBuilder.appendWhere(Account._ID + "=" 
-                    + uri.getLastPathSegment());
-            break;
-        case BIBINFO:
-            queryBuilder.setTables(BibItem.TBL_NAME);
-            break;
-        case BIBINFO_ID:
-            queryBuilder.setTables(BibItem.TBL_NAME);
-            queryBuilder.appendWhere(BibItem._ID + "=" 
-                    + uri.getLastPathSegment());
-            break;
-        default:
-            throw new IllegalArgumentException("Unknown URI " + uri);
-        }
-
-        SQLiteDatabase db = mSQLiteHelper.getReadableDatabase();
-        Cursor cursor = queryBuilder.query(db, projection, selection,
-                                            selectionArgs, null, null,
-                                            sortOrder);
-        cursor.setNotificationUri(getContext().getContentResolver(), uri);
-        return cursor;
-    }
-
-    @Override
     public int update(Uri uri, ContentValues values, String selection, String[] selectionArgs) {
         if(values == null)
             return 0;
 
         SQLiteDatabase db = mSQLiteHelper.getWritableDatabase();
+
+        String tbl = getTable(uri);
+
+        String whereId = getWhere(uri);
+        if(!TextUtils.isEmpty(whereId)){
+            // Only allow one of ID or selection
+            if(!TextUtils.isEmpty(selection)){
+                throw new IllegalArgumentException("Update by ID with non-null selection argument");
+            }
+            selection = whereId;
+        }
+
+        return db.update(tbl, values, selection, selectionArgs);
+    }
+
+    @Override
+    public int delete(Uri uri, String selection, String[] selectionArgs) {
+        SQLiteDatabase db = mSQLiteHelper.getWritableDatabase();
+        String tbl = getTable(uri);
+        return db.delete(tbl, selection, selectionArgs);
+    }
+
+    private String getTable(Uri uri) {
         String tbl; 
         switch(URI_MATCHER.match(uri)){
             case ACCOUNT:
                 tbl = Account.TBL_NAME;
                 break;
             case ACCOUNT_ID:
-                if(selection != null) throw new IllegalArgumentException("Update by ID with where clause.");
-                selection = Account._ID+"="+uri.getLastPathSegment();
                 tbl = Account.TBL_NAME;
             case BIBINFO:
                 tbl = BibItem.TBL_NAME;
                 break;
             case BIBINFO_ID:
-                if(selection != null) throw new IllegalArgumentException("Update by ID with where clause.");
-                selection = BibItem._ID+"="+uri.getLastPathSegment();
                 tbl = BibItem.TBL_NAME;
                 break;
             default:
                 throw new IllegalArgumentException("Unknown URI " + uri);
         }
-
-        return db.update(tbl, values, selection, selectionArgs);
+        return tbl;
+    }
+    
+    private String getWhere(Uri uri){
+        String where = null;
+        switch (URI_MATCHER.match(uri)){
+        case ACCOUNT:
+            break;
+        case BIBINFO:
+            break;
+        case ACCOUNT_ID:
+            where = Account._ID + "=" + uri.getLastPathSegment();
+            break;
+        case BIBINFO_ID:
+            where = BibItem._ID + "=" + uri.getLastPathSegment();
+            break;
+        default:
+            throw new IllegalArgumentException("Unknown URI " + uri);
+        }
+        return where;
     }
 
 private class DatabaseHelper extends SQLiteOpenHelper {

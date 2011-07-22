@@ -1,7 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<menu
-  xmlns:android="http://schemas.android.com/apk/res/android">
-    <item android:title="Manage Keys" android:id="@+id/ctx_manage_keys"></item>
-    <item android:title="About" android:id="@+id/ctx_about"></item>
-    
-</menu>

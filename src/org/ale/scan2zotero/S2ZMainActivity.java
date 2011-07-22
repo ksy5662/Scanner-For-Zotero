@@ -2,7 +2,6 @@ package org.ale.scan2zotero;
 
 import org.ale.scan2zotero.data.Account;
 import org.ale.scan2zotero.data.BibItem;
-import org.ale.scan2zotero.data.S2ZDatabase;
 import org.ale.scan2zotero.web.APIRequest;
 import org.ale.scan2zotero.web.GoogleBooksAPIClient;
 import org.ale.scan2zotero.web.RequestQueue;
@@ -11,11 +10,8 @@ import org.ale.scan2zotero.web.APIRequest.APIResponse;
 import org.json.JSONObject;
 
 import android.app.Activity;
-import android.app.ProgressDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
-import android.database.Cursor;
-import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
@@ -35,6 +31,8 @@ public class S2ZMainActivity extends Activity {
 
     private static final int RESULT_SCAN = 0;
 
+    public static final String INTENT_EXTRA_ACCOUNT = "ACCOUNT";
+
     private ZoteroAPIClient mZAPI;
     private GoogleBooksAPIClient mBooksAPI;
 
@@ -45,13 +43,13 @@ public class S2ZMainActivity extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.main);
-        
+
         findViewById(R.id.scan_isbn).setOnClickListener(scanIsbn);
 
         // Initialize Zotero API Client
         Bundle extras = getIntent().getExtras();
         if(extras != null){
-            Account acct = (Account) extras.getParcelable(S2ZLoginActivity.ACCOUNT_EXTRA);
+            Account acct = (Account) extras.getParcelable(INTENT_EXTRA_ACCOUNT);
             mZAPI = new ZoteroAPIClient(mZoteroAPIHandler);
             mZAPI.setAccount(acct);
         }else{
@@ -74,12 +72,13 @@ public class S2ZMainActivity extends Activity {
     @Override
     public void onResume(){
         super.onResume();
-        if(mZAPI == null) logout();
+        if(mZAPI == null)
+            logout();
     }
 
     public void logout(){
         Intent intent = new Intent(S2ZMainActivity.this, S2ZLoginActivity.class);
-        intent.putExtra(S2ZLoginActivity.CLEAR_FIELDS, true);
+        intent.putExtra(S2ZLoginActivity.INTENT_EXTRA_CLEAR_FIELDS, true);
         S2ZMainActivity.this.startActivity(intent);
         finish();
     }
@@ -94,7 +93,7 @@ public class S2ZMainActivity extends Activity {
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.context_menu_main, menu);
+        inflater.inflate(R.menu.options_menu_main, menu);
         return true;
     }
 
@@ -170,7 +169,7 @@ public class S2ZMainActivity extends Activity {
                 startActivityForResult(intent, RESULT_SCAN);
             } catch (ActivityNotFoundException e) {
                 // Ask the user if we should install ZXing scanner
-                Util.getZxingScanner(S2ZMainActivity.this);
+                S2ZDialogs.getZxingScanner(S2ZMainActivity.this);
             }
         }
     };

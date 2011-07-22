@@ -10,6 +10,7 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.app.Activity;
 import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Color;
@@ -69,42 +70,32 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
             }
         }).start();
     }
-    
-    public void insertIntoDatabase(final BibItem item){
+
+    public void addItem(final BibItem item){
         new Thread(new Runnable() {
             public void run(){
                 Uri row = mContext.getContentResolver().insert(S2ZDatabase.BIBINFO_URI, item.toContentValues());
                 item.setId(Integer.parseInt(row.getLastPathSegment()));
                 mDatabaseResponseHandler.sendMessage(
                         Message.obtain(mDatabaseResponseHandler, 
-                                       BibItemListAdapter.INSERTED_ITEM, row));
+                                       BibItemListAdapter.INSERTED_ITEM, item));
             }
         }).start();
     }
-    
-    public void removeItemFromDatabase(final BibItem item){
+
+    public void deleteItem(int indx){
+        final BibItem item = mItems.get(indx);
         if(item.getId() == BibItem.NO_ID) // Item isn't in database
             return;
         new Thread(new Runnable() {
             public void run(){
                 mContext.getContentResolver().delete(
-                        S2ZDatabase.BIBINFO_URI, BibItem._ID+"="+item.getId(), null);
+                        S2ZDatabase.BIBINFO_URI, BibItem._ID+"="+item.getId(), null); 
+                mDatabaseResponseHandler.sendMessage(
+                            Message.obtain(mDatabaseResponseHandler,
+                                    BibItemListAdapter.REMOVED_ITEM, item));
             }
         }).start();
-    }
-
-    public void addItem(BibItem item){
-        mItems.add(0, item);
-        mAdapters.add(0, new BibDetailJSONAdapter(mContext, item.getSelectedInfo()));
-        insertIntoDatabase(item);
-        notifyDataSetChanged();
-    }
-
-    public void deleteItem(int indx){
-        removeItemFromDatabase(mItems.get(indx));
-        mItems.remove(indx);
-        mAdapters.remove(indx);
-        notifyDataSetChanged();
     }
 
     private final Handler mDatabaseResponseHandler = new Handler(){
@@ -118,8 +109,16 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
                 notifyDataSetChanged();
                 break;
             case BibItemListAdapter.INSERTED_ITEM:
+                mItems.add(0, (BibItem)msg.obj);
+                mAdapters.add(0, new BibDetailJSONAdapter(
+                                      mContext, ((BibItem)msg.obj).getSelectedInfo()));
+                notifyDataSetChanged();
                 break;
             case BibItemListAdapter.REMOVED_ITEM:
+                int indx = mItems.indexOf((BibItem)msg.obj);
+                mItems.remove(indx);
+                mAdapters.remove(indx);
+                notifyDataSetChanged();
                 break;
             }
         }
@@ -212,6 +211,6 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
 
     @Override
     public boolean isChildSelectable(int group, int child) {
-        return false;
+        return true;
     }
 }

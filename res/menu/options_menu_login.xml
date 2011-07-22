@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu
+  xmlns:android="http://schemas.android.com/apk/res/android">
+    <item android:title="Use Saved Key" android:id="@+id/opt_use_saved_key"></item>
+    <item android:title="Manage Keys" android:id="@+id/opt_manage_keys"></item>
+    <item android:title="About" android:id="@+id/opt_about"></item>
+    
+</menu>

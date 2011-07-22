@@ -5,7 +5,6 @@ import org.ale.scan2zotero.data.S2ZDatabase;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.content.ActivityNotFoundException;
 import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -13,49 +12,56 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Handler;
-import android.os.Message;
-import android.os.Parcelable;
 import android.text.TextUtils;
 import android.util.Log;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.EditText;
-import android.widget.ViewFlipper;
+import android.widget.Toast;
 
 public class S2ZLoginActivity extends Activity {
-
-    public static final String PREFS_NAME = "config";
-    
-    public static final String CLEAR_FIELDS = "CLEAR_FIELDS";
-
-    public static final String ACCOUNT_EXTRA = "ACCOUNT";
-
-    public Account mAccount;
-    
-    public boolean mFirstRun;
-
-    public boolean mLoggedIn;
-
-    // Subactivity result codes
-    public static final int RESULT_APIKEY = 1;
-
-    public static final int GOT_SAVED_KEYS = 0;
 
     // Logging tag
     private static final String CLASS_TAG = S2ZLoginActivity.class.getCanonicalName();
 
+    public static final String PREFS_NAME = "config";
+    
+    public static final String INTENT_EXTRA_CLEAR_FIELDS = "CLEAR_FIELDS";
+
+    // Subactivity result codes
+    public static final int RESULT_APIKEY = 0;
+
+    // Transient state
+    private Account mAccount;
+
+    private boolean mFirstRun;
+
+    private boolean mLoggedIn;
+    
+    private boolean mRememberMe;
+
     private Cursor mAcctCursor = null;
+
+    protected static boolean mListOptions = true;
+
+    private AlertDialog mAlertDialog = null;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.login);
 
+        // Load the saved state, fills user/key fields, sets checkboxes etc.
+        loadConfig();
+
+        // All listeners are defined at the bottom of this file.
+        // Login option buttons:
         findViewById(R.id.login_manually).setOnClickListener(loginButtonListener);
         findViewById(R.id.login_by_web).setOnClickListener(loginButtonListener);
         findViewById(R.id.register_new_account).setOnClickListener(loginButtonListener);
@@ -63,15 +69,32 @@ public class S2ZLoginActivity extends Activity {
         findViewById(R.id.login_submit).setOnClickListener(loginButtonListener);
         findViewById(R.id.login_cancel).setOnClickListener(loginButtonListener);
 
-        loadConfig();
+        // The checkbox determines whether the alias field is visible
+        // and sets mRememberMe
+        ((CheckBox)findViewById(R.id.save_login)).setOnCheckedChangeListener(cbListener);
 
+        // These update mAccount when an edittext changes
+        findViewById(R.id.useralias_edittext).setOnKeyListener(editableTextListener);
+        findViewById(R.id.userid_edittext).setOnKeyListener(editableTextListener);
+        findViewById(R.id.apikey_edittext).setOnKeyListener(editableTextListener);
+        
+        // These validate edittext content on focus change
+        findViewById(R.id.useralias_edittext).setOnFocusChangeListener(focusTextListener);
+        findViewById(R.id.userid_edittext).setOnFocusChangeListener(focusTextListener);
+        findViewById(R.id.apikey_edittext).setOnFocusChangeListener(focusTextListener);
+
+        // Query the database for saved keys
+        getSavedKeys();
+
+        // If we're called from Main via "Log out", we need to clear the login info
+        // main provides an extra telling us this.
         Bundle extras = getIntent().getExtras();
-        if(extras != null && extras.getBoolean(CLEAR_FIELDS, false)){
+        if(extras != null && extras.getBoolean(INTENT_EXTRA_CLEAR_FIELDS, false)){
             setUserAndKey("","","");
             mLoggedIn = false;
         }
-        //mZAPI = new ZoteroAPIClient();
 
+        // Until the user logs in successfully, some instructions are provided.
         if(!mFirstRun){
             findViewById(R.id.login_instructions).setVisibility(View.GONE);
         }
@@ -80,10 +103,27 @@ public class S2ZLoginActivity extends Activity {
     @Override
     public void onResume(){
         super.onResume();
-        if(mLoggedIn){
-            doLogin();
+        if(mLoggedIn){ // Might still be logged in from last session
+            doLogin(); // jump straight to Main if everything checks out.
         }else{
             showLoginScreen();
+        }
+
+        // Set the remember me checkbox
+        ((CheckBox)findViewById(R.id.save_login)).setChecked(mRememberMe);
+
+        // Display any dialogs we were displaying before being destroyed
+        switch(S2ZDialogs.displayedDialog) {
+        case(S2ZDialogs.DIALOG_NO_DIALOG):
+            break;
+        case(S2ZDialogs.DIALOG_ZOTERO_REGISTER):
+            mAlertDialog = S2ZDialogs.informUserAboutLogin(S2ZLoginActivity.this,
+                                GetApiKeyActivity.NEW_ACCOUNT);
+            break;
+        case(S2ZDialogs.DIALOG_ZOTERO_LOGIN):
+            mAlertDialog = S2ZDialogs.informUserAboutLogin(S2ZLoginActivity.this,
+                                GetApiKeyActivity.EXISTING_ACCOUNT);
+            break;
         }
     }
 
@@ -91,51 +131,44 @@ public class S2ZLoginActivity extends Activity {
     public void onPause(){
         super.onPause();
         saveConfig();
-    }
-
-    private void showLoginScreen(){
-        getSavedKeys();
-        if(!TextUtils.isEmpty(mAccount.getUid()) && !TextUtils.isEmpty(mAccount.getKey())){
-            findViewById(R.id.choose_login_method).setVisibility(View.GONE);
-            findViewById(R.id.edit_id_and_key).setVisibility(View.VISIBLE);
-        }else{
-            // Otherwise display the options and look for saved keys.
-            findViewById(R.id.choose_login_method).setVisibility(View.VISIBLE);
-            findViewById(R.id.edit_id_and_key).setVisibility(View.GONE);
-            if(mAcctCursor != null && mAcctCursor.getCount() > 0){
-                promptToUseSavedKey(mAcctCursor);
-            }
+        if(mAlertDialog != null){ // Prevent dialog windows from leaking
+            mAlertDialog.dismiss();
+            mAlertDialog = null;
         }
     }
 
-    private void doLogin(){
-        boolean validId = mAccount.hasValidUserId();
-        boolean validKey = mAccount.hasValidApiKey();
+    protected void showLoginScreen(){
+        if(mListOptions){ // Display the options
+            findViewById(R.id.choose_login_method).setVisibility(View.VISIBLE);
+            findViewById(R.id.edit_id_and_key).setVisibility(View.GONE);
+        }else{ // Display the edittexts
+            findViewById(R.id.choose_login_method).setVisibility(View.GONE);
+            findViewById(R.id.edit_id_and_key).setVisibility(View.VISIBLE);
+        }
+    }
 
-        if(validId && validKey){
-            if(!mLoggedIn && ((CheckBox)findViewById(R.id.save_login)).isChecked()){
+    private void doLogin(){ 
+        boolean validAlias = validateUserAlias();
+        boolean validId = validateUserId();
+        boolean validKey = validateApiKey();
+
+        if(validAlias && validId && validKey){
+            if(!mLoggedIn && mRememberMe){
                 saveLoginData();
             }else{
                 //TODO: forgetKeyIfNecessary();
             }
             mLoggedIn = true;
             Intent intent = new Intent(S2ZLoginActivity.this, S2ZMainActivity.class);
-            intent.putExtra(ACCOUNT_EXTRA, mAccount);
+            intent.putExtra(S2ZMainActivity.INTENT_EXTRA_ACCOUNT, mAccount);
             S2ZLoginActivity.this.startActivity(intent);
-            // We're done with the login.
+            // We're done with the login activity.
             finish();
-        }else{
-            if(!validId){
-                //TODO: Show id is invalid
-            }
-            if(!validKey){
-                //TODO: Show key is invalid
-            }
         }
     }
 
     private void saveLoginData(){
-        if(mAcctCursor != null && mAcctCursor.getCount() > 0){
+        if(mAcctCursor.getCount() > 0){
             // Check if key is already in database
             String pKey;
             String keyToInsert = mAccount.getKey();
@@ -145,100 +178,51 @@ public class S2ZLoginActivity extends Activity {
                 if(TextUtils.equals(pKey, keyToInsert)){
                     return;
                 }
+                mAcctCursor.moveToNext();
             }
-        }else{ // Insert the key
-            ContentValues values = mAccount.toContentValues();
-            getContentResolver().insert(S2ZDatabase.ACCOUNT_URI, values);
         }
+        // Insert the key
+        ContentValues values = mAccount.toContentValues();
+        getContentResolver().insert(S2ZDatabase.ACCOUNT_URI, values);
     }
 
     public void onActivityResult(int requestCode, int resultCode, Intent intent) {
         switch(requestCode){
             case RESULT_APIKEY:
                 if (resultCode == RESULT_OK) {
-                    String alias = intent.getStringExtra(GetApiKeyActivity.ALIAS);
-                    String uid = intent.getStringExtra(GetApiKeyActivity.USERID);
-                    String key = intent.getStringExtra(GetApiKeyActivity.APIKEY);
-                    setUserAndKey(alias, uid, key);
+                    Account acct = (Account) intent.getParcelableExtra(GetApiKeyActivity.ACCOUNT);
+                    setUserAndKey(acct);
+                    mListOptions = false;
                 }
                 break;
         }
     }
-
-    private final Handler mDBHandler = new Handler() {
-        public void handleMessage(Message msg){
-            switch(msg.what){
-            case GOT_SAVED_KEYS:
-                mAcctCursor = (Cursor)msg.obj;
-                if(!mLoggedIn && (mAcctCursor.getCount() > 0))
-                    promptToUseSavedKey((Cursor)msg.obj);
-                break;
-            }
-        }
-    };
 
     private void getSavedKeys(){
-        if(mAcctCursor != null) return;
+        // Ignore this call if we have an open cursor
+        if(mAcctCursor != null && !mAcctCursor.isClosed())
+            return;
+
         // This might create or upgrade the database, so it is
         // run in a separate thread.
-        Thread task = new Thread(new Runnable() {
+        new Thread(new Runnable() {
             @Override
             public void run() {
-                Cursor c = managedQuery(S2ZDatabase.ACCOUNT_URI,null, null, null, null);
-                mDBHandler.sendMessage(Message.obtain(mDBHandler, GOT_SAVED_KEYS, c));
-            }
-        });
-        task.start();
-    }
+                mAcctCursor = managedQuery(S2ZDatabase.ACCOUNT_URI, null, null, null, null);
 
-    private void promptToUseSavedKey(final Cursor c){
-        AlertDialog.Builder downloadDialog =
-                    new AlertDialog.Builder(S2ZLoginActivity.this);
-        DialogInterface.OnClickListener clickListener = 
-                    new DialogInterface.OnClickListener() {
-            private int selected;
-            public void onClick(DialogInterface dialog, int i) {
-                if(i == DialogInterface.BUTTON_POSITIVE){ 
-                    c.moveToPosition(selected);
-                    String alias = c.getString(S2ZDatabase.ACCOUNT_ALIAS_INDEX);
-                    String uid = c.getString(S2ZDatabase.ACCOUNT_UID_INDEX);
-                    String key = c.getString(S2ZDatabase.ACCOUNT_KEY_INDEX);
-                    setUserAndKey(alias, uid, key);
-                    showLoginScreen();
-                    dialog.dismiss();
-                }else if(i == DialogInterface.BUTTON_NEGATIVE){
-                    // User cancelled dialog
-                    dialog.dismiss();
-                }else{
-                    // User clicked a key, but did not yet confirm their choice
-                    selected = i;
+                // On an activity recreate (following orientation change, etc)
+                // we need to immediately call promptToUseSavedKey if the dialog
+                // was displayed prior to the activity being destroyed.
+                if(S2ZDialogs.displayedDialog == S2ZDialogs.DIALOG_SAVED_KEYS){
+                    S2ZLoginActivity.this.runOnUiThread(new Runnable() {
+                        public void run() {
+                            mAlertDialog = S2ZDialogs.promptToUseSavedKey(
+                                                S2ZLoginActivity.this, mAcctCursor);
+                        }
+                    });
                 }
             }
-        };
-        downloadDialog.setTitle("Login with saved key?");
-        downloadDialog.setPositiveButton("Use selected key", clickListener);
-        downloadDialog.setNegativeButton("None of these", clickListener);
-        downloadDialog.setSingleChoiceItems(c, 0, Account.COL_ALIAS, clickListener);
-        downloadDialog.show(); 
-    }
-
-    @Override
-    public boolean onCreateOptionsMenu(Menu menu) {
-        MenuInflater inflater = getMenuInflater();
-        inflater.inflate(R.menu.context_menu_login, menu);
-        return true;
-    }
-
-    @Override
-    public boolean onOptionsItemSelected(MenuItem item) {
-        switch (item.getItemId()) {
-        case R.id.ctx_manage_keys:
-            //showEditKeyDialog();
-            return true;
-        case R.id.ctx_about:
-            return true;
-        }
-        return super.onOptionsItemSelected(item);
+        }).start();
     }
 
     protected void loadConfig(){
@@ -247,6 +231,7 @@ public class S2ZLoginActivity extends Activity {
         String uid = prefs.getString(getString(R.string.userid_pref_key), "");
         String key = prefs.getString(getString(R.string.apikey_pref_key), "");
         mFirstRun = prefs.getBoolean(getString(R.string.firstrun_pref_key), true);
+        mRememberMe = prefs.getBoolean(getString(R.string.rememberme_pref_key), true);
         mLoggedIn = prefs.getBoolean(getString(R.string.logged_in_pref_key), false);
 
         setUserAndKey(alias, uid, key);
@@ -256,54 +241,127 @@ public class S2ZLoginActivity extends Activity {
         SharedPreferences config = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         SharedPreferences.Editor editor = config.edit();
 
-        boolean saveLogin = ((CheckBox)findViewById(R.id.save_login)).isChecked();
-        editor.putString(getString(R.string.alias_pref_key),
-                saveLogin ? mAccount.getAlias() : "");
-        editor.putString(getString(R.string.userid_pref_key),
-                saveLogin ? mAccount.getUid() : "");
-        editor.putString(getString(R.string.apikey_pref_key),
-                saveLogin ? mAccount.getKey() : "");
+        editor.putString(getString(R.string.alias_pref_key), mAccount.getAlias());
+        editor.putString(getString(R.string.userid_pref_key), mAccount.getUid());
+        editor.putString(getString(R.string.apikey_pref_key), mAccount.getKey());
+
+        editor.putBoolean(getString(R.string.rememberme_pref_key), mRememberMe);
 
         editor.putBoolean(getString(R.string.logged_in_pref_key), mLoggedIn);
 
-        editor.putBoolean(getString(R.string.firstrun_pref_key), false);
+        // Set firstrun to false the first time the user logs in
+        editor.putBoolean(getString(R.string.firstrun_pref_key), mFirstRun && !mLoggedIn);
 
         editor.commit();
     }
 
     protected void setUserAndKey(String alias, String uid, String key){
-        mAccount = new Account(alias, uid, key);
-        ((EditText) findViewById(R.id.userid_edittext)).setText(mAccount.getUid());
-        ((EditText) findViewById(R.id.apikey_edittext)).setText(mAccount.getKey());
+        if(TextUtils.isEmpty(alias))
+            alias = "New User";
+        setUserAndKey(new Account(alias, uid, key));
     }
 
+    protected void setUserAndKey(Account acct){
+        mAccount = acct;
+        ((EditText) findViewById(R.id.useralias_edittext)).setText(acct.getAlias());
+        ((EditText) findViewById(R.id.userid_edittext)).setText(acct.getUid());
+        ((EditText) findViewById(R.id.apikey_edittext)).setText(acct.getKey());
+        validateUserId();
+        validateApiKey();
+    }
+    
+    private boolean validateUserAlias(){
+        boolean valid = !(mRememberMe && TextUtils.isEmpty(mAccount.getAlias()));
+        if(valid){
+            ((EditText) findViewById(R.id.userid_edittext)).setError("Alias required");
+        }else{
+            ((EditText) findViewById(R.id.userid_edittext)).setError(null);
+        }
+        return valid;
+    }
+
+    private boolean validateUserId(){
+        boolean valid = mAccount.hasValidUserId();
+        if(valid)
+            ((EditText) findViewById(R.id.userid_edittext)).setError(null);
+        else
+            ((EditText) findViewById(R.id.userid_edittext)).setError("Invalid user ID");
+        return valid;
+    }
+
+    private boolean validateApiKey(){
+        boolean valid = mAccount.hasValidApiKey();
+        if(valid)
+            ((EditText) findViewById(R.id.apikey_edittext)).setError(null);
+        else
+            ((EditText) findViewById(R.id.apikey_edittext)).setError("Invalid API key");
+        return valid;
+    }
+
+    /* Options Menu */
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater inflater = getMenuInflater();
+        inflater.inflate(R.menu.options_menu_login, menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+        case R.id.opt_manage_keys:
+            //showEditKeyDialog();
+            return true;
+        case R.id.opt_use_saved_key:
+            if(mAcctCursor != null) {
+                if (mAcctCursor.getCount() > 0) {
+                    mAlertDialog = S2ZDialogs.promptToUseSavedKey(
+                                        S2ZLoginActivity.this, mAcctCursor);
+                }else{
+                    Toast.makeText(S2ZLoginActivity.this, "No saved keys", Toast.LENGTH_SHORT);
+                }
+            }
+            return true;
+        case R.id.opt_about:
+            return true;
+        }
+        return super.onOptionsItemSelected(item);
+    }
+
+    /* Interface listeners */
     private final Button.OnClickListener loginButtonListener = new Button.OnClickListener() {
         public void onClick(View v) {
             switch(v.getId()){
 
             case R.id.login_manually:
+                mListOptions = false;
                 findViewById(R.id.choose_login_method).setVisibility(View.GONE);
                 findViewById(R.id.edit_id_and_key).setVisibility(View.VISIBLE);
                 break;
 
             case R.id.login_by_web:
-                Util.informUserAboutLogin(S2ZLoginActivity.this,
-                                          GetApiKeyActivity.EXISTING_ACCOUNT);
+                mAlertDialog = S2ZDialogs.informUserAboutLogin(
+                                    S2ZLoginActivity.this,
+                                    GetApiKeyActivity.EXISTING_ACCOUNT);
                 break;
 
             case R.id.register_new_account:
-                Util.informUserAboutLogin(S2ZLoginActivity.this,
-                                          GetApiKeyActivity.NEW_ACCOUNT);
+                mAlertDialog = S2ZDialogs.informUserAboutLogin(
+                                    S2ZLoginActivity.this,
+                                    GetApiKeyActivity.NEW_ACCOUNT);
                 break;
 
             case R.id.login_submit:
                 // validate UserID and APIKey
+                /*mAccount.setAlias(((EditText) findViewById(R.id.useralias_edittext)).getText().toString());
                 mAccount.setUid(((EditText) findViewById(R.id.userid_edittext)).getText().toString());
-                mAccount.setKey(((EditText) findViewById(R.id.apikey_edittext)).getText().toString());
+                mAccount.setKey(((EditText) findViewById(R.id.apikey_edittext)).getText().toString());*/
+                Log.d(CLASS_TAG, mAccount.getAlias());
                 doLogin();
                 break;
 
             case R.id.login_cancel:
+                mListOptions = true;
                 setUserAndKey("", "", "");
                 showLoginScreen();
                 break;
@@ -314,6 +372,57 @@ public class S2ZLoginActivity extends Activity {
                 startActivity(i);
                 break;
             //TODO: case R.id.login_openid:
+            }
+        }
+    };
+    
+    private final View.OnKeyListener editableTextListener = new View.OnKeyListener() {
+        @Override
+        public boolean onKey(View v, int keyCode, KeyEvent event) {
+            switch(v.getId()){
+            case R.id.useralias_edittext:
+                mAccount.setAlias(((EditText)v).getText().toString());
+                break;
+            case R.id.userid_edittext:
+                mAccount.setUid(((EditText)v).getText().toString());
+                if(!mAccount.hasValidUserId()) // Doesn't use validateUserId so as
+                    ((EditText) v).setError(null); // to avoid setting a new error
+                break;
+            case R.id.apikey_edittext:
+                mAccount.setKey(((EditText)v).getText().toString());
+                if(!mAccount.hasValidApiKey()) // Same deal
+                    ((EditText) v).setError(null);
+                break;
+            }
+            return false;
+        }
+    };
+    private final View.OnFocusChangeListener focusTextListener = new View.OnFocusChangeListener() {
+
+        @Override
+        public void onFocusChange(View v, boolean hasFocus) {
+            switch(v.getId()){
+            case R.id.useralias_edittext:
+                validateUserAlias();
+            case R.id.userid_edittext:
+                validateUserId();
+                break;
+            case R.id.apikey_edittext:
+                validateApiKey();
+                break;
+            }
+        }
+    };
+    
+    private final CheckBox.OnCheckedChangeListener cbListener = new CheckBox.OnCheckedChangeListener() {
+        @Override
+        public void onCheckedChanged(CompoundButton checkbox, boolean checked) {
+            mRememberMe = checked;
+            if(checked){
+                findViewById(R.id.useralias_edittext).setVisibility(View.VISIBLE);
+                validateUserAlias();
+            }else{
+                findViewById(R.id.useralias_edittext).setVisibility(View.GONE);
             }
         }
     };

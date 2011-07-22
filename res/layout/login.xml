@@ -76,6 +76,11 @@
                  android:layout_width="match_parent"
                  android:orientation="vertical"
                  android:visibility="invisible">
+        <EditText android:id="@+id/useralias_edittext"
+                  android:layout_height="wrap_content"
+                  android:layout_width="match_parent"
+                  android:hint="Key Alias">
+        </EditText>
         <EditText android:id="@+id/userid_edittext"
                   android:layout_height="wrap_content"
                   android:layout_width="match_parent"

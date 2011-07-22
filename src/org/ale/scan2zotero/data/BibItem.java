@@ -24,7 +24,6 @@ public class BibItem implements BaseColumns {
     public static final int NO_ID = -1;
 
     private int mId;
-    private int mAccountId;
     private long mCreationDate;
     private int mType;
     private JSONObject mInfo;
