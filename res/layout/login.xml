@@ -37,6 +37,12 @@
                   android:id="@+id/haveacct"
                   android:textAppearance="?android:attr/textAppearanceSmall"/>
 
+        <Button android:text="Log in with saved key" 
+                android:id="@+id/login_saved_key" 
+                android:layout_width="match_parent" 
+                android:layout_height="wrap_content"
+                android:paddingTop="10dip" />
+
         <Button android:text="Enter ID and Key manually" 
                 android:id="@+id/login_manually" 
                 android:layout_width="match_parent" 
@@ -63,11 +69,11 @@
                    android:layout_width="match_parent"
                    android:layout_height="wrap_content"
                    android:paddingTop="10dip" />
-
-           <Button android:text="Learn more"
+        
+        <!--<Button android:text="Learn more"
                    android:id="@+id/learn_more"
                    android:layout_width="match_parent"
-                   android:layout_height="wrap_content" />
+                   android:layout_height="wrap_content" />-->
     </LinearLayout>
 
     <!-- Manual login -->

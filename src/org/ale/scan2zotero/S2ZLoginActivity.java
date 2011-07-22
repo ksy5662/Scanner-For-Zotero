@@ -62,10 +62,11 @@ public class S2ZLoginActivity extends Activity {
 
         // All listeners are defined at the bottom of this file.
         // Login option buttons:
+        findViewById(R.id.login_saved_key).setOnClickListener(loginButtonListener);
         findViewById(R.id.login_manually).setOnClickListener(loginButtonListener);
         findViewById(R.id.login_by_web).setOnClickListener(loginButtonListener);
         findViewById(R.id.register_new_account).setOnClickListener(loginButtonListener);
-        findViewById(R.id.learn_more).setOnClickListener(loginButtonListener);
+        //findViewById(R.id.learn_more).setOnClickListener(loginButtonListener);
         findViewById(R.id.login_submit).setOnClickListener(loginButtonListener);
         findViewById(R.id.login_cancel).setOnClickListener(loginButtonListener);
 
@@ -273,9 +274,9 @@ public class S2ZLoginActivity extends Activity {
     private boolean validateUserAlias(){
         boolean valid = !(mRememberMe && TextUtils.isEmpty(mAccount.getAlias()));
         if(valid){
-            ((EditText) findViewById(R.id.userid_edittext)).setError("Alias required");
+            ((EditText) findViewById(R.id.useralias_edittext)).setError(null);
         }else{
-            ((EditText) findViewById(R.id.userid_edittext)).setError(null);
+            ((EditText) findViewById(R.id.useralias_edittext)).setError("Alias required");
         }
         return valid;
     }
@@ -310,16 +311,15 @@ public class S2ZLoginActivity extends Activity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
         case R.id.opt_manage_keys:
-            //showEditKeyDialog();
+            Intent intent = new Intent(S2ZLoginActivity.this, ManageAccountsActivity.class);
+            startActivity(intent);
             return true;
         case R.id.opt_use_saved_key:
-            if(mAcctCursor != null) {
-                if (mAcctCursor.getCount() > 0) {
-                    mAlertDialog = S2ZDialogs.promptToUseSavedKey(
-                                        S2ZLoginActivity.this, mAcctCursor);
-                }else{
-                    Toast.makeText(S2ZLoginActivity.this, "No saved keys", Toast.LENGTH_SHORT);
-                }
+            if (mAcctCursor != null && mAcctCursor.getCount() > 0) {
+                mAlertDialog = S2ZDialogs.promptToUseSavedKey(
+                                    S2ZLoginActivity.this, mAcctCursor);
+            }else{
+                Toast.makeText(S2ZLoginActivity.this, "No saved keys", Toast.LENGTH_SHORT).show();
             }
             return true;
         case R.id.opt_about:
@@ -332,6 +332,14 @@ public class S2ZLoginActivity extends Activity {
     private final Button.OnClickListener loginButtonListener = new Button.OnClickListener() {
         public void onClick(View v) {
             switch(v.getId()){
+            case R.id.login_saved_key:
+                if (mAcctCursor != null && mAcctCursor.getCount() > 0) {
+                    mAlertDialog = S2ZDialogs.promptToUseSavedKey(
+                                        S2ZLoginActivity.this, mAcctCursor);
+                }else{
+                    Toast.makeText(S2ZLoginActivity.this, "No saved keys", Toast.LENGTH_LONG).show();
+                }
+                break;
 
             case R.id.login_manually:
                 mListOptions = false;
@@ -366,11 +374,11 @@ public class S2ZLoginActivity extends Activity {
                 showLoginScreen();
                 break;
 
-            case R.id.learn_more: // TODO: Make this more helpful.
+            /*case R.id.learn_more: // TODO: Make this more helpful.
                 Intent i = new Intent(Intent.ACTION_VIEW);
                 i.setData(Uri.parse("http://zotero.org"));
                 startActivity(i);
-                break;
+                break;*/
             //TODO: case R.id.login_openid:
             }
         }

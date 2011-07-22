@@ -7,9 +7,11 @@ import org.json.JSONObject;
 
 import android.content.ContentValues;
 import android.database.Cursor;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.provider.BaseColumns;
 
-public class BibItem implements BaseColumns {
+public class BibItem implements BaseColumns, Parcelable {
 
     public static final String TBL_NAME = "bibinfo";
 
@@ -17,6 +19,7 @@ public class BibItem implements BaseColumns {
     public static final String COL_TYPE = "type";
     public static final String COL_JSON = "json";
 
+    public static final int TYPE_ERROR = -1;
     public static final int TYPE_BOOK = 0;
     public static final int TYPE_JOURNAL = 1;
     public static final int TYPE_MAGAZINE = 2;
@@ -28,13 +31,18 @@ public class BibItem implements BaseColumns {
     private int mType;
     private JSONObject mInfo;
     private int mSelected;
-    
+
     public BibItem(int id, long date, int type, JSONObject json){
         mId = id;
         mCreationDate = date;
         mType = type;
         mInfo = json;
         mSelected = 0;
+    }
+
+    public BibItem(Parcel p) throws JSONException{
+        this(p.readInt(), p.readLong(), p.readInt(), new JSONObject(p.readString()));
+        mSelected = p.readInt();
     }
 
     public BibItem(long date, int type, JSONObject json){
@@ -83,5 +91,35 @@ public class BibItem implements BaseColumns {
             data = new JSONObject();
         }
         return new BibItem(id,date,type,data);
+    }
+
+    public static final Creator<BibItem> CREATOR = new Creator<BibItem>() {
+        public BibItem createFromParcel(Parcel in) {
+            BibItem r;
+            try {
+                r = new BibItem(in);
+            } catch (JSONException e) {
+                r = new BibItem(TYPE_ERROR, new JSONObject());
+            }
+            return r;
+        }
+
+        public BibItem[] newArray(int size) {
+            return new BibItem[size];
+        }
+    };
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(Parcel p, int flags) {
+        p.writeInt(mId);
+        p.writeLong(mCreationDate);
+        p.writeInt(mType);
+        p.writeString(mInfo.toString());
+        p.writeInt(mSelected);
     }
 }

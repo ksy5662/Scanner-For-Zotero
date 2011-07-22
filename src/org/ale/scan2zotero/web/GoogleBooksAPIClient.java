@@ -1,9 +1,8 @@
 package org.ale.scan2zotero.web;
+
 import java.net.URI;
-import java.net.URISyntaxException;
 
 import org.ale.scan2zotero.Util;
-import org.ale.scan2zotero.data.CreatorFields;
 import org.ale.scan2zotero.data.CreatorType;
 import org.ale.scan2zotero.data.ItemField;
 import org.apache.http.impl.client.DefaultHttpClient;
@@ -98,7 +97,7 @@ public class GoogleBooksAPIClient {
                 for(int j=0; j<authors.length(); j++){
                     JSONObject author = new JSONObject();
                     author.put(CreatorType.type, CreatorType.Book.author);
-                    author.put(CreatorFields.name, authors.get(j));
+                    author.put(ItemField.Creator.name, authors.get(j));
                     creators.put(author);
                 }
                 tItem.put(ItemField.creators, creators);

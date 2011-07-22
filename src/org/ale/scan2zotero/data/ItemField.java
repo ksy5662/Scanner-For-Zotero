@@ -6,7 +6,12 @@ public final class ItemField {
     // in a localized form in our database. 
     public static final String creators = "creators";
 
-    
+    public final class Creator {
+        public static final String firstName = "firstName";
+        public static final String lastName = "lastName";
+        public static final String name = "name";
+    }
+
     public static final String numPages = "numPages";
     public static final String numberOfVolumes = "numberOfVolumes";
     public static final String abstractNote = "abstractNote";

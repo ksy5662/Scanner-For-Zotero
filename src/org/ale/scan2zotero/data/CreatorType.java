@@ -1,9 +1,9 @@
 package org.ale.scan2zotero.data;
 
 public final class CreatorType {
-    
+
     public static final String type = "creatorType";
-    
+
     public final class Book {
         public static final String author = "author";
         public static final String contributor = "contributor";

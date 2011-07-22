@@ -3,14 +3,12 @@ package org.ale.scan2zotero;
 import java.util.ArrayList;
 
 import org.ale.scan2zotero.data.BibItem;
-import org.ale.scan2zotero.data.CreatorFields;
 import org.ale.scan2zotero.data.ItemField;
 import org.ale.scan2zotero.data.S2ZDatabase;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import android.app.Activity;
 import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Color;
@@ -18,13 +16,11 @@ import android.net.Uri;
 import android.os.Handler;
 import android.os.Message;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseExpandableListAdapter;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 public class BibItemListAdapter extends BaseExpandableListAdapter {
@@ -99,6 +95,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
     }
 
     private final Handler mDatabaseResponseHandler = new Handler(){
+        @SuppressWarnings("unchecked")
         public void handleMessage(Message msg){
             switch(msg.what){
             case BibItemListAdapter.FOUND_SAVED_ITEMS:
@@ -187,7 +184,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
             ArrayList<String> creatorNames = new ArrayList<String>(numAuthors);
             try {
                 for(int i=0; i<creators.length(); i++){
-                    String name = ((JSONObject)creators.get(i)).optString(CreatorFields.name);
+                    String name = ((JSONObject)creators.get(i)).optString(ItemField.Creator.name);
                     if(!TextUtils.isEmpty(name))
                         creatorNames.add(name);
                 }

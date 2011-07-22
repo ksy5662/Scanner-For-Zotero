@@ -6,6 +6,7 @@ import java.util.Map;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
@@ -53,6 +54,7 @@ public class GetApiKeyActivity extends Activity {
 
     private AlertDialog mAlertDialog = null;
 
+    // TODO: detect log out
     private static boolean mLoggedIn = false;
 
     protected ArrayList<String> mFoundNames;
@@ -67,35 +69,18 @@ public class GetApiKeyActivity extends Activity {
         WebView wv = (WebView) findViewById(R.id.webView);
 
         if (state != null){
-           Log.d(CLASS_TAG, "State was not null on create");
            wv.restoreState(state);
            mFoundNames = state.getStringArrayList(RECREATE_FOUND_NAMES);
            mFoundIDs = state.getStringArrayList(RECREATE_FOUND_IDS);
            mFoundKeys = state.getStringArrayList(RECREATE_FOUND_KEYS);
-        }else{
-            wv.setWebViewClient(new WebViewClient() {
-                // TODO: Block non-zotero.org sites or maybe white-list just the pages
-                // we need.
-                public void onPageStarted(WebView view, String url, Bitmap favicon){
-                    if(url.indexOf("zotero.org/settings/keys") > 0) {
-                        mLoggedIn = true;
-                    }
-                }
-                @Override
-                public void onPageFinished(WebView view, String url)  
-                {
-                    if(url.indexOf("zotero.org/user/validate") > 0) {
-                        mAlertDialog = S2ZDialogs.showEmailValidationDialog(GetApiKeyActivity.this);
-                    }else if(url.indexOf("zotero.org/user/login") > 0) {
-                        view.loadUrl(JS_LOGGED_IN);
-                    }else if(url.indexOf("zotero.org/settings/keys") > 0) {
-                        view.loadUrl(JS_KEY_SCRAPE);
-                    }
-                }
-            });
-    
+        }/*else{*/
+            wv.setWebViewClient(getWebViewClient());
+
             Bundle extras = getIntent().getExtras();
             if(extras.getInt(LOGIN_TYPE, EXISTING_ACCOUNT) == EXISTING_ACCOUNT){
+                // The images are barely noticeable during this so we don't need them
+                wv.getSettings().setBlockNetworkImage(true);
+
                 // TODO: extreaHeaders doesn't exist on versions <= 2.1 - try to find workaround
                 Map<String, String> extraHeaders = new HashMap<String, String>();
                 extraHeaders.put("Referer", "https://zotero.org/settings/keys");
@@ -104,20 +89,23 @@ public class GetApiKeyActivity extends Activity {
                 if(mLoggedIn){
                     wv.loadUrl("https://zotero.org/settings/keys");
                 }else{
+                    // Cause dialog to display in onResume
+                    S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_CHECKING_LOGIN;
                     wv.loadUrl("https://zotero.org/user/login/", extraHeaders);
                 }
             }else{
+                // Have to do a captcha :(
+                wv.getSettings().setBlockNetworkImage(false);
+
                 wv.loadUrl("https://zotero.org/user/register/");
-            }
+            //}
         }
     }
 
     @Override
     public void onPause(){
         super.onPause();
-        Log.d(CLASS_TAG, "Called onPause");
         if(mAlertDialog != null){
-            Log.d(CLASS_TAG, "The dialog was non null");
             mAlertDialog.dismiss();
             mAlertDialog = null;
         }
@@ -126,7 +114,7 @@ public class GetApiKeyActivity extends Activity {
     @Override
     public void onResume() {
         super.onResume();
-        
+
         // Display any dialogs we were displaying before being destroyed
         switch(S2ZDialogs.displayedDialog) {
         case(S2ZDialogs.DIALOG_NO_DIALOG):
@@ -141,12 +129,16 @@ public class GetApiKeyActivity extends Activity {
             mAlertDialog = S2ZDialogs.showNoKeysDialog(GetApiKeyActivity.this);
             break;
         case(S2ZDialogs.DIALOG_FOUND_KEYS):
-            Log.d(CLASS_TAG, "We're showing found keys");
-            if(mFoundNames != null && mFoundIDs != null && mFoundKeys != null)
-            mAlertDialog = S2ZDialogs.showSelectKeyDialog(GetApiKeyActivity.this,
+            if(mFoundNames != null && mFoundIDs != null && mFoundKeys != null){
+                mAlertDialog = S2ZDialogs.showSelectKeyDialog(
+                                        GetApiKeyActivity.this,
                                         mFoundNames, mFoundIDs, mFoundKeys);
-            else
-                Log.d(CLASS_TAG, "But shit's null");
+            }
+            break;
+        case(S2ZDialogs.DIALOG_CHECKING_LOGIN):
+            mAlertDialog = ProgressDialog.show(GetApiKeyActivity.this,
+                            "Please wait",
+                            "Checking for existing session.", false, true);
             break;
         }
     }
@@ -154,8 +146,7 @@ public class GetApiKeyActivity extends Activity {
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        Log.d(CLASS_TAG, "saving instance state");
-        ((WebView)findViewById(R.id.webView)).saveState(outState);
+        //((WebView)findViewById(R.id.webView)).saveState(outState);
         outState.putStringArrayList(RECREATE_FOUND_NAMES, mFoundNames);
         outState.putStringArrayList(RECREATE_FOUND_IDS, mFoundIDs);
         outState.putStringArrayList(RECREATE_FOUND_KEYS, mFoundKeys);
@@ -176,6 +167,40 @@ public class GetApiKeyActivity extends Activity {
         }
         mAlertDialog = S2ZDialogs.showSSLDialog(GetApiKeyActivity.this);
         return true;
+    }
+
+    private WebViewClient getWebViewClient(){
+        return new WebViewClient() {
+            // TODO: Block non-zotero.org sites or maybe white-list just the pages
+            // we need.
+            @Override
+            public void onPageStarted(WebView view, String url, Bitmap favicon){
+                if(url.indexOf("zotero.org/settings/keys") > 0) {
+                    mLoggedIn = true;
+                }
+            }
+            @Override  
+            public boolean shouldOverrideUrlLoading(WebView view, String url)  
+            {  
+                if (url.indexOf("zotero.org/user/logout") > 0) { 
+                    mLoggedIn = false;
+                    return false; // Let it load
+                } else if(url.indexOf("zotero.org/user/validate") > 0) {
+                    mAlertDialog = S2ZDialogs.showEmailValidationDialog(GetApiKeyActivity.this);
+                    return true;
+                }
+                return false;  
+            }
+            @Override
+            public void onPageFinished(WebView view, String url)  
+            {
+                if(url.indexOf("zotero.org/user/login") > 0) {
+                    view.loadUrl(JS_LOGGED_IN);
+                }else if(url.indexOf("zotero.org/settings/keys") > 0) {
+                    view.loadUrl(JS_KEY_SCRAPE);
+                }
+            }
+        };
     }
 
     /* Javascript Interface */
@@ -230,6 +255,13 @@ public class GetApiKeyActivity extends Activity {
                 if(!((String)msg.obj).equals("-1")){
                     ((WebView) findViewById(R.id.webView))
                         .loadUrl("https://zotero.org/settings/keys");
+                }
+                if(S2ZDialogs.displayedDialog == S2ZDialogs.DIALOG_CHECKING_LOGIN){
+                    S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                    if(mAlertDialog != null){
+                        mAlertDialog.dismiss();
+                        mAlertDialog = null;
+                    }
                 }
                 break;
             }

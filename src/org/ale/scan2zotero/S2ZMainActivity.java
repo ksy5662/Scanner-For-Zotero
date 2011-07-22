@@ -10,6 +10,7 @@ import org.ale.scan2zotero.web.APIRequest.APIResponse;
 import org.json.JSONObject;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
 import android.os.Bundle;
@@ -38,6 +39,8 @@ public class S2ZMainActivity extends Activity {
 
     private RequestQueue mRequestQueue;
     private BibItemListAdapter mItemList;
+
+    private AlertDialog mAlertDialog = null;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -70,10 +73,28 @@ public class S2ZMainActivity extends Activity {
     }
 
     @Override
-    public void onResume(){
+    public void onPause() {
+        super.onPause();
+        if(mAlertDialog != null){
+            mAlertDialog.dismiss();
+            mAlertDialog = null;
+        }
+    }
+
+    @Override
+    public void onResume() {
         super.onResume();
         if(mZAPI == null)
             logout();
+
+        // Display any dialogs we were displaying before being destroyed
+        switch(S2ZDialogs.displayedDialog) {
+        case(S2ZDialogs.DIALOG_NO_DIALOG):
+            break;
+        case(S2ZDialogs.DIALOG_ZXING):
+            mAlertDialog = S2ZDialogs.getZxingScanner(S2ZMainActivity.this);
+            break;
+        }
     }
 
     public void logout(){
@@ -101,10 +122,12 @@ public class S2ZMainActivity extends Activity {
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle item selection
         switch (item.getItemId()) {
+        case R.id.ctx_collection:
+            return true;
         case R.id.ctx_logout:
             logout();
             return true;
-        case R.id.ctx_settings:
+        case R.id.ctx_about:
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -123,6 +146,9 @@ public class S2ZMainActivity extends Activity {
             (ExpandableListView.ExpandableListContextMenuInfo) item.getMenuInfo();
         switch (item.getItemId()) {
         case R.id.ctx_edit:
+            BibItem toEdit = (BibItem) mItemList.getGroup((int) info.id);
+            Intent intent = new Intent(S2ZMainActivity.this, S2ZEditActivity.class);
+            intent.putExtra(S2ZEditActivity.INTENT_EXTRA_BIBITEM, toEdit);
             return true;
         case R.id.ctx_delete:
             mItemList.deleteItem((int) info.id);

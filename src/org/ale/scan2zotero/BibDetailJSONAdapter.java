@@ -1,9 +1,9 @@
 package org.ale.scan2zotero;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 
 import org.ale.scan2zotero.data.ItemField;
+
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;

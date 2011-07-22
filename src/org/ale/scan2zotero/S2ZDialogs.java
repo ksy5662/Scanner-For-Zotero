@@ -29,36 +29,11 @@ public class S2ZDialogs {
     protected static final int DIALOG_EMAIL_VERIFY = 5;
     protected static final int DIALOG_NO_KEYS = 6;
     protected static final int DIALOG_FOUND_KEYS = 7;
+    protected static final int DIALOG_CHECKING_LOGIN = 8;
 
     protected static int displayedDialog = DIALOG_NO_DIALOG;
 
     /* S2ZLoginActivity Dialogs */
-    /* Dialog for asking the user to install ZXing Scanner */
-    protected static AlertDialog getZxingScanner(final S2ZMainActivity parent) {
-        S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_ZXING;
-        AlertDialog.Builder downloadDialog = new AlertDialog.Builder(parent);
-
-        DialogInterface.OnClickListener clickListener = new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int i) {
-                if(i == DialogInterface.BUTTON_POSITIVE){
-                    Uri uri = Uri.parse(parent.getString(R.string.zxing_uri));
-                    Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-                    parent.startActivity(intent);
-                    S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
-                }else{
-                    dialog.dismiss();
-                    S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
-                }
-            }
-        };
-        
-        downloadDialog.setTitle(parent.getString(R.string.install_bs_title));
-        downloadDialog.setMessage(parent.getString(R.string.install_bs_msg));
-        downloadDialog.setPositiveButton(parent.getString(R.string.install), clickListener);
-        downloadDialog.setNegativeButton(parent.getString(R.string.cancel), clickListener);
-        return downloadDialog.show();        
-    }
-
     /* Dialog to ask user if we may go to Zotero.org to manage API keys*/
     protected static AlertDialog informUserAboutLogin(final S2ZLoginActivity parent, final int loginType){
         S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_ZOTERO_LOGIN;
@@ -105,10 +80,12 @@ public class S2ZDialogs {
                     parent.setUserAndKey(alias, uid, key);
                     parent.showLoginScreen();
                     S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                    S2ZDialogs.selectedSavedKey = 0;
                     dialog.dismiss();
                 }else if(i == DialogInterface.BUTTON_NEGATIVE){
                     // User cancelled dialog
                     S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                    S2ZDialogs.selectedSavedKey = 0;
                     dialog.dismiss();
                 }else{
                     // User clicked a key, but did not yet confirm their choice
@@ -125,6 +102,32 @@ public class S2ZDialogs {
         return dialogBuilder.show(); 
     }
 
+    /* S2ZMainActivity Dialogs */
+    /* Dialog for asking the user to install ZXing Scanner */
+    protected static AlertDialog getZxingScanner(final S2ZMainActivity parent) {
+        S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_ZXING;
+        AlertDialog.Builder downloadDialog = new AlertDialog.Builder(parent);
+
+        DialogInterface.OnClickListener clickListener = new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int i) {
+                if(i == DialogInterface.BUTTON_POSITIVE){
+                    Uri uri = Uri.parse(parent.getString(R.string.zxing_uri));
+                    Intent intent = new Intent(Intent.ACTION_VIEW, uri);
+                    parent.startActivity(intent);
+                    S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                }else{
+                    dialog.dismiss();
+                    S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                }
+            }
+        };
+
+        downloadDialog.setTitle(parent.getString(R.string.install_bs_title));
+        downloadDialog.setMessage(parent.getString(R.string.install_bs_msg));
+        downloadDialog.setPositiveButton(parent.getString(R.string.install), clickListener);
+        downloadDialog.setNegativeButton(parent.getString(R.string.cancel), clickListener);
+        return downloadDialog.show();        
+    }
 
     /* GetApiKeyActivity Dialogs */
     protected static AlertDialog showEmailValidationDialog(final GetApiKeyActivity parent){
