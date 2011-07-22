@@ -1,59 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-                android:id="@+id/s2z_login"
+<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
                 android:layout_height="match_parent"
-                android:layout_width="match_parent"
-                android:orientation="vertical"
-                android:gravity="center">
+                android:layout_width="match_parent">
+                
+<ViewFlipper android:id="@+id/login_view_flipper"
+                android:layout_height="match_parent"
+                android:layout_width="match_parent">
 
+    <RelativeLayout android:id="@+id/login_view_options"
+                    android:layout_height="match_parent"
+                    android:layout_width="match_parent">
     <ImageView android:id="@+id/logo"
                android:layout_height="wrap_content"
                android:layout_width="match_parent"
                android:src="@drawable/icon"
-                  android:paddingBottom="15dip"
-               android:gravity="center_horizontal"
-               android:layout_above="@+id/linearLayout1"/>
+               android:paddingBottom="15dip"
+               android:gravity="center_horizontal"/>
 
     <TextView android:text="@string/login_instructions"
-                 android:id="@+id/login_instructions"
+              android:id="@+id/login_instructions"
               android:layout_width="wrap_content"
               android:layout_height="wrap_content"
               android:paddingLeft="30dip"
-                 android:paddingRight="30dip"
-                 android:paddingBottom="15dip"
-              android:textAppearance="?android:attr/textAppearanceSmall"/>
+              android:paddingRight="30dip"
+              android:paddingBottom="15dip"
+              android:textAppearance="?android:attr/textAppearanceSmall"
+              android:layout_below="@id/logo"/>
 
-    <LinearLayout android:id="@+id/choose_login_method"
-                  android:layout_height="wrap_content"
-                     android:layout_width="match_parent"
-                     android:orientation="vertical">
-
-        <TextView android:text="Already have a Zotero.org account?"
-                  android:layout_width="match_parent"
-                  android:layout_height="wrap_content"
-                     android:paddingLeft="10dip"
-                     android:textColor="#FFF"
-                     android:background="#888"
-                  android:id="@+id/haveacct"
-                  android:textAppearance="?android:attr/textAppearanceSmall"/>
+   <TextView android:text="Already have a Zotero.org account?"
+             android:layout_width="match_parent"
+             android:layout_height="wrap_content"
+             android:paddingLeft="10dip"
+             android:textColor="#FFF"
+             android:background="#888"
+             android:id="@+id/haveacct"
+             android:textAppearance="?android:attr/textAppearanceSmall"
+             android:layout_below="@id/login_instructions" />
 
         <Button android:text="Log in with saved key" 
                 android:id="@+id/login_saved_key" 
-                android:layout_width="match_parent" 
+                android:drawableTop="@drawable/ic_menu_login"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:paddingTop="10dip" />
-
-        <Button android:text="Enter ID and Key manually" 
-                android:id="@+id/login_manually" 
-                android:layout_width="match_parent" 
-                android:layout_height="wrap_content"
-                android:paddingTop="10dip" />
+                android:paddingTop="10dip"
+                android:layout_below="@id/haveacct"
+                android:layout_alignParentLeft="true"/>
 
         <Button android:text="Get ID and Key from Zotero.org"
                 android:id="@+id/login_by_web"
-                android:layout_width="match_parent"
+                android:drawableTop="@drawable/ic_menu_details"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:paddingBottom="10dip" />
+                android:paddingBottom="10dip"
+                android:layout_below="@id/haveacct"
+                android:layout_toRightOf="@id/login_saved_key" />
 
            <TextView android:text="New to Zotero?"
                      android:layout_width="match_parent"
@@ -62,26 +62,29 @@
                      android:textColor="#FFF"
                      android:background="#888"
                      android:id="@+id/newtozotero"
-                     android:textAppearance="?android:attr/textAppearanceSmall"/>
+                     android:textAppearance="?android:attr/textAppearanceSmall"
+                     android:layout_below="@id/login_by_web"
+                     android:layout_alignParentLeft="true" />
 
         <Button android:text="Register a new Zotero account"
                    android:id="@+id/register_new_account"
-                   android:layout_width="match_parent"
+                   android:layout_width="wrap_content"
                    android:layout_height="wrap_content"
-                   android:paddingTop="10dip" />
-        
-        <!--<Button android:text="Learn more"
-                   android:id="@+id/learn_more"
-                   android:layout_width="match_parent"
-                   android:layout_height="wrap_content" />-->
-    </LinearLayout>
-
+                   android:paddingTop="10dip" 
+                   android:layout_below="@id/newtozotero"
+                   android:layout_centerHorizontal="true" />
+    </RelativeLayout>
+    
+    <RelativeLayout android:id="@+id/login_view_editables"
+                    android:layout_height="match_parent"
+                    android:layout_width="match_parent">
     <!-- Manual login -->
        <LinearLayout android:id="@+id/edit_id_and_key"
                  android:layout_height="wrap_content"
                  android:layout_width="match_parent"
                  android:orientation="vertical"
-                 android:visibility="invisible">
+                 android:layout_below="@id/register_new_account"
+                 android:layout_centerHorizontal="true" >
         <EditText android:id="@+id/useralias_edittext"
                   android:layout_height="wrap_content"
                   android:layout_width="match_parent"
@@ -119,4 +122,6 @@
                    android:layout_height="wrap_content" />
            </LinearLayout>
     </LinearLayout>
-</LinearLayout>
+    </RelativeLayout>
+</ViewFlipper>
+</ScrollView>

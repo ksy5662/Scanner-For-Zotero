@@ -46,7 +46,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         mAdapters = new ArrayList<BibDetailJSONAdapter>();
     }
 
-    public void fillFromDatabase(){
+    public void fillFromDatabase(final String key){
         new Thread(new Runnable() {
             public void run(){
                 Cursor c = mContext.getContentResolver()

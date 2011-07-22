@@ -13,7 +13,9 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.net.http.SslCertificate;
 import android.text.TextUtils;
+import android.view.animation.AnimationUtils;
 import android.webkit.WebView;
+import android.widget.ViewFlipper;
 
 public class S2ZDialogs {
 
@@ -76,12 +78,14 @@ public class S2ZDialogs {
                     String alias = c.getString(S2ZDatabase.ACCOUNT_ALIAS_INDEX);
                     String uid = c.getString(S2ZDatabase.ACCOUNT_UID_INDEX);
                     String key = c.getString(S2ZDatabase.ACCOUNT_KEY_INDEX);
-                    S2ZLoginActivity.mListOptions = false;
                     parent.setUserAndKey(alias, uid, key);
-                    parent.showLoginScreen();
+                    dialog.dismiss();
+                    ViewFlipper vf = (ViewFlipper)parent.findViewById(R.id.login_view_flipper);
+                    vf.setInAnimation(AnimationUtils.loadAnimation(parent, R.anim.slide_in_next));
+                    vf.setOutAnimation(AnimationUtils.loadAnimation(parent, R.anim.slide_out_next));
+                    vf.showNext();
                     S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
                     S2ZDialogs.selectedSavedKey = 0;
-                    dialog.dismiss();
                 }else if(i == DialogInterface.BUTTON_NEGATIVE){
                     // User cancelled dialog
                     S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;

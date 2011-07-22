@@ -19,11 +19,13 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.view.animation.AnimationUtils;
 import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.Toast;
+import android.widget.ViewFlipper;
 
 public class S2ZLoginActivity extends Activity {
 
@@ -48,8 +50,6 @@ public class S2ZLoginActivity extends Activity {
 
     private Cursor mAcctCursor = null;
 
-    protected static boolean mListOptions = true;
-
     private AlertDialog mAlertDialog = null;
 
     @Override
@@ -63,7 +63,6 @@ public class S2ZLoginActivity extends Activity {
         // All listeners are defined at the bottom of this file.
         // Login option buttons:
         findViewById(R.id.login_saved_key).setOnClickListener(loginButtonListener);
-        findViewById(R.id.login_manually).setOnClickListener(loginButtonListener);
         findViewById(R.id.login_by_web).setOnClickListener(loginButtonListener);
         findViewById(R.id.register_new_account).setOnClickListener(loginButtonListener);
         //findViewById(R.id.learn_more).setOnClickListener(loginButtonListener);
@@ -95,6 +94,9 @@ public class S2ZLoginActivity extends Activity {
             mLoggedIn = false;
         }
 
+        // Set the remember me checkbox
+        ((CheckBox)findViewById(R.id.save_login)).setChecked(mRememberMe);
+
         // Until the user logs in successfully, some instructions are provided.
         if(!mFirstRun){
             findViewById(R.id.login_instructions).setVisibility(View.GONE);
@@ -106,12 +108,7 @@ public class S2ZLoginActivity extends Activity {
         super.onResume();
         if(mLoggedIn){ // Might still be logged in from last session
             doLogin(); // jump straight to Main if everything checks out.
-        }else{
-            showLoginScreen();
         }
-
-        // Set the remember me checkbox
-        ((CheckBox)findViewById(R.id.save_login)).setChecked(mRememberMe);
 
         // Display any dialogs we were displaying before being destroyed
         switch(S2ZDialogs.displayedDialog) {
@@ -137,15 +134,21 @@ public class S2ZLoginActivity extends Activity {
             mAlertDialog = null;
         }
     }
-
-    protected void showLoginScreen(){
-        if(mListOptions){ // Display the options
-            findViewById(R.id.choose_login_method).setVisibility(View.VISIBLE);
-            findViewById(R.id.edit_id_and_key).setVisibility(View.GONE);
-        }else{ // Display the edittexts
-            findViewById(R.id.choose_login_method).setVisibility(View.GONE);
-            findViewById(R.id.edit_id_and_key).setVisibility(View.VISIBLE);
+    
+    // Catch back button if we're showing the editable fields
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event)  {
+        if (keyCode == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
+            ViewFlipper vf = ((ViewFlipper)findViewById(R.id.login_view_flipper));
+            if(vf.getCurrentView().getId() == R.id.login_view_editables){
+                // Show the options screen (previous)
+                vf.setInAnimation(AnimationUtils.loadAnimation(S2ZLoginActivity.this, R.anim.slide_in_previous));
+                vf.setOutAnimation(AnimationUtils.loadAnimation(S2ZLoginActivity.this, R.anim.slide_out_previous));
+                vf.showPrevious();
+                return true;
+            }
         }
+        return super.onKeyDown(keyCode, event);
     }
 
     private void doLogin(){ 
@@ -193,7 +196,10 @@ public class S2ZLoginActivity extends Activity {
                 if (resultCode == RESULT_OK) {
                     Account acct = (Account) intent.getParcelableExtra(GetApiKeyActivity.ACCOUNT);
                     setUserAndKey(acct);
-                    mListOptions = false;
+                    ViewFlipper vf = (ViewFlipper)findViewById(R.id.login_view_flipper);
+                    vf.setInAnimation(AnimationUtils.loadAnimation(S2ZLoginActivity.this, R.anim.slide_in_next));
+                    vf.setOutAnimation(AnimationUtils.loadAnimation(S2ZLoginActivity.this, R.anim.slide_out_next));
+                    vf.showNext();
                 }
                 break;
         }
@@ -273,7 +279,7 @@ public class S2ZLoginActivity extends Activity {
     
     private boolean validateUserAlias(){
         boolean valid = !(mRememberMe && TextUtils.isEmpty(mAccount.getAlias()));
-        if(valid){
+        if(valid || TextUtils.isEmpty(mAccount.getAlias())){
             ((EditText) findViewById(R.id.useralias_edittext)).setError(null);
         }else{
             ((EditText) findViewById(R.id.useralias_edittext)).setError("Alias required");
@@ -283,7 +289,7 @@ public class S2ZLoginActivity extends Activity {
 
     private boolean validateUserId(){
         boolean valid = mAccount.hasValidUserId();
-        if(valid)
+        if(valid || TextUtils.isEmpty(mAccount.getUid()))
             ((EditText) findViewById(R.id.userid_edittext)).setError(null);
         else
             ((EditText) findViewById(R.id.userid_edittext)).setError("Invalid user ID");
@@ -292,7 +298,7 @@ public class S2ZLoginActivity extends Activity {
 
     private boolean validateApiKey(){
         boolean valid = mAccount.hasValidApiKey();
-        if(valid)
+        if(valid || TextUtils.isEmpty(mAccount.getKey()))
             ((EditText) findViewById(R.id.apikey_edittext)).setError(null);
         else
             ((EditText) findViewById(R.id.apikey_edittext)).setError("Invalid API key");
@@ -341,12 +347,6 @@ public class S2ZLoginActivity extends Activity {
                 }
                 break;
 
-            case R.id.login_manually:
-                mListOptions = false;
-                findViewById(R.id.choose_login_method).setVisibility(View.GONE);
-                findViewById(R.id.edit_id_and_key).setVisibility(View.VISIBLE);
-                break;
-
             case R.id.login_by_web:
                 mAlertDialog = S2ZDialogs.informUserAboutLogin(
                                     S2ZLoginActivity.this,
@@ -360,25 +360,18 @@ public class S2ZLoginActivity extends Activity {
                 break;
 
             case R.id.login_submit:
-                // validate UserID and APIKey
-                /*mAccount.setAlias(((EditText) findViewById(R.id.useralias_edittext)).getText().toString());
-                mAccount.setUid(((EditText) findViewById(R.id.userid_edittext)).getText().toString());
-                mAccount.setKey(((EditText) findViewById(R.id.apikey_edittext)).getText().toString());*/
-                Log.d(CLASS_TAG, mAccount.getAlias());
                 doLogin();
                 break;
 
             case R.id.login_cancel:
-                mListOptions = true;
+                ViewFlipper vf = (ViewFlipper)findViewById(R.id.login_view_flipper);
+                // Show the options screen (previous)
+                vf.setInAnimation(AnimationUtils.loadAnimation(S2ZLoginActivity.this, R.anim.slide_in_previous));
+                vf.setOutAnimation(AnimationUtils.loadAnimation(S2ZLoginActivity.this, R.anim.slide_out_previous));
+                vf.showPrevious();
                 setUserAndKey("", "", "");
-                showLoginScreen();
                 break;
 
-            /*case R.id.learn_more: // TODO: Make this more helpful.
-                Intent i = new Intent(Intent.ACTION_VIEW);
-                i.setData(Uri.parse("http://zotero.org"));
-                startActivity(i);
-                break;*/
             //TODO: case R.id.login_openid:
             }
         }
