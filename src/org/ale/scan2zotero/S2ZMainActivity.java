@@ -25,6 +25,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.ExpandableListView;
+import android.widget.ProgressBar;
 
 public class S2ZMainActivity extends Activity {
 
@@ -42,6 +43,8 @@ public class S2ZMainActivity extends Activity {
 
     private AlertDialog mAlertDialog = null;
 
+    private int mAccountId;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -55,9 +58,13 @@ public class S2ZMainActivity extends Activity {
             Account acct = (Account) extras.getParcelable(INTENT_EXTRA_ACCOUNT);
             mZAPI = new ZoteroAPIClient(mZoteroAPIHandler);
             mZAPI.setAccount(acct);
+            mAccountId = acct.getDbId();
         }else{
             mZAPI = null;
+            mAccountId = Account.NOT_IN_DATABASE;
         }
+
+        mRequestQueue = RequestQueue.getInstance();
 
         // Initialize Google Books API Client
         mBooksAPI = new GoogleBooksAPIClient(mGoogleBooksHandler);
@@ -67,9 +74,7 @@ public class S2ZMainActivity extends Activity {
         registerForContextMenu(explv);
         explv.setAdapter(mItemList);
 
-        mItemList.fillFromDatabase();
-
-        mRequestQueue = RequestQueue.getInstance();
+        mItemList.fillFromDatabase(mAccountId);
     }
 
     @Override
@@ -106,8 +111,7 @@ public class S2ZMainActivity extends Activity {
 
     public void gotBibInfo(JSONObject info){
         // Fill in form from online info.
-        Log.d(CLASS_TAG, info.toString());
-        BibItem item = new BibItem(BibItem.TYPE_BOOK, info);
+        BibItem item = new BibItem(BibItem.TYPE_BOOK, info, mAccountId);
         mItemList.addItem(item);
     }
 
@@ -174,6 +178,7 @@ public class S2ZMainActivity extends Activity {
         switch(Util.parseBarcode(content, format)) {
             case(Util.SCAN_PARSE_ISBN):
                 Log.d(CLASS_TAG, "Looking up ISBN:"+content);
+                findViewById(R.id.bib_item_progress).setVisibility(View.VISIBLE);
                 mBooksAPI.isbnLookup(content);
                 break;
             case(Util.SCAN_PARSE_ISSN):
@@ -230,13 +235,24 @@ public class S2ZMainActivity extends Activity {
         public void handleMessage(Message msg){
             switch(msg.what) {
             case APIRequest.START:
+                ((ProgressBar)findViewById(R.id.bib_item_progress))
+                                .setIndeterminate(false);
+                ((ProgressBar)findViewById(R.id.bib_item_progress))
+                                .incrementProgressBy(10);
                 Log.d(CLASS_TAG, "START");
+                break;
+            case APIRequest.PROGRESS:
+                ((ProgressBar)findViewById(R.id.bib_item_progress))
+                                .incrementProgressBy(50);
                 break;
             case APIRequest.EXCEPTION:
                 Log.d(CLASS_TAG, "EXCEPTION");
-                ((Exception)msg.obj).printStackTrace();
+                APIResponse rexp = (APIResponse)msg.obj;
+                ((Exception)rexp.getData()).printStackTrace();
                 break;
             case APIRequest.SUCCESS:
+                ((ProgressBar)findViewById(R.id.bib_item_progress))
+                                .incrementProgressBy(30);
                 Log.d(CLASS_TAG, "SUCCESS");
                 APIResponse resp = (APIResponse)msg.obj;
                 String isbn = resp.getId();
@@ -247,6 +263,8 @@ public class S2ZMainActivity extends Activity {
                 gotBibInfo(translated);
                 break;
             case APIRequest.FINISH:
+                ((ProgressBar)findViewById(R.id.bib_item_progress))
+                                .incrementProgressBy(10);
                 Log.d(CLASS_TAG, "FINISHED");
                 mRequestQueue.taskComplete((APIRequest) msg.obj);
                 break;

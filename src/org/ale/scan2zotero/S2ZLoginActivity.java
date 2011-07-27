@@ -12,6 +12,8 @@ import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
+import android.os.Message;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.KeyEvent;
@@ -39,18 +41,26 @@ public class S2ZLoginActivity extends Activity {
     // Subactivity result codes
     public static final int RESULT_APIKEY = 0;
 
+    public static final int GOT_CURSOR = 0;
+    // Transitions to make on receiving cursor
+    public static final int RECV_CURSOR_NOTHING = -1;
+    public static final int RECV_CURSOR_PROMPT = 0;
+    public static final int RECV_CURSOR_LOGIN = 1;
+
     // Transient state
     private Account mAccount;
 
     private boolean mFirstRun;
 
     private boolean mLoggedIn;
-    
+
     private boolean mRememberMe;
 
     private Cursor mAcctCursor = null;
 
     private AlertDialog mAlertDialog = null;
+
+    private int mOnRecvCursor = RECV_CURSOR_NOTHING;
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -64,6 +74,7 @@ public class S2ZLoginActivity extends Activity {
         // Login option buttons:
         findViewById(R.id.login_saved_key).setOnClickListener(loginButtonListener);
         findViewById(R.id.login_by_web).setOnClickListener(loginButtonListener);
+        findViewById(R.id.login_manually).setOnClickListener(loginButtonListener);
         findViewById(R.id.register_new_account).setOnClickListener(loginButtonListener);
         //findViewById(R.id.learn_more).setOnClickListener(loginButtonListener);
         findViewById(R.id.login_submit).setOnClickListener(loginButtonListener);
@@ -107,7 +118,11 @@ public class S2ZLoginActivity extends Activity {
     public void onResume(){
         super.onResume();
         if(mLoggedIn){ // Might still be logged in from last session
-            doLogin(); // jump straight to Main if everything checks out.
+            if(mAcctCursor != null){
+                doLogin();
+            }else{
+                mOnRecvCursor = RECV_CURSOR_LOGIN;
+            }
         }
 
         // Display any dialogs we were displaying before being destroyed
@@ -122,6 +137,9 @@ public class S2ZLoginActivity extends Activity {
             mAlertDialog = S2ZDialogs.informUserAboutLogin(S2ZLoginActivity.this,
                                 GetApiKeyActivity.EXISTING_ACCOUNT);
             break;
+        case(S2ZDialogs.DIALOG_SAVED_KEYS):
+            mOnRecvCursor = RECV_CURSOR_PROMPT;
+            break;
         }
     }
 
@@ -134,44 +152,19 @@ public class S2ZLoginActivity extends Activity {
             mAlertDialog = null;
         }
     }
-    
-    // Catch back button if we're showing the editable fields
-    @Override
-    public boolean onKeyDown(int keyCode, KeyEvent event)  {
-        if (keyCode == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
-            ViewFlipper vf = ((ViewFlipper)findViewById(R.id.login_view_flipper));
-            if(vf.getCurrentView().getId() == R.id.login_view_editables){
-                // Show the options screen (previous)
-                vf.setInAnimation(AnimationUtils.loadAnimation(S2ZLoginActivity.this, R.anim.slide_in_previous));
-                vf.setOutAnimation(AnimationUtils.loadAnimation(S2ZLoginActivity.this, R.anim.slide_out_previous));
-                vf.showPrevious();
-                return true;
-            }
-        }
-        return super.onKeyDown(keyCode, event);
-    }
 
     private void doLogin(){ 
-        boolean validAlias = validateUserAlias();
-        boolean validId = validateUserId();
-        boolean validKey = validateApiKey();
+        // mAcctCursor MUST be open before this is called
 
-        if(validAlias && validId && validKey){
-            if(!mLoggedIn && mRememberMe){
-                saveLoginData();
-            }else{
-                //TODO: forgetKeyIfNecessary();
-            }
-            mLoggedIn = true;
-            Intent intent = new Intent(S2ZLoginActivity.this, S2ZMainActivity.class);
-            intent.putExtra(S2ZMainActivity.INTENT_EXTRA_ACCOUNT, mAccount);
-            S2ZLoginActivity.this.startActivity(intent);
-            // We're done with the login activity.
-            finish();
-        }
-    }
+        boolean validAlias = validateUserAlias(); // These have side effects
+        boolean validId = validateUserId();       //
+        boolean validKey = validateApiKey();      //
 
-    private void saveLoginData(){
+        if(!(validAlias && validId && validKey))
+            return;
+
+        // Try to find a matching account in the database
+        int acctId = Account.NOT_IN_DATABASE;
         if(mAcctCursor.getCount() > 0){
             // Check if key is already in database
             String pKey;
@@ -180,14 +173,31 @@ public class S2ZLoginActivity extends Activity {
             while(mAcctCursor.isAfterLast() == false){
                 pKey = mAcctCursor.getString(S2ZDatabase.ACCOUNT_KEY_INDEX);
                 if(TextUtils.equals(pKey, keyToInsert)){
-                    return;
+                    acctId = mAcctCursor.getInt(S2ZDatabase.ACCOUNT_ID_INDEX);
+                    break;
                 }
                 mAcctCursor.moveToNext();
             }
         }
-        // Insert the key
-        ContentValues values = mAccount.toContentValues();
-        getContentResolver().insert(S2ZDatabase.ACCOUNT_URI, values);
+
+        // Insert new key into database
+        if(mRememberMe && acctId == Account.NOT_IN_DATABASE){
+            // Yes, this blocks the UI thread.
+            ContentValues values = mAccount.toContentValues();
+            Uri result = getContentResolver().insert(S2ZDatabase.ACCOUNT_URI, values);
+            acctId = Integer.parseInt(result.getLastPathSegment());
+        }
+
+        mAccount.setDbId(acctId);
+
+        mLoggedIn = mRememberMe; // This is the mLoggedIn value that gets saved
+                                 // to prefs. If the user didn't check "Remember Me"
+                                 // we won't automatically log them in.
+        // Transition to Main activity
+        Intent intent = new Intent(S2ZLoginActivity.this, S2ZMainActivity.class);
+        intent.putExtra(S2ZMainActivity.INTENT_EXTRA_ACCOUNT, mAccount);
+        S2ZLoginActivity.this.startActivity(intent);
+        finish();
     }
 
     public void onActivityResult(int requestCode, int resultCode, Intent intent) {
@@ -196,10 +206,7 @@ public class S2ZLoginActivity extends Activity {
                 if (resultCode == RESULT_OK) {
                     Account acct = (Account) intent.getParcelableExtra(GetApiKeyActivity.ACCOUNT);
                     setUserAndKey(acct);
-                    ViewFlipper vf = (ViewFlipper)findViewById(R.id.login_view_flipper);
-                    vf.setInAnimation(AnimationUtils.loadAnimation(S2ZLoginActivity.this, R.anim.slide_in_next));
-                    vf.setOutAnimation(AnimationUtils.loadAnimation(S2ZLoginActivity.this, R.anim.slide_out_next));
-                    vf.showNext();
+                    showNext();
                 }
                 break;
         }
@@ -217,21 +224,34 @@ public class S2ZLoginActivity extends Activity {
             public void run() {
                 mAcctCursor = managedQuery(S2ZDatabase.ACCOUNT_URI, null, null, null, null);
 
-                // On an activity recreate (following orientation change, etc)
-                // we need to immediately call promptToUseSavedKey if the dialog
-                // was displayed prior to the activity being destroyed.
-                if(S2ZDialogs.displayedDialog == S2ZDialogs.DIALOG_SAVED_KEYS){
-                    S2ZLoginActivity.this.runOnUiThread(new Runnable() {
-                        public void run() {
-                            mAlertDialog = S2ZDialogs.promptToUseSavedKey(
-                                                S2ZLoginActivity.this, mAcctCursor);
-                        }
-                    });
-                }
+                mCursorHandler.sendMessage(Message.obtain(mCursorHandler, GOT_CURSOR));
             }
         }).start();
     }
 
+    private Handler mCursorHandler = new Handler() {
+        public void handleMessage(Message msg){
+            if(msg.what != GOT_CURSOR)
+                return;
+            switch(mOnRecvCursor){
+            // On an activity recreate (following orientation change, etc)
+            // we need to immediately call promptToUseSavedKey if the dialog
+            // was displayed prior to the activity being destroyed.
+            case RECV_CURSOR_PROMPT:
+                mAlertDialog = S2ZDialogs.promptToUseSavedKey(
+                                    S2ZLoginActivity.this, mAcctCursor);
+                break;
+            // And sometimes we're resuming a previous session and just need the
+            // cursor to determine the account id
+            case RECV_CURSOR_LOGIN:
+                doLogin();
+                break;
+            }
+            mOnRecvCursor = RECV_CURSOR_NOTHING;
+        }
+    };
+
+    /* Saved Preferences */
     protected void loadConfig(){
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         String alias = prefs.getString(getString(R.string.alias_pref_key), "");
@@ -276,7 +296,8 @@ public class S2ZLoginActivity extends Activity {
         validateUserId();
         validateApiKey();
     }
-    
+
+    /* Input validation */
     private boolean validateUserAlias(){
         boolean valid = !(mRememberMe && TextUtils.isEmpty(mAccount.getAlias()));
         if(valid || TextUtils.isEmpty(mAccount.getAlias())){
@@ -305,6 +326,40 @@ public class S2ZLoginActivity extends Activity {
         return valid;
     }
 
+
+    /* View Flipping */
+    private void showPrevious() {
+        ViewFlipper vf = (ViewFlipper)findViewById(R.id.login_view_flipper);
+        if(vf.getCurrentView().getId() == R.id.login_view_editables){
+            vf.setInAnimation(AnimationUtils.loadAnimation(S2ZLoginActivity.this, R.anim.slide_in_previous));
+            vf.setOutAnimation(AnimationUtils.loadAnimation(S2ZLoginActivity.this, R.anim.slide_out_previous));
+            vf.showPrevious();
+        }
+    }
+
+    private void showNext() {
+        ViewFlipper vf = (ViewFlipper)findViewById(R.id.login_view_flipper);
+        if(vf.getCurrentView().getId() == R.id.login_view_options){
+            vf.setInAnimation(AnimationUtils.loadAnimation(S2ZLoginActivity.this, R.anim.slide_in_next));
+            vf.setOutAnimation(AnimationUtils.loadAnimation(S2ZLoginActivity.this, R.anim.slide_out_next));
+            vf.showNext();
+        }
+    }
+
+    // Catch back button if we're showing the editable fields
+    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event)  {
+        if (keyCode == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
+            ViewFlipper vf = ((ViewFlipper)findViewById(R.id.login_view_flipper));
+            if(vf.getCurrentView().getId() == R.id.login_view_editables){
+                showPrevious();
+                return true;
+            }
+        }
+        return super.onKeyDown(keyCode, event);
+    }
+
+
     /* Options Menu */
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
@@ -321,11 +376,11 @@ public class S2ZLoginActivity extends Activity {
             startActivity(intent);
             return true;
         case R.id.opt_use_saved_key:
-            if (mAcctCursor != null && mAcctCursor.getCount() > 0) {
+            if (mAcctCursor != null) {
                 mAlertDialog = S2ZDialogs.promptToUseSavedKey(
                                     S2ZLoginActivity.this, mAcctCursor);
-            }else{
-                Toast.makeText(S2ZLoginActivity.this, "No saved keys", Toast.LENGTH_SHORT).show();
+            } else {
+                mOnRecvCursor = RECV_CURSOR_PROMPT;
             }
             return true;
         case R.id.opt_about:
@@ -334,16 +389,17 @@ public class S2ZLoginActivity extends Activity {
         return super.onOptionsItemSelected(item);
     }
 
+
     /* Interface listeners */
     private final Button.OnClickListener loginButtonListener = new Button.OnClickListener() {
         public void onClick(View v) {
             switch(v.getId()){
             case R.id.login_saved_key:
-                if (mAcctCursor != null && mAcctCursor.getCount() > 0) {
+                if (mAcctCursor != null) {
                     mAlertDialog = S2ZDialogs.promptToUseSavedKey(
                                         S2ZLoginActivity.this, mAcctCursor);
                 }else{
-                    Toast.makeText(S2ZLoginActivity.this, "No saved keys", Toast.LENGTH_LONG).show();
+                    mOnRecvCursor = RECV_CURSOR_PROMPT;
                 }
                 break;
 
@@ -351,6 +407,10 @@ public class S2ZLoginActivity extends Activity {
                 mAlertDialog = S2ZDialogs.informUserAboutLogin(
                                     S2ZLoginActivity.this,
                                     GetApiKeyActivity.EXISTING_ACCOUNT);
+                break;
+            
+            case R.id.login_manually:
+                showNext();
                 break;
 
             case R.id.register_new_account:
@@ -360,15 +420,15 @@ public class S2ZLoginActivity extends Activity {
                 break;
 
             case R.id.login_submit:
-                doLogin();
+                if(mAcctCursor != null){
+                    doLogin();
+                }else{
+                    mOnRecvCursor = RECV_CURSOR_LOGIN;
+                }
                 break;
 
             case R.id.login_cancel:
-                ViewFlipper vf = (ViewFlipper)findViewById(R.id.login_view_flipper);
-                // Show the options screen (previous)
-                vf.setInAnimation(AnimationUtils.loadAnimation(S2ZLoginActivity.this, R.anim.slide_in_previous));
-                vf.setOutAnimation(AnimationUtils.loadAnimation(S2ZLoginActivity.this, R.anim.slide_out_previous));
-                vf.showPrevious();
+                showPrevious();
                 setUserAndKey("", "", "");
                 break;
 

@@ -25,13 +25,13 @@ import android.widget.TextView;
 
 public class BibItemListAdapter extends BaseExpandableListAdapter {
 
-    private static final int EVEN_ROW_COLOR = 0xFFFFFFFF;
-    private static final int ODD_ROW_COLOR = 0xFFEEEEEE;
+    private final int EVEN_ROW_COLOR = 0xFFF4F9EB;
+    private final int ODD_ROW_COLOR = 0xFFF1F6DB;
 
     private static final int FOUND_SAVED_ITEMS = 0;
     private static final int INSERTED_ITEM = 1;
     private static final int REMOVED_ITEM = 2;
-    
+
     private ArrayList<BibItem> mItems;
     private ArrayList<BibDetailJSONAdapter> mAdapters;
 
@@ -46,11 +46,15 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         mAdapters = new ArrayList<BibDetailJSONAdapter>();
     }
 
-    public void fillFromDatabase(final String key){
+    public void fillFromDatabase(final int acctId){
         new Thread(new Runnable() {
             public void run(){
                 Cursor c = mContext.getContentResolver()
-                                   .query(S2ZDatabase.BIBINFO_URI, null, null, null, BibItem.COL_DATE + " DESC");
+                                   .query(S2ZDatabase.BIBINFO_URI,
+                                           null, 
+                                           BibItem.COL_ACCT+"=?",
+                                           new String[] {String.valueOf(acctId)},
+                                           BibItem.COL_DATE + " DESC");
                 if(c.getCount() > 0) {
                     ArrayList<BibItem> toadd = new ArrayList<BibItem>(c.getCount());
                     c.moveToFirst();
@@ -67,8 +71,8 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         }).start();
     }
 
-    public void addItem(final BibItem item){
-        new Thread(new Runnable() {
+    public void addItem(BibItem item){
+/*        new Thread(new Runnable() {
             public void run(){
                 Uri row = mContext.getContentResolver().insert(S2ZDatabase.BIBINFO_URI, item.toContentValues());
                 item.setId(Integer.parseInt(row.getLastPathSegment()));
@@ -76,7 +80,18 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
                         Message.obtain(mDatabaseResponseHandler, 
                                        BibItemListAdapter.INSERTED_ITEM, item));
             }
-        }).start();
+        }).start();*/
+        
+        // XXX: This blocks the UI thread - but prevents a race condition
+        // in which items added to the database are missed by the initial db query
+        // of a recreated S2ZMainActivity and thus not displayed.
+        Uri row = mContext.getContentResolver().insert(S2ZDatabase.BIBINFO_URI, item.toContentValues());
+        item.setId(Integer.parseInt(row.getLastPathSegment()));
+
+        mItems.add(0, item);
+        mAdapters.add(0, new BibDetailJSONAdapter(
+                              mContext, item.getSelectedInfo()));
+        notifyDataSetChanged();
     }
 
     public void deleteItem(int indx){
@@ -97,7 +112,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
     private final Handler mDatabaseResponseHandler = new Handler(){
         @SuppressWarnings("unchecked")
         public void handleMessage(Message msg){
-            switch(msg.what){
+            switch(msg.what) {
             case BibItemListAdapter.FOUND_SAVED_ITEMS:
                 mItems.addAll(((ArrayList<BibItem>)msg.obj));
                 for(BibItem b :(ArrayList<BibItem>)msg.obj){
@@ -122,45 +137,15 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
     };
 
     @Override
-    public Object getChild(int group, int child) {
-        return mItems.get(group);
-    }
-
-    @Override
-    public long getChildId(int group, int child) {
-        return 100000 + group;
-    }
-
-    @Override
     public View getChildView(int group, int child, boolean last,
             View convert, ViewGroup parent) {
         if(convert == null){
             convert = mInflater.inflate(R.layout.expandable_bib_child, parent, false);
         }
-        convert.setBackgroundColor(group % 2 == 0 ? EVEN_ROW_COLOR : ODD_ROW_COLOR);
+        convert.setBackgroundColor((mItems.size()-group) % 2 == 0 ? EVEN_ROW_COLOR : ODD_ROW_COLOR);
         BibDetailJSONAdapter adapter = mAdapters.get(group);
         adapter.fillLinearLayout((LinearLayout) convert);
         return convert;
-    }
-
-    @Override
-    public int getChildrenCount(int group) {
-        return 1;
-    }
-
-    @Override
-    public Object getGroup(int group) {
-        return mItems.get(group);
-    }
-
-    @Override
-    public int getGroupCount() {
-        return mItems.size();
-    }
-
-    @Override
-    public long getGroupId(int group) {
-        return group;
     }
 
     @Override
@@ -169,8 +154,9 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         if(convert == null){      
             convert = mInflater.inflate(R.layout.expandable_bib_item, parent, false);
         }
+        convert.findViewById(R.id.bib_row_checkbox);
         convert.findViewById(R.id.bib_row)
-            .setBackgroundColor(group % 2 == 0 ? EVEN_ROW_COLOR : ODD_ROW_COLOR);
+            .setBackgroundColor((mItems.size()-group) % 2 == 0 ? EVEN_ROW_COLOR : ODD_ROW_COLOR);
         TextView tv_author_lbl = (TextView) convert.findViewById(R.id.bib_author_lbl);
         TextView tv_author = (TextView) convert.findViewById(R.id.bib_author);
         TextView tv_title = (TextView) convert.findViewById(R.id.bib_title);
@@ -199,6 +185,36 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
 
         tv_title.setText(data.optString(ItemField.title));
         return convert;
+    }
+
+    @Override
+    public Object getChild(int group, int child) {
+        return mItems.get(group);
+    }
+
+    @Override
+    public long getChildId(int group, int child) {
+        return 100000 + group;
+    }
+
+    @Override
+    public int getChildrenCount(int group) {
+        return 1;
+    }
+
+    @Override
+    public Object getGroup(int group) {
+        return mItems.get(group);
+    }
+
+    @Override
+    public int getGroupCount() {
+        return mItems.size();
+    }
+
+    @Override
+    public long getGroupId(int group) {
+        return group;
     }
 
     @Override

@@ -40,12 +40,13 @@ public class S2ZDatabase extends ContentProvider {
     public static final int BIBINFO_DATE_INDEX = 1;
     public static final int BIBINFO_TYPE_INDEX = 2;
     public static final int BIBINFO_JSON_INDEX = 3;
+    public static final int BIBINFO_ACCT_INDEX = 4;
 
     private static final String SQL_CREATE_BIBINFO_TBL = 
         "CREATE TABLE IF NOT EXISTS "+BibItem.TBL_NAME+" ("
         +BibItem._ID + " INTEGER PRIMARY KEY AUTOINCREMENT, "
         +BibItem.COL_DATE+" INTEGER, "+BibItem.COL_TYPE+" INTEGER, "
-        +BibItem.COL_JSON+" BLOB);";
+        +BibItem.COL_JSON+" BLOB, "+BibItem.COL_ACCT+" INTEGER );";
 
     private static final String BIBINFO_BASE_PATH = "bibinfo";
 

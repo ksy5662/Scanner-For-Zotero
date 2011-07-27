@@ -15,6 +15,7 @@ import android.net.http.SslCertificate;
 import android.text.TextUtils;
 import android.view.animation.AnimationUtils;
 import android.webkit.WebView;
+import android.widget.Toast;
 import android.widget.ViewFlipper;
 
 public class S2ZDialogs {
@@ -68,6 +69,11 @@ public class S2ZDialogs {
     /* Dialog to present the user with saved keys */
     protected static int selectedSavedKey = 0;
     protected static AlertDialog promptToUseSavedKey(final S2ZLoginActivity parent, final Cursor c){
+        if(c.getCount() == 0){
+            Toast.makeText(parent, "No saved keys", Toast.LENGTH_SHORT).show();
+            return null;
+        }
+
         S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_SAVED_KEYS;
         AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(parent);
         DialogInterface.OnClickListener clickListener = 
@@ -75,10 +81,12 @@ public class S2ZDialogs {
             public void onClick(DialogInterface dialog, int i) {
                 if(i == DialogInterface.BUTTON_POSITIVE){ 
                     c.moveToPosition(S2ZDialogs.selectedSavedKey);
+                    int dbid = c.getInt(S2ZDatabase.ACCOUNT_ID_INDEX);
                     String alias = c.getString(S2ZDatabase.ACCOUNT_ALIAS_INDEX);
                     String uid = c.getString(S2ZDatabase.ACCOUNT_UID_INDEX);
                     String key = c.getString(S2ZDatabase.ACCOUNT_KEY_INDEX);
-                    parent.setUserAndKey(alias, uid, key);
+                    Account acct = new Account(dbid, alias, uid, key);
+                    parent.setUserAndKey(acct);
                     dialog.dismiss();
                     ViewFlipper vf = (ViewFlipper)parent.findViewById(R.id.login_view_flipper);
                     vf.setInAnimation(AnimationUtils.loadAnimation(parent, R.anim.slide_in_next));

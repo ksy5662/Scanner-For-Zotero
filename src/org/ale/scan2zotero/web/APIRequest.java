@@ -29,10 +29,11 @@ public class APIRequest implements Runnable {
     public static final int DELETE = 3;
 
     public static final int START = 0;
-    public static final int FAILURE = 1;
-    public static final int EXCEPTION = 2;
-    public static final int SUCCESS = 3;
-    public static final int FINISH = 4;
+    public static final int PROGRESS = 1;
+    public static final int FAILURE = 2;
+    public static final int EXCEPTION = 3;
+    public static final int SUCCESS = 4;
+    public static final int FINISH = 5;
 
 
     private HttpClient mHttpsClient;
@@ -105,7 +106,8 @@ public class APIRequest implements Runnable {
             InputStream inputStream = entity.getContent();
 
             ByteArrayOutputStream content = new ByteArrayOutputStream();
-
+            mHandler.sendMessage(
+                    Message.obtain(mHandler, APIRequest.PROGRESS, 0));
             // Read response into a buffered stream
             int readBytes = 0;
             byte[] sBuffer = new byte[512];
@@ -131,7 +133,7 @@ public class APIRequest implements Runnable {
                     Message.obtain(mHandler, APIRequest.FINISH, this));
         }
     }
-    
+
     public class APIResponse {
         private String mId;
         private Object mData;

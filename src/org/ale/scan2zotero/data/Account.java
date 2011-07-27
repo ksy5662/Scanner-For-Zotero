@@ -14,18 +14,26 @@ public class Account implements Parcelable, BaseColumns {
     public static final String COL_UID = "uid";
     public static final String COL_KEY = "key";
 
+    public static final int NOT_IN_DATABASE = -1;
+
+    private int mDbId;
     private String mAlias;
     private String mUid;
     private String mKey;
 
-    public Account(String alias, String uid, String key){
-        setAlias(alias);
-        setUid(uid);
-        setKey(key);
+    public Account(int dbid, String alias, String uid, String key){
+        mDbId = dbid;
+        mAlias = alias;
+        mUid = uid;
+        mKey = key;
     }
-    
+
+    public Account(String alias, String uid, String key){
+        this(-1, alias, uid, key);
+    }
+
     public Account(Parcel p){
-        this(p.readString(), p.readString(), p.readString());
+        this(p.readInt(), p.readString(), p.readString(), p.readString());
     }
 
     public boolean hasValidUserId() {
@@ -42,6 +50,14 @@ public class Account implements Parcelable, BaseColumns {
         values.put(Account.COL_UID, mUid);
         values.put(Account.COL_KEY, mKey);
         return values;
+    }
+
+    public void setDbId(int id) {
+        mDbId = id;
+    }
+
+    public int getDbId() {
+        return mDbId;
     }
 
     public void setAlias(String mAlias) {
@@ -69,10 +85,11 @@ public class Account implements Parcelable, BaseColumns {
     }
 
     public static Account fromCursor(Cursor c){
+        int dbid = c.getInt(S2ZDatabase.ACCOUNT_ID_INDEX);
         String alias = c.getString(S2ZDatabase.ACCOUNT_ALIAS_INDEX);
         String uid = c.getString(S2ZDatabase.ACCOUNT_UID_INDEX);
         String key = c.getString(S2ZDatabase.ACCOUNT_KEY_INDEX);
-        return new Account(alias,uid,key);
+        return new Account(dbid, alias,uid,key);
     }
 
     public static final Creator<Account> CREATOR = new Creator<Account>() {
@@ -92,6 +109,7 @@ public class Account implements Parcelable, BaseColumns {
 
     @Override
     public void writeToParcel(Parcel p, int flags) {
+        p.writeInt(mDbId);
         p.writeString(mAlias);
         p.writeString(mUid);
         p.writeString(mKey);
