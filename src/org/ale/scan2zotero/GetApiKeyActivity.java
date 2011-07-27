@@ -54,7 +54,6 @@ public class GetApiKeyActivity extends Activity {
 
     private AlertDialog mAlertDialog = null;
 
-    // TODO: detect log out
     private static boolean mLoggedIn = false;
 
     protected ArrayList<String> mFoundNames;
@@ -73,32 +72,32 @@ public class GetApiKeyActivity extends Activity {
            mFoundNames = state.getStringArrayList(RECREATE_FOUND_NAMES);
            mFoundIDs = state.getStringArrayList(RECREATE_FOUND_IDS);
            mFoundKeys = state.getStringArrayList(RECREATE_FOUND_KEYS);
-        }/*else{*/
+        } else {
             wv.setWebViewClient(getWebViewClient());
+        }
 
-            Bundle extras = getIntent().getExtras();
-            if(extras.getInt(LOGIN_TYPE, EXISTING_ACCOUNT) == EXISTING_ACCOUNT){
-                // The images are barely noticeable during this so we don't need them
-                wv.getSettings().setBlockNetworkImage(true);
+        Bundle extras = getIntent().getExtras();
+        if(extras.getInt(LOGIN_TYPE, EXISTING_ACCOUNT) == EXISTING_ACCOUNT){
+            // The images are barely noticeable during this so we don't need them
+            wv.getSettings().setBlockNetworkImage(true);
 
-                // TODO: extreaHeaders doesn't exist on versions <= 2.1 - try to find workaround
-                Map<String, String> extraHeaders = new HashMap<String, String>();
-                extraHeaders.put("Referer", "https://zotero.org/settings/keys");
-                wv.getSettings().setJavaScriptEnabled(true);
-                wv.addJavascriptInterface(new KeyScraper(), "KEYSCRAPE");
-                if(mLoggedIn){
-                    wv.loadUrl("https://zotero.org/settings/keys");
-                }else{
-                    // Cause dialog to display in onResume
-                    S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_CHECKING_LOGIN;
-                    wv.loadUrl("https://zotero.org/user/login/", extraHeaders);
-                }
+            // TODO: extreaHeaders doesn't exist on versions <= 2.1 - try to find workaround
+            Map<String, String> extraHeaders = new HashMap<String, String>();
+            extraHeaders.put("Referer", "https://zotero.org/settings/keys");
+            wv.getSettings().setJavaScriptEnabled(true);
+            wv.addJavascriptInterface(new KeyScraper(), "KEYSCRAPE");
+            if(mLoggedIn){
+                wv.loadUrl("https://zotero.org/settings/keys");
             }else{
-                // Have to do a captcha :(
-                wv.getSettings().setBlockNetworkImage(false);
+                // Cause dialog to display in onResume
+                S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_CHECKING_LOGIN;
+                wv.loadUrl("https://zotero.org/user/login/", extraHeaders);
+            }
+        }else{
+            // Have to do a captcha :(
+            wv.getSettings().setBlockNetworkImage(false);
 
-                wv.loadUrl("https://zotero.org/user/register/");
-            //}
+            wv.loadUrl("https://zotero.org/user/register/");
         }
     }
 
@@ -177,6 +176,13 @@ public class GetApiKeyActivity extends Activity {
             public void onPageStarted(WebView view, String url, Bitmap favicon){
                 if(url.indexOf("zotero.org/settings/keys") > 0) {
                     mLoggedIn = true;
+                    if(S2ZDialogs.displayedDialog == S2ZDialogs.DIALOG_CHECKING_LOGIN){
+                        S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                        if(mAlertDialog != null){
+                            mAlertDialog.dismiss();
+                            mAlertDialog = null;
+                        }
+                    }
                 }
             }
             @Override  
@@ -221,11 +227,20 @@ public class GetApiKeyActivity extends Activity {
         public void handleMessage(Message msg){
             switch(msg.what){
             case JS_FOUND_KEYS:
+                // We're going to display a dialog so dismiss any existing ones
+                if(mAlertDialog != null){
+                    mAlertDialog.dismiss();
+                    mAlertDialog = null;
+                }
+
+                // Check if any keys were found
                 String[] keyrows = ((String)msg.obj).split(",");
                 if(TextUtils.isEmpty(keyrows[0])){
                     mAlertDialog = S2ZDialogs.showNoKeysDialog(GetApiKeyActivity.this);
                     return;
                 }
+
+                // Prepare to prompt user to select a key
                 mFoundNames = new ArrayList<String>(keyrows.length);
                 mFoundIDs = new ArrayList<String>(keyrows.length);
                 mFoundKeys = new ArrayList<String>(keyrows.length);
@@ -255,12 +270,13 @@ public class GetApiKeyActivity extends Activity {
                 if(!((String)msg.obj).equals("-1")){
                     ((WebView) findViewById(R.id.webView))
                         .loadUrl("https://zotero.org/settings/keys");
-                }
-                if(S2ZDialogs.displayedDialog == S2ZDialogs.DIALOG_CHECKING_LOGIN){
-                    S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
-                    if(mAlertDialog != null){
-                        mAlertDialog.dismiss();
-                        mAlertDialog = null;
+                } else {
+                    if(S2ZDialogs.displayedDialog == S2ZDialogs.DIALOG_CHECKING_LOGIN){
+                        S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                        if(mAlertDialog != null){
+                            mAlertDialog.dismiss();
+                            mAlertDialog = null;
+                        }
                     }
                 }
                 break;
