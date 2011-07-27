@@ -6,7 +6,7 @@
                 android:descendantFocusability="blocksDescendants"
                 android:paddingTop="5dp">
 
-    <CheckBox android:id="@+id/readyToSubmit"
+    <CheckBox android:id="@+id/bib_row_checkbox"
               android:checked="false"
               android:layout_height="wrap_content"
               android:layout_width="wrap_content"
@@ -19,7 +19,7 @@
                   android:orientation="vertical"
                   android:paddingLeft="?android:attr/expandableListPreferredItemPaddingLeft"
                   android:layout_alignParentLeft="true"
-                  android:layout_toLeftOf="@id/readyToSubmit">
+                  android:layout_toLeftOf="@id/bib_row_checkbox">
 
         <LinearLayout android:layout_height="wrap_content"
               android:layout_width="wrap_content"
@@ -35,7 +35,8 @@
 	        <TextView android:id="@+id/bib_title"
 	                  android:textAppearance="?android:attr/textAppearanceMedium"
 	                  android:layout_width="wrap_content"
-	                  android:layout_height="wrap_content" />
+	                  android:layout_height="wrap_content"
+	                  android:textStyle="italic" />
         </LinearLayout>
 
         <LinearLayout android:layout_height="wrap_content"
@@ -49,7 +50,7 @@
 	             android:layout_height="wrap_content" 
 	             android:paddingRight="15dip"/>
 	        <TextView android:id="@+id/bib_author"
-	                  android:textAppearance="?android:attr/textAppearanceSmall"
+	                  android:textAppearance="?android:attr/textAppearanceMedium"
 	                  android:layout_width="wrap_content"
 	                  android:layout_height="wrap_content" />
         </LinearLayout>

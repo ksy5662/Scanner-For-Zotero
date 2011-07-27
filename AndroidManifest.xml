@@ -10,7 +10,7 @@
                  android:label="@string/app_name">
 
         <activity android:name=".S2ZLoginActivity"
-                  android:theme="@android:style/Theme.Light.NoTitleBar"
+                  android:theme="@style/S2ZTheme"
                   android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -19,17 +19,17 @@
         </activity>
 
        <activity android:name=".ManageAccountsActivity"
-                  android:theme="@android:style/Theme.Light.NoTitleBar"
+                  android:theme="@style/S2ZTheme"
                   android:label="@string/app_name">
         </activity>
 
         <activity android:name=".S2ZMainActivity"
-                  android:theme="@android:style/Theme.Light.NoTitleBar"
+                  android:theme="@style/S2ZTheme"
                   android:label="@string/app_name">
         </activity>
 
         <activity android:name=".GetApiKeyActivity"
-                  android:theme="@android:style/Theme.Light.NoTitleBar"
+                  android:theme="@style/S2ZTheme"
                   android:label="@string/app_name">
         </activity>
 

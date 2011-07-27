@@ -3,7 +3,8 @@
                android:id="@+id/s2z_home"
                android:layout_height="match_parent"
                android:layout_width="match_parent"
-               android:orientation="vertical">
+               android:orientation="vertical"
+               android:background="@color/s2z_light_beige">
 
     <Button android:text="Scan New Item"
             android:id="@+id/scan_isbn"
@@ -22,14 +23,26 @@
 			android:focusable="true"
 			android:clickable="true" />
 
+	<LinearLayout android:id="@+id/bib_item_progress_holder"
+		android:orientation="horizontal" android:layout_width="match_parent"
+		android:layout_height="wrap_content"
+		android:layout_below="@id/scan_isbn">
+
+		<ProgressBar android:id="@+id/bib_item_progress"
+		             android:visibility="gone"
+		             style="?android:attr/progressBarStyleHorizontal"
+		             android:layout_width="match_parent"
+		             android:layout_height="5dp" />
+	</LinearLayout>
+
     <ExpandableListView android:id="@+id/bib_items"
                         android:layout_height="wrap_content"
                         android:layout_width="match_parent"
-                        android:layout_below="@id/s2z_home"
-                        android:childIndicator="@drawable/bib_child_indicator"
-                        android:childDivider="@android:color/transparent"
-                        android:dividerHeight="0dp"
-                        android:paddingBottom="15dp">
+                        android:layout_below="@id/bib_item_progress"
+                        android:childDivider="@color/s2z_light_blue"
+                        android:dividerHeight="1dp"
+                        android:divider="@color/s2z_dark_red"
+                        android:fadingEdge="none">
     </ExpandableListView>
 
 </LinearLayout>
