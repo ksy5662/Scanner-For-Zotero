@@ -12,8 +12,6 @@ import org.json.JSONObject;
 
 import android.os.Handler;
 import android.text.TextUtils;
-import android.util.Log;
-
 
 public class GoogleBooksAPIClient {
 

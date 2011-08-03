@@ -6,7 +6,6 @@ import org.ale.scan2zotero.data.S2ZDatabase;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ContentValues;
-import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.database.Cursor;
@@ -15,7 +14,6 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -26,17 +24,17 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
-import android.widget.Toast;
 import android.widget.ViewFlipper;
 
 public class S2ZLoginActivity extends Activity {
 
-    // Logging tag
-    private static final String CLASS_TAG = S2ZLoginActivity.class.getCanonicalName();
+    //private static final String CLASS_TAG = S2ZLoginActivity.class.getCanonicalName();
 
     public static final String PREFS_NAME = "config";
     
     public static final String INTENT_EXTRA_CLEAR_FIELDS = "CLEAR_FIELDS";
+
+    public static final String RECREATE_CURRENT_DISPLAY = "CURDISP";
 
     // Subactivity result codes
     public static final int RESULT_APIKEY = 0;
@@ -67,6 +65,9 @@ public class S2ZLoginActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.login);
 
+        // Query the database for saved keys (separate thread)
+        getSavedKeys();
+
         // Load the saved state, fills user/key fields, sets checkboxes etc.
         loadConfig();
 
@@ -76,13 +77,13 @@ public class S2ZLoginActivity extends Activity {
         findViewById(R.id.login_by_web).setOnClickListener(loginButtonListener);
         findViewById(R.id.login_manually).setOnClickListener(loginButtonListener);
         findViewById(R.id.register_new_account).setOnClickListener(loginButtonListener);
-        //findViewById(R.id.learn_more).setOnClickListener(loginButtonListener);
         findViewById(R.id.login_submit).setOnClickListener(loginButtonListener);
         findViewById(R.id.login_cancel).setOnClickListener(loginButtonListener);
 
         // The checkbox determines whether the alias field is visible
         // and sets mRememberMe
         ((CheckBox)findViewById(R.id.save_login)).setOnCheckedChangeListener(cbListener);
+        ((CheckBox)findViewById(R.id.save_login)).setChecked(mRememberMe);
 
         // These update mAccount when an edittext changes
         findViewById(R.id.useralias_edittext).setOnKeyListener(editableTextListener);
@@ -94,19 +95,20 @@ public class S2ZLoginActivity extends Activity {
         findViewById(R.id.userid_edittext).setOnFocusChangeListener(focusTextListener);
         findViewById(R.id.apikey_edittext).setOnFocusChangeListener(focusTextListener);
 
-        // Query the database for saved keys
-        getSavedKeys();
+        if (savedInstanceState != null){
+            // Set the displayed screen (login options or editables)
+            int curView = savedInstanceState.getInt(RECREATE_CURRENT_DISPLAY, 0);
+            ((ViewFlipper)findViewById(R.id.login_view_flipper))
+                .setDisplayedChild(curView);
+         }
 
         // If we're called from Main via "Log out", we need to clear the login info
-        // main provides an extra telling us this.
+        // (Main provides an extra telling us this)
         Bundle extras = getIntent().getExtras();
         if(extras != null && extras.getBoolean(INTENT_EXTRA_CLEAR_FIELDS, false)){
             setUserAndKey("","","");
             mLoggedIn = false;
         }
-
-        // Set the remember me checkbox
-        ((CheckBox)findViewById(R.id.save_login)).setChecked(mRememberMe);
 
         // Until the user logs in successfully, some instructions are provided.
         if(!mFirstRun){
@@ -151,6 +153,13 @@ public class S2ZLoginActivity extends Activity {
             mAlertDialog.dismiss();
             mAlertDialog = null;
         }
+    }
+
+    @Override
+    public void onSaveInstanceState(Bundle state){
+        super.onSaveInstanceState(state);
+        state.putInt(RECREATE_CURRENT_DISPLAY, 
+             ((ViewFlipper)findViewById(R.id.login_view_flipper)).getDisplayedChild());
     }
 
     private void doLogin(){ 

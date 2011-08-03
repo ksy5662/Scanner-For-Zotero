@@ -1,11 +1,9 @@
 package org.ale.scan2zotero;
 
 import org.ale.scan2zotero.data.Account;
-import org.ale.scan2zotero.data.BibItem;
 import org.ale.scan2zotero.data.S2ZDatabase;
 
 import android.app.ListActivity;
-import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.view.ContextMenu;
@@ -13,10 +11,7 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.view.ContextMenu.ContextMenuInfo;
-import android.widget.Adapter;
 import android.widget.AdapterView;
-import android.widget.ExpandableListView;
-import android.widget.ListAdapter;
 import android.widget.SimpleCursorAdapter;
 
 public class ManageAccountsActivity extends ListActivity {

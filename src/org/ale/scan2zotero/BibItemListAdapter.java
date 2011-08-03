@@ -16,12 +16,17 @@ import android.net.Uri;
 import android.os.Handler;
 import android.os.Message;
 import android.text.TextUtils;
+import android.util.Log;
+import android.util.SparseBooleanArray;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseExpandableListAdapter;
+import android.widget.CheckBox;
+import android.widget.CompoundButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.CompoundButton.OnCheckedChangeListener;
 
 public class BibItemListAdapter extends BaseExpandableListAdapter {
 
@@ -34,6 +39,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
 
     private ArrayList<BibItem> mItems;
     private ArrayList<BibDetailJSONAdapter> mAdapters;
+    private SparseBooleanArray mChecked;
 
     private final Context mContext;
     private final LayoutInflater mInflater;
@@ -44,6 +50,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
             (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         mItems = new ArrayList<BibItem>();
         mAdapters = new ArrayList<BibDetailJSONAdapter>();
+        mChecked = new SparseBooleanArray();
     }
 
     public void fillFromDatabase(final int acctId){
@@ -130,6 +137,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
                 int indx = mItems.indexOf((BibItem)msg.obj);
                 mItems.remove(indx);
                 mAdapters.remove(indx);
+                mChecked.delete(indx);
                 notifyDataSetChanged();
                 break;
             }
@@ -142,21 +150,20 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         if(convert == null){
             convert = mInflater.inflate(R.layout.expandable_bib_child, parent, false);
         }
-        convert.setBackgroundColor((mItems.size()-group) % 2 == 0 ? EVEN_ROW_COLOR : ODD_ROW_COLOR);
+        convert.setBackgroundColor(getColor(group));
         BibDetailJSONAdapter adapter = mAdapters.get(group);
         adapter.fillLinearLayout((LinearLayout) convert);
         return convert;
     }
 
     @Override
-    public View getGroupView(int group, boolean expanded, View convert, ViewGroup parent) {
+    public View getGroupView(final int group, boolean expanded, View convert, ViewGroup parent) {
         BibItem item = mItems.get(group);
         if(convert == null){      
             convert = mInflater.inflate(R.layout.expandable_bib_item, parent, false);
         }
-        convert.findViewById(R.id.bib_row_checkbox);
-        convert.findViewById(R.id.bib_row)
-            .setBackgroundColor((mItems.size()-group) % 2 == 0 ? EVEN_ROW_COLOR : ODD_ROW_COLOR);
+
+        convert.findViewById(R.id.bib_row).setBackgroundColor(getColor(group));
         TextView tv_author_lbl = (TextView) convert.findViewById(R.id.bib_author_lbl);
         TextView tv_author = (TextView) convert.findViewById(R.id.bib_author);
         TextView tv_title = (TextView) convert.findViewById(R.id.bib_title);
@@ -185,6 +192,10 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
 
         tv_title.setText(data.optString(ItemField.title));
         return convert;
+    }
+
+    private int getColor(int group){
+        return (mItems.size()-group) % 2 == 0 ? EVEN_ROW_COLOR : ODD_ROW_COLOR;
     }
 
     @Override

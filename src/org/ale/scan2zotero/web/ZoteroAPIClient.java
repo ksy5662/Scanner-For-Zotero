@@ -6,12 +6,10 @@ import java.util.Random;
 import org.ale.scan2zotero.data.Account;
 import org.apache.http.impl.client.DefaultHttpClient;
 
-import android.os.Handler;
-
 public class ZoteroAPIClient {
     private static final boolean DEBUG = true;
 
-    private static final String CLASS_TAG = ZoteroAPIClient.class.getCanonicalName();
+    //private static final String CLASS_TAG = ZoteroAPIClient.class.getCanonicalName();
 
     private static final String ZOTERO_BASE_URL = DEBUG ? "http://10.13.37.64/" : "https://api.zotero.org/";
     private static final String ZOTERO_USERS_URL = ZOTERO_BASE_URL + "users/";
@@ -23,10 +21,10 @@ public class ZoteroAPIClient {
 
     private RequestQueue mRequestQueue;
 
-    private Handler mHandler;
+    private ZoteroHandler mHandler;
 
-    public ZoteroAPIClient(Handler handler) {
-        mHandler = handler;
+    public ZoteroAPIClient() {
+        mHandler = ZoteroHandler.getInstance();
         mHttpsClient = HttpsClient.getHttpsClientInstance();
         mRequestQueue = RequestQueue.getInstance();
     }

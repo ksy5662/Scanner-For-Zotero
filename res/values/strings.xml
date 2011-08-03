@@ -15,5 +15,8 @@
     <string name="zxing_uri">market://search?q=pname:com.google.zxing.client.android</string>
     <string name="zxing_intent_scan">com.google.zxing.client.android.SCAN</string>
     <string name="logged_in_pref_key">logged_in</string>
+    <string name="pending_status_failed">Failure:</string>
+    <string name="pending_status_loading">Loading:</string>
+    <string name="pending_status_nonet">Network unavailable</string>
     
 </resources>
