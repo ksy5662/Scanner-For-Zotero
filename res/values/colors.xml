@@ -2,6 +2,7 @@
 <resources>
     <!--http://kuler.adobe.com/#themeID/201348-->
     <color name="s2z_light_blue">#FFBAD0C4</color>
+    <color name="s2z_mid_blue">#FF304040</color>
     <color name="s2z_dark_blue">#FF3F4343</color>
     <!--<color name="s2z_dark_beige">#FFCAD3A1</color>-->
     <color name="s2z_dark_beige">#FFF1F6DB</color>

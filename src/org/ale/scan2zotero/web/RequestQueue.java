@@ -19,7 +19,7 @@ public class RequestQueue {
         return instance;
     }
 
-    public void enqueue(APIRequest task){
+    public synchronized void enqueue(APIRequest task){
         queue.add(task);
         if(active.size() < CAPACITY){
             startNext();
@@ -35,7 +35,7 @@ public class RequestQueue {
         }
     }
 
-    public void taskComplete(APIRequest task){
+    public synchronized void taskComplete(APIRequest task){
         active.remove(task);
         startNext();
     }

@@ -14,6 +14,7 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -28,10 +29,10 @@ import android.widget.ViewFlipper;
 
 public class S2ZLoginActivity extends Activity {
 
-    //private static final String CLASS_TAG = S2ZLoginActivity.class.getCanonicalName();
+    private static final String CLASS_TAG = S2ZLoginActivity.class.getCanonicalName();
 
     public static final String PREFS_NAME = "config";
-    
+
     public static final String INTENT_EXTRA_CLEAR_FIELDS = "CLEAR_FIELDS";
 
     public static final String RECREATE_CURRENT_DISPLAY = "CURDISP";
@@ -39,7 +40,6 @@ public class S2ZLoginActivity extends Activity {
     // Subactivity result codes
     public static final int RESULT_APIKEY = 0;
 
-    public static final int GOT_CURSOR = 0;
     // Transitions to make on receiving cursor
     public static final int RECV_CURSOR_NOTHING = -1;
     public static final int RECV_CURSOR_PROMPT = 0;
@@ -60,10 +60,14 @@ public class S2ZLoginActivity extends Activity {
 
     private int mOnRecvCursor = RECV_CURSOR_NOTHING;
 
+    private Handler mHandler;
+
     @Override
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.login);
+
+        mHandler = new Handler();
 
         // Query the database for saved keys (separate thread)
         getSavedKeys();
@@ -229,36 +233,36 @@ public class S2ZLoginActivity extends Activity {
         // This might create or upgrade the database, so it is
         // run in a separate thread.
         new Thread(new Runnable() {
-            @Override
             public void run() {
-                mAcctCursor = managedQuery(S2ZDatabase.ACCOUNT_URI, null, null, null, null);
-
-                mCursorHandler.sendMessage(Message.obtain(mCursorHandler, GOT_CURSOR));
+                Cursor cursor = getContentResolver().query(S2ZDatabase.ACCOUNT_URI, null, null, null, null);
+                gotAccountCursor(cursor);
             }
         }).start();
     }
 
-    private Handler mCursorHandler = new Handler() {
-        public void handleMessage(Message msg){
-            if(msg.what != GOT_CURSOR)
-                return;
-            switch(mOnRecvCursor){
-            // On an activity recreate (following orientation change, etc)
-            // we need to immediately call promptToUseSavedKey if the dialog
-            // was displayed prior to the activity being destroyed.
-            case RECV_CURSOR_PROMPT:
-                mAlertDialog = S2ZDialogs.promptToUseSavedKey(
-                                    S2ZLoginActivity.this, mAcctCursor);
-                break;
-            // And sometimes we're resuming a previous session and just need the
-            // cursor to determine the account id
-            case RECV_CURSOR_LOGIN:
-                doLogin();
-                break;
+    private void gotAccountCursor(final Cursor c){
+        mHandler.post(new Runnable() {
+            public void run() {
+                mAcctCursor = c;
+                startManagingCursor(mAcctCursor); 
+                switch(mOnRecvCursor){
+                // On an activity recreate (following orientation change, etc)
+                // we need to immediately call promptToUseSavedKey if the dialog
+                // was displayed prior to the activity being destroyed.
+                case RECV_CURSOR_PROMPT:
+                    mAlertDialog = S2ZDialogs.promptToUseSavedKey(
+                                        S2ZLoginActivity.this, mAcctCursor);
+                    break;
+                // And sometimes we're resuming a previous session and just need the
+                // cursor to determine the account id
+                case RECV_CURSOR_LOGIN:
+                    doLogin();
+                    break;
+                }
+                mOnRecvCursor = RECV_CURSOR_NOTHING;
             }
-            mOnRecvCursor = RECV_CURSOR_NOTHING;
-        }
-    };
+        });
+    }
 
     /* Saved Preferences */
     protected void loadConfig(){
@@ -328,6 +332,7 @@ public class S2ZLoginActivity extends Activity {
 
     private boolean validateApiKey(){
         boolean valid = mAccount.hasValidApiKey();
+        Log.d(CLASS_TAG, valid + "\t" + mAccount.getKey());
         if(valid || TextUtils.isEmpty(mAccount.getKey()))
             ((EditText) findViewById(R.id.apikey_edittext)).setError(null);
         else
@@ -445,7 +450,7 @@ public class S2ZLoginActivity extends Activity {
             }
         }
     };
-    
+
     private final View.OnKeyListener editableTextListener = new View.OnKeyListener() {
         @Override
         public boolean onKey(View v, int keyCode, KeyEvent event) {
@@ -455,12 +460,12 @@ public class S2ZLoginActivity extends Activity {
                 break;
             case R.id.userid_edittext:
                 mAccount.setUid(((EditText)v).getText().toString());
-                if(!mAccount.hasValidUserId()) // Doesn't use validateUserId so as
+                if(mAccount.hasValidUserId()) // Doesn't use validateUserId so as
                     ((EditText) v).setError(null); // to avoid setting a new error
                 break;
             case R.id.apikey_edittext:
                 mAccount.setKey(((EditText)v).getText().toString());
-                if(!mAccount.hasValidApiKey()) // Same deal
+                if(mAccount.hasValidApiKey()) // Same deal
                     ((EditText) v).setError(null);
                 break;
             }
@@ -473,11 +478,15 @@ public class S2ZLoginActivity extends Activity {
         public void onFocusChange(View v, boolean hasFocus) {
             switch(v.getId()){
             case R.id.useralias_edittext:
+                mAccount.setAlias(((EditText)v).getText().toString());
                 validateUserAlias();
+                break;
             case R.id.userid_edittext:
+                mAccount.setUid(((EditText)v).getText().toString());
                 validateUserId();
                 break;
             case R.id.apikey_edittext:
+                mAccount.setKey(((EditText)v).getText().toString());
                 validateApiKey();
                 break;
             }

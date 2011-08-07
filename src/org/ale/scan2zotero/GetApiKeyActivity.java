@@ -6,8 +6,6 @@ import java.util.Map;
 
 import android.app.Activity;
 import android.app.AlertDialog;
-import android.app.ProgressDialog;
-import android.graphics.Bitmap;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -30,11 +28,6 @@ public class GetApiKeyActivity extends Activity {
             "} return res; })" +
         "(document.getElementById('api-keys-table')).join(','));";
 
-    private static final String JS_LOGGED_IN =
-        "javascript:window.KEYSCRAPE.checkLogin(" +
-        "document.getElementById('login-links')" +
-        ".innerHTML.search('Inbox'));";
-
     public static final String CLASS_TAG = GetApiKeyActivity.class.getCanonicalName();
 
     public static final String LOGIN_TYPE = "LOGIN_TYPE";
@@ -49,11 +42,8 @@ public class GetApiKeyActivity extends Activity {
     public static final String RECREATE_FOUND_KEYS = "REKEY";
 
     private static final int JS_FOUND_KEYS = 0;
-    private static final int JS_CHECK_LOGIN = 1;
 
     private AlertDialog mAlertDialog = null;
-
-    private static boolean mLoggedIn = false;
 
     protected ArrayList<String> mFoundNames;
     protected ArrayList<String> mFoundIDs;
@@ -80,18 +70,13 @@ public class GetApiKeyActivity extends Activity {
             // The images are barely noticeable during this so we don't need them
             wv.getSettings().setBlockNetworkImage(true);
 
-            // TODO: extreaHeaders doesn't exist on versions <= 2.1 - try to find workaround
+            // TODO: extraHeaders doesn't exist on versions <= 2.1 - try to find workaround
             Map<String, String> extraHeaders = new HashMap<String, String>();
             extraHeaders.put("Referer", "https://zotero.org/settings/keys");
             wv.getSettings().setJavaScriptEnabled(true);
             wv.addJavascriptInterface(new KeyScraper(), "KEYSCRAPE");
-            if(mLoggedIn){
-                wv.loadUrl("https://zotero.org/settings/keys");
-            }else{
-                // Cause dialog to display in onResume
-                S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_CHECKING_LOGIN;
-                wv.loadUrl("https://zotero.org/user/login/", extraHeaders);
-            }
+            // Cause dialog to display in onResume
+            wv.loadUrl("https://zotero.org/user/login/", extraHeaders);
         }else{
             // Have to do a captcha :(
             wv.getSettings().setBlockNetworkImage(false);
@@ -133,11 +118,6 @@ public class GetApiKeyActivity extends Activity {
                                         mFoundNames, mFoundIDs, mFoundKeys);
             }
             break;
-        case(S2ZDialogs.DIALOG_CHECKING_LOGIN):
-            mAlertDialog = ProgressDialog.show(GetApiKeyActivity.this,
-                            "Please wait",
-                            "Checking for existing session.", false, true);
-            break;
         }
     }
 
@@ -171,26 +151,10 @@ public class GetApiKeyActivity extends Activity {
         return new WebViewClient() {
             // TODO: Block non-zotero.org sites or maybe white-list just the pages
             // we need.
-            @Override
-            public void onPageStarted(WebView view, String url, Bitmap favicon){
-                if(url.indexOf("zotero.org/settings/keys") > 0) {
-                    mLoggedIn = true;
-                    if(S2ZDialogs.displayedDialog == S2ZDialogs.DIALOG_CHECKING_LOGIN){
-                        S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
-                        if(mAlertDialog != null){
-                            mAlertDialog.dismiss();
-                            mAlertDialog = null;
-                        }
-                    }
-                }
-            }
             @Override  
             public boolean shouldOverrideUrlLoading(WebView view, String url)  
             {  
-                if (url.indexOf("zotero.org/user/logout") > 0) { 
-                    mLoggedIn = false;
-                    return false; // Let it load
-                } else if(url.indexOf("zotero.org/user/validate") > 0) {
+                if(url.indexOf("zotero.org/user/validate") > 0) {
                     mAlertDialog = S2ZDialogs.showEmailValidationDialog(GetApiKeyActivity.this);
                     return true;
                 }
@@ -199,9 +163,7 @@ public class GetApiKeyActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url)  
             {
-                if(url.indexOf("zotero.org/user/login") > 0) {
-                    view.loadUrl(JS_LOGGED_IN);
-                }else if(url.indexOf("zotero.org/settings/keys") > 0) {
+                if(url.indexOf("zotero.org/settings/keys") > 0) {
                     view.loadUrl(JS_KEY_SCRAPE);
                 }
             }
@@ -214,11 +176,6 @@ public class GetApiKeyActivity extends Activity {
         public void foundKeys(String result) { // This runs outside the main thread!
             mJSHandler.sendMessage(
                     Message.obtain(mJSHandler, JS_FOUND_KEYS, result));
-        }
-        @SuppressWarnings("unused")
-        public void checkLogin(String result) { // This runs outside the main thread!
-            mJSHandler.sendMessage(
-                    Message.obtain(mJSHandler, JS_CHECK_LOGIN, result));
         }
     }
 
@@ -264,20 +221,6 @@ public class GetApiKeyActivity extends Activity {
                 }
                 mAlertDialog = S2ZDialogs.showSelectKeyDialog(GetApiKeyActivity.this,
                                             mFoundNames, mFoundIDs, mFoundKeys);
-                break;
-            case JS_CHECK_LOGIN:
-                if(!((String)msg.obj).equals("-1")){
-                    ((WebView) findViewById(R.id.webView))
-                        .loadUrl("https://zotero.org/settings/keys");
-                } else {
-                    if(S2ZDialogs.displayedDialog == S2ZDialogs.DIALOG_CHECKING_LOGIN){
-                        S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
-                        if(mAlertDialog != null){
-                            mAlertDialog.dismiss();
-                            mAlertDialog = null;
-                        }
-                    }
-                }
                 break;
             }
         }

@@ -5,7 +5,6 @@ import android.database.Cursor;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.provider.BaseColumns;
-import android.text.TextUtils;
 
 public class Account implements Parcelable, BaseColumns {
 
@@ -37,13 +36,15 @@ public class Account implements Parcelable, BaseColumns {
     }
 
     public boolean hasValidUserId() {
-        return (mUid != null && mUid.length() == 6 && TextUtils.isDigitsOnly(mUid));
+        return (mUid != null && 
+                mUid.matches("[0-9]{6}"));
     }
 
     public boolean hasValidApiKey(){
-        return (mKey != null && mKey.length() == 24);
+        return (mKey != null && 
+                mKey.matches("[A-Za-z0-9]{24}"));
     }
-    
+
     public ContentValues toContentValues(){
         ContentValues values = new ContentValues();
         values.put(Account.COL_ALIAS, mAlias);

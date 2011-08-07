@@ -3,19 +3,28 @@
 	android:id="@+id/pending_item_row" android:layout_width="match_parent"
 	android:layout_height="wrap_content">
 
+    <ViewFlipper android:id="@+id/pending_item_img"
+        android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:layout_centerVertical="true">
 	<ProgressBar android:id="@+id/pending_item_progress_indef"
-		android:layout_width="wrap_content" android:layout_height="wrap_content" />
-
-	<TextView android:id="@+id/pending_item_status" android:text="Loading:"
-		android:layout_toRightOf="@id/pending_item_progress_indef"
-		android:textAppearance="?android:attr/textAppearanceMedium"
-		android:layout_width="wrap_content" android:layout_height="wrap_content"
-		android:paddingLeft="30dp" android:paddingRight="15dp"
-		android:layout_centerVertical="true" />
+		         android:layout_width="wrap_content"
+		         android:layout_height="wrap_content"/>
+	<ImageView android:src="@drawable/ic_menu_logout" 
+		       android:layout_width="match_parent"
+		       android:layout_height="match_parent"/>
+    </ViewFlipper>
 
 	<TextView android:id="@+id/pending_item_id"
-		android:layout_toRightOf="@id/pending_item_status"
+		android:layout_toRightOf="@+id/pending_item_img"
 		android:textAppearance="?android:attr/textAppearanceMedium"
-		android:layout_width="wrap_content" android:layout_height="wrap_content"
-		android:layout_centerVertical="true" />
+		android:paddingLeft="30dp"
+		android:layout_width="wrap_content" android:layout_height="wrap_content" />
+		
+    <TextView android:id="@+id/pending_item_status" android:text="@string/pending_status_loading"
+        android:layout_toRightOf="@id/pending_item_img"
+        android:layout_below="@+id/pending_item_id"
+        android:textAppearance="?android:attr/textAppearanceSmall"
+        android:layout_width="wrap_content" android:layout_height="wrap_content"
+        android:paddingLeft="30dp" />
+		
 </RelativeLayout>

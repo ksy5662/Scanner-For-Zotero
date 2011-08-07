@@ -3,8 +3,9 @@ package org.ale.scan2zotero.data;
 public final class ItemField {
     // These are for translating between other APIs, such as Google Books
     // and Zotero's. The text for displaying each of these on screen is stored
-    // in a localized form in our database. 
+    // in a localized form in our database.
     public static final String creators = "creators";
+    public static final String itemType = "itemType";
 
     public final class Creator {
         public static final String firstName = "firstName";

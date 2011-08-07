@@ -4,10 +4,13 @@ import java.util.ArrayList;
 import java.util.List;
 
 import android.content.Context;
+import android.graphics.drawable.Drawable;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
+import android.widget.ProgressBar;
 import android.widget.TextView;
+import android.widget.ViewFlipper;
 
 public class PendingListAdapter extends ArrayAdapter<String> {
 
@@ -17,13 +20,28 @@ public class PendingListAdapter extends ArrayAdapter<String> {
 
     private ArrayList<Integer> mPendingStatus;
     private Context mContext;
-
+    
     public PendingListAdapter(Context context, int resource,
             int textViewResourceId, List<String> objects,
             ArrayList<Integer> status) {
         super(context, resource, textViewResourceId, objects);
         mContext = context;
         mPendingStatus = status;
+    }
+
+    public boolean hasItem(String item){
+        return (getPosition(item) != -1);
+    }
+
+    public void setStatus(String item, Integer status){
+        int idx = getPosition(item);
+        if(idx < 0) return;
+        mPendingStatus.set(idx, status);
+        notifyDataSetChanged();
+    }
+
+    public Integer getStatus(String item){
+        return mPendingStatus.get(getPosition(item));
     }
 
     @Override
@@ -50,10 +68,18 @@ public class PendingListAdapter extends ArrayAdapter<String> {
         convertView = super.getView(position, convertView, parent);
 
         if(convertView != null && position < mPendingStatus.size()){
-            ((TextView)convertView.findViewById(R.id.pending_item_status))
-                .setText(mContext.getString(mPendingStatus.get(position).intValue()));
+            TextView tv = (TextView) convertView.findViewById(R.id.pending_item_status);
+            int stat = mPendingStatus.get(position).intValue();
+            String strstat = mContext.getString(stat);
+            tv.setText(strstat);
+            ViewFlipper vf = (ViewFlipper)convertView.findViewById(R.id.pending_item_img);
+            if(stat != R.string.pending_status_loading){
+                vf.setDisplayedChild(1);
+            }else{
+                vf.setDisplayedChild(0);
+            }
         }
-        
+
         return convertView;
     }
 }

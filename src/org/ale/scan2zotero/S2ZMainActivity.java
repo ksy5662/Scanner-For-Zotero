@@ -2,19 +2,26 @@ package org.ale.scan2zotero;
 
 import java.util.ArrayList;
 
+import org.ale.scan2zotero.data.Access;
 import org.ale.scan2zotero.data.Account;
 import org.ale.scan2zotero.data.BibItem;
+import org.ale.scan2zotero.data.Group;
+import org.ale.scan2zotero.data.S2ZDatabase;
 import org.ale.scan2zotero.web.GoogleBooksAPIClient;
 import org.ale.scan2zotero.web.GoogleBooksHandler;
 import org.ale.scan2zotero.web.ZoteroAPIClient;
 import org.ale.scan2zotero.web.ZoteroHandler;
+import org.json.JSONArray;
+import org.json.JSONException;
 import org.json.JSONObject;
 
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.Intent;
+import android.database.Cursor;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
@@ -23,9 +30,11 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
-import android.widget.CheckBox;
 import android.widget.ExpandableListView;
 import android.widget.ListView;
+import android.widget.RelativeLayout;
+import android.widget.AdapterView.AdapterContextMenuInfo;
+import android.widget.ExpandableListView.ExpandableListContextMenuInfo;
 
 public class S2ZMainActivity extends Activity {
 
@@ -38,21 +47,25 @@ public class S2ZMainActivity extends Activity {
     public static final String RC_PEND = "PENDING";
     public static final String RC_PEND_STAT = "STATUS";
     public static final String RC_CHECKED = "CHECKED";
+    public static final String RC_ACCESS = "ACCESS";
 
     private ZoteroAPIClient mZAPI;
     private GoogleBooksAPIClient mBooksAPI;
 
-    private BibItemListAdapter mItemList;
-    private GoogleBooksHandler mGoogleBooksHandler;
-    private ZoteroHandler mZoteroHandler;
+    private BibItemListAdapter mItemAdapter;
 
     private AlertDialog mAlertDialog = null;
 
     private ArrayList<String> mPendingItems;
     private ArrayList<Integer> mPendingStatus;
     private PendingListAdapter  mPendingAdapter;
+    private ListView mPendingList;
 
-    private int mAccountId;
+    private Account mAccount;
+
+    private Access mAccountAccess = null;
+
+    private Handler mHandler;
 
     @Override
     public void onCreate(Bundle state) {
@@ -60,21 +73,18 @@ public class S2ZMainActivity extends Activity {
         setContentView(R.layout.main);
 
         findViewById(R.id.scan_isbn).setOnClickListener(scanIsbn);
+        findViewById(R.id.upload).setOnClickListener(uploadSelected);
+
+        mHandler = new Handler();
 
         // Initialize Google Books API Client
-        mBooksAPI = new GoogleBooksAPIClient(mGoogleBooksHandler);
+        mBooksAPI = new GoogleBooksAPIClient();
 
         // Initialize Zotero API Client
-        Account acct = (Account) getIntent().getExtras()
+        mAccount = (Account) getIntent().getExtras()
                                     .getParcelable(INTENT_EXTRA_ACCOUNT);
         mZAPI = new ZoteroAPIClient();
-        mZAPI.setAccount(acct);
-        mAccountId = acct.getDbId();
-
-        // Handlers for HTTPS results
-        mGoogleBooksHandler = GoogleBooksHandler.getInstance();
-        mZoteroHandler = ZoteroHandler.getInstance();
-
+        mZAPI.setAccount(mAccount);
 
         // BibItem list for fetched but not-yet uploaded items
         ExpandableListView bibItemList =
@@ -82,19 +92,22 @@ public class S2ZMainActivity extends Activity {
         bibItemList.setChoiceMode(ExpandableListView.CHOICE_MODE_MULTIPLE);
 
         // Pending item list for items being fetched (resides as header inside
-        // BibItem list
-        ListView pendingList = (ListView) getLayoutInflater()
+        // BibItem list)
+        RelativeLayout pendingListHolder = (RelativeLayout) getLayoutInflater()
                                             .inflate(R.layout.pending_item_list,
                                                      bibItemList, false);
-        bibItemList.addHeaderView(pendingList);
+
+        mPendingList = (ListView) pendingListHolder.findViewById(R.id.pending_item_list);
+        bibItemList.addHeaderView(pendingListHolder);
 
         // Initialize list adapters
-        mItemList = new BibItemListAdapter(S2ZMainActivity.this);
+        mItemAdapter = new BibItemListAdapter(S2ZMainActivity.this);
 
         if(state == null){
             mPendingItems = new ArrayList<String>(2);
             mPendingStatus = new ArrayList<Integer>(2);
         }else{
+            mAccountAccess = state.getParcelable(RC_ACCESS);
             if(state.containsKey(RC_PEND) &&
                state.containsKey(RC_PEND_STAT)) {
                 mPendingItems = state.getStringArrayList(RC_PEND);
@@ -102,16 +115,12 @@ public class S2ZMainActivity extends Activity {
             }
             if(state.containsKey(RC_CHECKED)) {
                 boolean[] checked = state.getBooleanArray(RC_CHECKED);
-                for(int c = 0; c < checked.length; c++){
-                    ((CheckBox)bibItemList.getChildAt(c)
-                            .findViewById(R.id.bib_row_checkbox))
-                            .setChecked(checked[c]);
-                }
+                mItemAdapter.setChecked(checked);
             }
         }
 
         registerForContextMenu(bibItemList);
-        registerForContextMenu(pendingList);
+        registerForContextMenu(mPendingList);
 
         mPendingAdapter = new PendingListAdapter(S2ZMainActivity.this,
                                                    R.layout.pending_item,
@@ -119,18 +128,20 @@ public class S2ZMainActivity extends Activity {
                                                    mPendingItems,
                                                    mPendingStatus);
 
-        pendingList.setAdapter(mPendingAdapter);
-        bibItemList.setAdapter(mItemList);
+        mPendingList.setAdapter(mPendingAdapter);
+        bibItemList.setAdapter(mItemAdapter);
 
-        mItemList.fillFromDatabase(mAccountId);
+        mItemAdapter.fillFromDatabase(mAccount.getDbId());
     }
 
     @Override
     public void onPause() {
         super.onPause();
 
-        mGoogleBooksHandler.unregisterActivity();
-        mZoteroHandler.unregisterActivity();
+        GoogleBooksHandler.getInstance().unregisterActivity();
+        ZoteroHandler.getInstance().unregisterActivity();
+
+        mItemAdapter.prepForDestruction();
 
         if(mAlertDialog != null){
             mAlertDialog.dismiss();
@@ -142,15 +153,28 @@ public class S2ZMainActivity extends Activity {
     public void onResume() {
         super.onResume();
 
-        mGoogleBooksHandler.registerActivity(S2ZMainActivity.this);
-        mZoteroHandler.registerActivity(S2ZMainActivity.this);
+        GoogleBooksHandler.getInstance().registerActivity(S2ZMainActivity.this);
+        ZoteroHandler.getInstance().registerActivity(S2ZMainActivity.this);
+
+        mItemAdapter.readyToGo();
+
+        if(mAccountAccess == null){
+            S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_CREDENTIALS;
+            lookupAuthorizations();
+        }
+
+        int pendVis = mPendingAdapter.getCount() > 0 ? View.VISIBLE : View.GONE;
+        mPendingList.setVisibility(pendVis);
+        
+        showOrHideUploadButton();
 
         // Display any dialogs we were displaying before being destroyed
         switch(S2ZDialogs.displayedDialog) {
-        case(S2ZDialogs.DIALOG_NO_DIALOG):
-            break;
         case(S2ZDialogs.DIALOG_ZXING):
             mAlertDialog = S2ZDialogs.getZxingScanner(S2ZMainActivity.this);
+            break;
+        case(S2ZDialogs.DIALOG_CREDENTIALS):
+            mAlertDialog = S2ZDialogs.showCheckingCredentialsDialog(S2ZMainActivity.this);
             break;
         }
     }
@@ -160,13 +184,8 @@ public class S2ZMainActivity extends Activity {
         super.onSaveInstanceState(state);
         state.putStringArrayList(RC_PEND, mPendingItems);
         state.putIntegerArrayList(RC_PEND_STAT, mPendingStatus);
-        ExpandableListView elv=(ExpandableListView)findViewById(R.id.bib_items);
-        boolean[] checked = new boolean[elv.getCount()];
-        for(int i=0; i<checked.length; i++){
-            checked[i] = ((CheckBox)elv.getChildAt(i).findViewById(R.id.bib_row_checkbox)).isChecked();
-            Log.d(CLASS_TAG, checked[i]+"wtfwtfwtf");
-        }
-        state.putBooleanArray(RC_CHECKED, checked);
+        state.putBooleanArray(RC_CHECKED, mItemAdapter.getChecked());
+        state.putParcelable(RC_ACCESS, mAccountAccess);
     }
 
     public void logout(){
@@ -176,11 +195,90 @@ public class S2ZMainActivity extends Activity {
         finish();
     }
 
+    public void lookupAuthorizations() {
+        new Thread(new Runnable(){
+            @Override
+            public void run() {
+                Cursor c = getContentResolver()
+                            .query(S2ZDatabase.ACCESS_URI,
+                                    new String[]{Access.COL_GROUP, Access.COL_PERMISSION}, 
+                                    Access.COL_KEY+"=?",
+                                    new String[] {String.valueOf(mAccount.getDbId())},
+                                    null);
+                if(c.getCount() == 0) { // Found no permissions
+                    Log.d(CLASS_TAG, "Looking up online...");
+                    mZAPI.getPermissions();
+                }else{
+                    Log.d(CLASS_TAG, "Loading from database...");
+                    Access access = Access.fromCursor(c, mAccount.getDbId());
+                    postAccountPermissions(access);
+                }
+                c.close();
+            }
+        }).start();
+    }
+
+    public void postAccountPermissions(final Access perms){
+        mHandler.post(new Runnable() {
+        public void run() {
+            if(S2ZDialogs.displayedDialog == S2ZDialogs.DIALOG_CREDENTIALS){
+                if(mAlertDialog != null)
+                    mAlertDialog.dismiss();
+                S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+            }
+
+            if(perms == null || !perms.canWrite()){
+                mAlertDialog = S2ZDialogs.showNoPermissionsDialog(S2ZMainActivity.this);
+            }else{
+                mAccountAccess = perms;
+            }
+        }
+        });
+    }
+
+    public void lookupGroups() {
+        new Thread(new Runnable(){
+            @Override
+            public void run() {
+                Cursor c = getContentResolver()
+                            .query(S2ZDatabase.GROUP_URI,
+                                    new String[]{Group.COL_TITLE}, 
+                                    Access.COL_KEY+"=?",
+                                    new String[] {String.valueOf(mAccount.getDbId())},
+                                    null);
+                if(c.getCount() == 0) { // Found no permissions
+                    Log.d(CLASS_TAG, "Looking up online...");
+                    mZAPI.getPermissions();
+                }else{
+                    Log.d(CLASS_TAG, "Loading from database...");
+                    Access access = Access.fromCursor(c, mAccount.getDbId());
+                    postAccountPermissions(access);
+                }
+                c.close();
+            }
+        }).start();
+    }
+
     public void gotBibInfo(String isbn, JSONObject info){
         // Fill in form from online info.
-        BibItem item = new BibItem(BibItem.TYPE_BOOK, info, mAccountId);
+        BibItem item = new BibItem(BibItem.TYPE_BOOK, info, mAccount.getDbId());
         mPendingAdapter.remove(isbn);
-        mItemList.addItem(item);
+        if(mPendingAdapter.getCount() == 0)
+            mPendingList.setVisibility(View.GONE);
+        if(mItemAdapter.getGroupCount() > 0)
+            findViewById(R.id.upload).setVisibility(View.VISIBLE);
+        mItemAdapter.addItem(item);
+    }
+    
+    public void itemFailed(String isbn, Integer status){
+        mPendingAdapter.setStatus(isbn, status);
+    }
+
+    public void showOrHideUploadButton(){
+       if(mItemAdapter.getGroupCount() > 0)
+           findViewById(R.id.upload).setVisibility(View.VISIBLE);
+       else
+           findViewById(R.id.upload).setVisibility(View.GONE);
     }
 
     @Override
@@ -195,6 +293,7 @@ public class S2ZMainActivity extends Activity {
         // Handle item selection
         switch (item.getItemId()) {
         case R.id.ctx_collection:
+            mZAPI.newCollection("Temp", "");
             return true;
         case R.id.ctx_logout:
             logout();
@@ -209,36 +308,57 @@ public class S2ZMainActivity extends Activity {
     public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
         super.onCreateContextMenu(menu, v, menuInfo);
         MenuInflater inflater = getMenuInflater();
-        Log.d(CLASS_TAG, "Calling createcontextmenu " + v.getId());
-        switch(v.getId()){
-        case R.id.pending_item_holder:
-            inflater.inflate(R.menu.pending_item_context_menu, menu);
-            break;
-        case R.id.bib_items:
-            inflater.inflate(R.menu.bib_item_context_menu, menu);
-            break;
+        Log.d("CreateContextMenu", " "+menu+" "+v+" "+menuInfo);
+        if(menuInfo instanceof ExpandableListContextMenuInfo){
+            ExpandableListContextMenuInfo info = (ExpandableListContextMenuInfo) menuInfo;
+            int type = ExpandableListView.getPackedPositionType(info.packedPosition);
+            int group = ExpandableListView.getPackedPositionGroup(info.packedPosition);
+            if(type != ExpandableListView.PACKED_POSITION_TYPE_NULL){
+                // It's not in the header
+                inflater.inflate(R.menu.bib_item_context_menu, menu);
+
+                menu.setHeaderTitle(mItemAdapter.getTitleOfGroup(group));
+            }
+        }else if(menuInfo instanceof AdapterContextMenuInfo){
+            if(v.getId() != R.id.pending_item_list){
+                AdapterContextMenuInfo info = (AdapterContextMenuInfo) menuInfo;
+                inflater.inflate(R.menu.pending_item_context_menu, menu);
+                menu.setHeaderTitle(mPendingAdapter.getItem(info.position));
+            }
         }
-        menu.setHeaderTitle("Options");
     }
 
     @Override
-    public boolean onContextItemSelected(MenuItem item) {
-        ExpandableListView.ExpandableListContextMenuInfo info = 
-            (ExpandableListView.ExpandableListContextMenuInfo) item.getMenuInfo();
-
+    public boolean onContextItemSelected(MenuItem item) {        
         switch (item.getItemId()) {
         case R.id.ctx_edit:
-            BibItem toEdit = (BibItem) mItemList.getGroup((int) info.id);
+            ExpandableListContextMenuInfo einfo = (ExpandableListContextMenuInfo) item.getMenuInfo();
+
+            BibItem toEdit = (BibItem) mItemAdapter.getGroup((int) einfo.id);
             Intent intent = new Intent(S2ZMainActivity.this, S2ZEditActivity.class);
             intent.putExtra(S2ZEditActivity.INTENT_EXTRA_BIBITEM, toEdit);
             break;
         case R.id.ctx_delete:
-            mItemList.deleteItem((int) info.id);
+            ExpandableListContextMenuInfo dinfo = (ExpandableListContextMenuInfo) item.getMenuInfo();
+
+            mItemAdapter.deleteItem((int) dinfo.id);
+            if(mItemAdapter.getGroupCount() == 0)
+                findViewById(R.id.upload).setVisibility(View.GONE);
             break;
         case R.id.ctx_cancel:
-            mPendingAdapter.remove(mPendingAdapter.getItem(item.getItemId()));
+            AdapterContextMenuInfo cinfo = (AdapterContextMenuInfo) item.getMenuInfo();
+
+            mPendingAdapter.remove(mPendingAdapter.getItem(cinfo.position));
+            if(mPendingAdapter.getCount() == 0)
+                mPendingList.setVisibility(View.GONE);
             break;
-        //case R.id.ctx_retry:
+        case R.id.ctx_retry:
+            AdapterContextMenuInfo rinfo = (AdapterContextMenuInfo) item.getMenuInfo();
+            String ident = mPendingAdapter.getItem(rinfo.position);
+            if(mPendingAdapter.getStatus(ident) != PendingListAdapter.STATUS_LOADING){
+                mBooksAPI.isbnLookup(ident);
+                mPendingAdapter.setStatus(ident, PendingListAdapter.STATUS_LOADING);
+            }
         default:
             return super.onContextItemSelected(item);
         }
@@ -263,7 +383,18 @@ public class S2ZMainActivity extends Activity {
         switch(Util.parseBarcode(content, format)) {
             case(Util.SCAN_PARSE_ISBN):
                 Log.d(CLASS_TAG, "Looking up ISBN:"+content);
-                mPendingAdapter.add(content);
+                // Don't do anything if we're still loading the item
+                // Otherwise, try looking it up again.
+                if(mPendingAdapter.hasItem(content)){
+                    if(mPendingAdapter.getStatus(content) == 
+                            PendingListAdapter.STATUS_LOADING)
+                    {
+                        break;
+                    }
+                }else{
+                    mPendingAdapter.add(content);
+                    mPendingList.setVisibility(View.VISIBLE); 
+                }
                 mBooksAPI.isbnLookup(content);
                 break;
             case(Util.SCAN_PARSE_ISSN):
@@ -290,10 +421,26 @@ public class S2ZMainActivity extends Activity {
         }
     };
 
-    private final Button.OnClickListener getGroups = new Button.OnClickListener() {
+    private final Button.OnClickListener uploadSelected = new Button.OnClickListener() {
         public void onClick(View v) {
-            Log.d(CLASS_TAG, "Starting get groups");
-            mZAPI.getUsersGroups();
+            boolean[] checked = mItemAdapter.getChecked();
+            JSONObject items = new JSONObject();
+            JSONObject nxt;
+            try {
+                items.put("items", new JSONArray());
+                for(int b=0; b<checked.length; b++){
+                    if(!checked[b]) continue;
+
+                    nxt = ((BibItem)mItemAdapter.getGroup(b)).getSelectedInfo();
+                    items.accumulate("items", nxt);
+                }
+            } catch (JSONException e) {
+                // TODO Prompt about failure
+                e.printStackTrace();
+                // Clear the selection
+                mItemAdapter.setChecked(new boolean[0]);
+            }
+            mZAPI.addItems(items);
         }
     };
 }

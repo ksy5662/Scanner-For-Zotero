@@ -7,6 +7,7 @@ import org.ale.scan2zotero.data.S2ZDatabase;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
@@ -27,12 +28,13 @@ public class S2ZDialogs {
     protected static final int DIALOG_ZOTERO_LOGIN = 2;
     // Used by S2ZMainActivity
     protected static final int DIALOG_ZXING = 3;
+    protected static final int DIALOG_CREDENTIALS = 4;
+    protected static final int DIALOG_NO_PERMS = 5;
     // Used by GetApiKeyActivity
-    protected static final int DIALOG_SSL = 4;
-    protected static final int DIALOG_EMAIL_VERIFY = 5;
-    protected static final int DIALOG_NO_KEYS = 6;
-    protected static final int DIALOG_FOUND_KEYS = 7;
-    protected static final int DIALOG_CHECKING_LOGIN = 8;
+    protected static final int DIALOG_SSL = 6;
+    protected static final int DIALOG_EMAIL_VERIFY = 7;
+    protected static final int DIALOG_NO_KEYS = 8;
+    protected static final int DIALOG_FOUND_KEYS = 9;
 
     protected static int displayedDialog = DIALOG_NO_DIALOG;
 
@@ -63,6 +65,7 @@ public class S2ZDialogs {
             builder.setMessage(parent.getString(R.string.register));
         builder.setPositiveButton(parent.getString(R.string.proceed), clickListener);
         builder.setNegativeButton(parent.getString(R.string.cancel), clickListener);
+
         return builder.show();
     }
     
@@ -111,7 +114,8 @@ public class S2ZDialogs {
         dialogBuilder.setPositiveButton("Use selected key", clickListener);
         dialogBuilder.setNegativeButton(parent.getString(R.string.cancel), clickListener);
         dialogBuilder.setSingleChoiceItems(c, S2ZDialogs.selectedSavedKey, Account.COL_ALIAS, clickListener);
-        return dialogBuilder.show(); 
+
+        return dialogBuilder.show();
     }
 
     /* S2ZMainActivity Dialogs */
@@ -138,12 +142,49 @@ public class S2ZDialogs {
         downloadDialog.setMessage(parent.getString(R.string.install_bs_msg));
         downloadDialog.setPositiveButton(parent.getString(R.string.install), clickListener);
         downloadDialog.setNegativeButton(parent.getString(R.string.cancel), clickListener);
-        return downloadDialog.show();        
+
+        return downloadDialog.show();
+    }
+
+    // Checking the user's credentials
+    protected static AlertDialog showCheckingCredentialsDialog(final S2ZMainActivity parent){
+        S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_CREDENTIALS;
+
+        ProgressDialog dialog = ProgressDialog.show(parent, "Checking library and group access", "Please wait", true, true);
+        dialog.setOnCancelListener(new ProgressDialog.OnCancelListener(){
+            public void onCancel(DialogInterface view) {
+                S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                parent.logout();
+            }
+        });
+
+        return dialog;
+    }
+
+    protected static AlertDialog showNoPermissionsDialog(final S2ZMainActivity parent){
+        S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_PERMS;
+        AlertDialog.Builder builder = new AlertDialog.Builder(parent);
+
+        DialogInterface.OnClickListener clickListener = new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int i) {
+                S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                parent.logout();
+            }
+        };
+
+        builder.setTitle("No write access");
+        builder.setMessage("The key you have logged in with does not have write " +
+        		           "access to your library, nor to any groups. Please " +
+        		           "modify this key or log in with a different one");
+
+        builder.setNeutralButton("Log out", clickListener);
+        return builder.show();
     }
 
     /* GetApiKeyActivity Dialogs */
     protected static AlertDialog showEmailValidationDialog(final GetApiKeyActivity parent){
         S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_EMAIL_VERIFY;
+
         AlertDialog.Builder builder = new AlertDialog.Builder(parent);
         builder.setTitle("Email Verification");
         builder.setMessage("You will need to verify your email address before using your new account with Scan2Zotero.");
@@ -153,7 +194,8 @@ public class S2ZDialogs {
                 parent.finish();
             }
         });
-       return builder.show();
+        
+        return builder.show();
     }
 
     protected static AlertDialog showSSLDialog(final GetApiKeyActivity parent){
@@ -187,6 +229,7 @@ public class S2ZDialogs {
                 dialog.dismiss();
             }
         });
+
         return builder.show();
     }
 
@@ -205,7 +248,7 @@ public class S2ZDialogs {
                     parent.setResult(Activity.RESULT_CANCELED, null);
                     parent.finish();
                 }
-                displayedDialog = DIALOG_NO_DIALOG;
+                S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
                 dialog.dismiss();
             }
         };
@@ -213,6 +256,7 @@ public class S2ZDialogs {
         builder.setTitle("No API Keys Found");
         builder.setPositiveButton("Create a new key", clickListener);
         builder.setNegativeButton(parent.getString(R.string.cancel), clickListener);
+
         return builder.show();
     }
 
@@ -256,6 +300,7 @@ public class S2ZDialogs {
         builder.setSingleChoiceItems(uglyHackNames, S2ZDialogs.selectedNewKey, clickListener);
         builder.setPositiveButton("Use selected key", clickListener);
         builder.setNegativeButton("None of these", clickListener);
+
         return builder.show();
     }
 }

@@ -12,11 +12,13 @@ import android.os.Message;
 public abstract class APIHandler extends Handler {
 
     public static final String CLASS_TAG = APIHandler.class.getCanonicalName();
-
-    protected static ArrayList<Integer> mResponseTypes = new ArrayList<Integer>();
-    protected static ArrayList<APIResponse> mResponses = new ArrayList<APIResponse>();
+    
+    protected ArrayList<Integer> mResponseTypes; // Make static in implementing classes
+    protected ArrayList<APIResponse> mResponses; // Make static in implementing classes
 
     protected static S2ZMainActivity mActivity = null;
+
+    protected abstract void dequeueMessages();
 
     protected abstract void onStart(String id);
     protected abstract void onProgress(String id, int percent);
@@ -25,24 +27,20 @@ public abstract class APIHandler extends Handler {
     protected abstract void onSuccess(String id, String res);
 
     public void registerActivity(S2ZMainActivity activity){
-        if(mActivity != null || activity == null)
+        if(APIHandler.mActivity != null || activity == null)
             return;
-        mActivity = activity;
-        for(int i=0; i<mResponses.size(); i++){
-            handleMessage(mResponseTypes.get(i).intValue(), mResponses.get(i));
-        }
-        mResponseTypes.clear();
-        mResponses.clear();
+        APIHandler.mActivity = activity;
+        dequeueMessages();
     }
 
     public void unregisterActivity(){
-        mActivity = null;
+        APIHandler.mActivity = null;
     }
 
     public void handleMessage(Message msg){
         APIResponse resp = (APIResponse)msg.obj;
 
-        if(mActivity == null){
+        if(APIHandler.mActivity == null){
             mResponseTypes.add(new Integer(msg.what));
             mResponses.add(resp);
         }else{

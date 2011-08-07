@@ -28,7 +28,7 @@ public class ManageAccountsActivity extends ListActivity {
         
         updateList();
     }
-    
+
     private void updateList(){
         mCursor = getContentResolver().query(S2ZDatabase.ACCOUNT_URI, null, null, null, null);
         startManagingCursor(mCursor);

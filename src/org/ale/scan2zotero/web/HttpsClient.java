@@ -20,7 +20,7 @@ public class HttpsClient extends DefaultHttpClient {
 
     private static HttpsClient mInstance;
     
-    public static HttpsClient getHttpsClientInstance() {
+    public static HttpsClient getInstance() {
         if(mInstance == null){
             HttpParams mHttpParams = setupHttpParams();
             ThreadSafeClientConnManager mConnMan = setupSSLConnMan(mHttpParams);

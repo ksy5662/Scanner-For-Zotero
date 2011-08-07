@@ -66,6 +66,7 @@ public class APIRequest implements Runnable {
 
     public void setURI(URI uri) {
         mRequest.setURI(uri);
+        Log.d("APIREQUEST", uri.toString());
     }
 
     public void addHeader(String name, String value){

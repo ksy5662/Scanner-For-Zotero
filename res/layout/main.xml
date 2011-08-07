@@ -1,36 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?> 
-<LinearLayout  xmlns:android="http://schemas.android.com/apk/res/android"
-               android:id="@+id/s2z_home"
-               android:layout_height="match_parent"
-               android:layout_width="match_parent"
-               android:orientation="vertical"
-               android:background="@color/s2z_light_beige">
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                android:id="@+id/s2z_home"
+                android:layout_height="match_parent"
+                android:layout_width="match_parent"
+                android:background="@color/s2z_light_beige">
 
     <Button android:text="Scan New Item"
             android:id="@+id/scan_isbn"
             android:layout_width="match_parent" 
             android:layout_height="75dp"
-            android:layout_gravity="center_horizontal"
             android:layout_alignParentTop="true"
-            android:background="@drawable/fancy_button"
-			android:textColor="#FFFFFFFF"
-			android:shadowColor="#FF000000"
-			android:shadowDx="-1"
-			android:shadowDy="-1"
-			android:shadowRadius="0.2"
-			android:textSize="30dp"
-			android:textStyle="bold"
-			android:focusable="true"
-			android:clickable="true" />
+            android:background="@drawable/fancy_selector"
+            style="@style/S2ZButton" />
+
+    <Button android:text="Upload selected"
+            android:id="@+id/upload"
+            android:layout_width="match_parent"
+            android:layout_height="75dp"
+            android:layout_alignParentBottom="true"
+            android:background="@drawable/fancy_selector"
+            style="@style/S2ZButton" />
 
     <ExpandableListView android:id="@+id/bib_items"
                         android:layout_height="wrap_content"
                         android:layout_width="match_parent"
-                        android:choiceMode="multipleChoice"
+                        android:layout_above="@id/upload"
+                        android:layout_below="@id/scan_isbn"
                         android:childDivider="@color/s2z_light_blue"
+                        android:divider="@color/s2z_light_blue"
                         android:dividerHeight="1dp"
-                        android:divider="@color/s2z_dark_red"
+                        android:headerDividersEnabled="true"
                         android:fadingEdge="none">
     </ExpandableListView>
 
-</LinearLayout>
+</RelativeLayout>

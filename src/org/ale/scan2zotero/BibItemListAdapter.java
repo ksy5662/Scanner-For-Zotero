@@ -13,33 +13,32 @@ import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Color;
 import android.net.Uri;
-import android.os.Handler;
 import android.os.Message;
 import android.text.TextUtils;
-import android.util.Log;
 import android.util.SparseBooleanArray;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseExpandableListAdapter;
 import android.widget.CheckBox;
-import android.widget.CompoundButton;
 import android.widget.LinearLayout;
 import android.widget.TextView;
-import android.widget.CompoundButton.OnCheckedChangeListener;
 
 public class BibItemListAdapter extends BaseExpandableListAdapter {
 
     private final int EVEN_ROW_COLOR = 0xFFF4F9EB;
     private final int ODD_ROW_COLOR = 0xFFF1F6DB;
 
-    private static final int FOUND_SAVED_ITEMS = 0;
-    private static final int INSERTED_ITEM = 1;
-    private static final int REMOVED_ITEM = 2;
+    private static final int ACTION_ID = PersistentDBHandler.BIBITEM_ACTION_ID;
+    public static final int FOUND_SAVED_ITEMS = ACTION_ID + 0;
+    public static final int INSERTED_ITEM = ACTION_ID + 1;
+    public static final int REMOVED_ITEM = ACTION_ID + 2;
 
     private ArrayList<BibItem> mItems;
     private ArrayList<BibDetailJSONAdapter> mAdapters;
     private SparseBooleanArray mChecked;
+
+    private PersistentDBHandler mHandler;
 
     private final Context mContext;
     private final LayoutInflater mInflater;
@@ -51,6 +50,16 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         mItems = new ArrayList<BibItem>();
         mAdapters = new ArrayList<BibDetailJSONAdapter>();
         mChecked = new SparseBooleanArray();
+
+        mHandler = PersistentDBHandler.getInstance();
+    }
+
+    public void readyToGo(){
+        mHandler.registerAdapter(BibItemListAdapter.this);
+    }
+
+    public void prepForDestruction(){
+        mHandler.unregisterAdapter();
     }
 
     public void fillFromDatabase(final int acctId){
@@ -69,8 +78,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
                         toadd.add(BibItem.fromCursor(c));
                         c.moveToNext();
                     }
-                    mDatabaseResponseHandler.sendMessage(
-                            Message.obtain(mDatabaseResponseHandler, 
+                    mHandler.sendMessage(Message.obtain(mHandler, 
                                            BibItemListAdapter.FOUND_SAVED_ITEMS, toadd));
                 }
                 c.close();
@@ -78,27 +86,15 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         }).start();
     }
 
-    public void addItem(BibItem item){
-/*        new Thread(new Runnable() {
+    public void addItem(final BibItem item){
+        new Thread(new Runnable() {
             public void run(){
                 Uri row = mContext.getContentResolver().insert(S2ZDatabase.BIBINFO_URI, item.toContentValues());
                 item.setId(Integer.parseInt(row.getLastPathSegment()));
-                mDatabaseResponseHandler.sendMessage(
-                        Message.obtain(mDatabaseResponseHandler, 
+                mHandler.sendMessage(Message.obtain(mHandler, 
                                        BibItemListAdapter.INSERTED_ITEM, item));
             }
-        }).start();*/
-        
-        // XXX: This blocks the UI thread - but prevents a race condition
-        // in which items added to the database are missed by the initial db query
-        // of a recreated S2ZMainActivity and thus not displayed.
-        Uri row = mContext.getContentResolver().insert(S2ZDatabase.BIBINFO_URI, item.toContentValues());
-        item.setId(Integer.parseInt(row.getLastPathSegment()));
-
-        mItems.add(0, item);
-        mAdapters.add(0, new BibDetailJSONAdapter(
-                              mContext, item.getSelectedInfo()));
-        notifyDataSetChanged();
+        }).start();
     }
 
     public void deleteItem(int indx){
@@ -109,40 +105,38 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
             public void run(){
                 mContext.getContentResolver().delete(
                         S2ZDatabase.BIBINFO_URI, BibItem._ID+"="+item.getId(), null); 
-                mDatabaseResponseHandler.sendMessage(
-                            Message.obtain(mDatabaseResponseHandler,
+                mHandler.sendMessage(Message.obtain(mHandler,
                                     BibItemListAdapter.REMOVED_ITEM, item));
             }
         }).start();
     }
 
-    private final Handler mDatabaseResponseHandler = new Handler(){
-        @SuppressWarnings("unchecked")
-        public void handleMessage(Message msg){
-            switch(msg.what) {
-            case BibItemListAdapter.FOUND_SAVED_ITEMS:
-                mItems.addAll(((ArrayList<BibItem>)msg.obj));
-                for(BibItem b :(ArrayList<BibItem>)msg.obj){
-                    mAdapters.add(new BibDetailJSONAdapter(mContext, b.getSelectedInfo()));
-                }
-                notifyDataSetChanged();
-                break;
-            case BibItemListAdapter.INSERTED_ITEM:
-                mItems.add(0, (BibItem)msg.obj);
-                mAdapters.add(0, new BibDetailJSONAdapter(
-                                      mContext, ((BibItem)msg.obj).getSelectedInfo()));
-                notifyDataSetChanged();
-                break;
-            case BibItemListAdapter.REMOVED_ITEM:
-                int indx = mItems.indexOf((BibItem)msg.obj);
-                mItems.remove(indx);
-                mAdapters.remove(indx);
-                mChecked.delete(indx);
-                notifyDataSetChanged();
-                break;
-            }
+    protected void finishAddItem(BibItem item){
+        shiftUpSelections(0);
+        mItems.add(0, item);
+        mAdapters.add(0, new BibDetailJSONAdapter(
+                              mContext, item.getSelectedInfo()));
+        ((S2ZMainActivity)mContext).showOrHideUploadButton();
+        notifyDataSetChanged();
+    }
+
+    protected void finishAddItems(ArrayList<BibItem> items){
+        mItems.addAll(items);
+        for(BibItem b : items){
+            mAdapters.add(new BibDetailJSONAdapter(mContext, b.getSelectedInfo()));
         }
-    };
+        ((S2ZMainActivity)mContext).showOrHideUploadButton();
+        notifyDataSetChanged();
+    }
+
+    protected void finishDeleteItem(BibItem item){
+        int indx = mItems.indexOf(item);
+        shiftDownSelections(indx);
+        mItems.remove(indx);
+        mAdapters.remove(indx);
+        ((S2ZMainActivity)mContext).showOrHideUploadButton();
+        notifyDataSetChanged();
+    }
 
     @Override
     public View getChildView(int group, int child, boolean last,
@@ -163,6 +157,14 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
             convert = mInflater.inflate(R.layout.expandable_bib_item, parent, false);
         }
 
+        CheckBox cb = (CheckBox) convert.findViewById(R.id.bib_row_checkbox);
+        cb.setChecked(mChecked.get(group, false));
+        cb.setOnClickListener(new CheckBox.OnClickListener(){
+            @Override
+            public void onClick(View cb) {
+                mChecked.put(group, ((CheckBox)cb).isChecked());
+            }
+        });
         convert.findViewById(R.id.bib_row).setBackgroundColor(getColor(group));
         TextView tv_author_lbl = (TextView) convert.findViewById(R.id.bib_author_lbl);
         TextView tv_author = (TextView) convert.findViewById(R.id.bib_author);
@@ -236,5 +238,49 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
     @Override
     public boolean isChildSelectable(int group, int child) {
         return true;
+    }
+
+    public String getTitleOfGroup(int group){
+        try {
+            return mItems.get(group).getSelectedInfo().getString(ItemField.title);
+        } catch (Exception e) {
+            return "<unknown>";
+        }
+    }
+
+    public void shiftDownSelections(int indx){
+        // Update selections to reflect removal of an item at indx
+        mChecked.delete(indx);
+        for(int key=indx+1; key<mItems.size(); key++){
+            int i = mChecked.indexOfKey(key);
+            if(i < 0) continue; // Not storing that key
+            boolean value = mChecked.get(key);
+            mChecked.delete(key);
+            mChecked.put(key-1, value);
+        }
+    }
+
+    public void shiftUpSelections(int indx){
+        // Update selections to reflect insertion of item at indx
+        for(int key=mItems.size()-1; key >= indx; key--){
+            int i = mChecked.indexOfKey(key);
+            if(i < 0) continue; // Not storing that key
+            boolean value = mChecked.get(key);
+            mChecked.delete(key);
+            mChecked.put(key+1, value);
+        }
+    }
+
+    public void setChecked(boolean[] checks){
+        mChecked.clear();
+        for(int i=0; i<checks.length; i++)
+            mChecked.put(i, checks[i]);
+    }
+
+    public boolean[] getChecked(){
+        boolean[] result = new boolean[mItems.size()];
+        for(int i=0; i<result.length; i++)
+            result[i] = mChecked.get(i, false);
+        return result;
     }
 }
