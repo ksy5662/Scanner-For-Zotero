@@ -12,7 +12,14 @@ import android.os.Message;
 public abstract class APIHandler extends Handler {
 
     public static final String CLASS_TAG = APIHandler.class.getCanonicalName();
-    
+
+    public static final int START = 0;
+    public static final int STATUSLINE = 1;
+    public static final int PROGRESS = 2;
+    public static final int EXCEPTION = 3;
+    public static final int SUCCESS = 4;
+    public static final int FINISH = 5;
+
     protected ArrayList<Integer> mResponseTypes; // Make static in implementing classes
     protected ArrayList<APIResponse> mResponses; // Make static in implementing classes
 
@@ -22,7 +29,7 @@ public abstract class APIHandler extends Handler {
 
     protected abstract void onStart(String id);
     protected abstract void onProgress(String id, int percent);
-    protected abstract void onFailure(String id, StatusLine reason);
+    protected abstract void onStatusLine(String id, StatusLine reason);
     protected abstract void onException(String id, Exception exc);
     protected abstract void onSuccess(String id, String res);
 
@@ -52,22 +59,22 @@ public abstract class APIHandler extends Handler {
         String id = resp.getId();
 
         switch(type) {
-        case APIRequest.START:
+        case APIHandler.START:
             onStart(id);
             break;
-        case APIRequest.PROGRESS:
+        case APIHandler.PROGRESS:
             onProgress(id, ((Integer)resp.getData()).intValue());
             break;
-        case APIRequest.EXCEPTION:
+        case APIHandler.EXCEPTION:
             onException(id, (Exception)resp.getData());
             break;
-        case APIRequest.FAILURE:
-            onFailure(id, (StatusLine)resp.getData());
+        case APIHandler.STATUSLINE:
+            onStatusLine(id, (StatusLine)resp.getData());
             break;
-        case APIRequest.SUCCESS:
+        case APIHandler.SUCCESS:
             onSuccess(id, (String) resp.getData());
             break;
-        case APIRequest.FINISH:
+        case APIHandler.FINISH:
             RequestQueue.getInstance().taskComplete((APIRequest)resp.getData());
             break;
         }

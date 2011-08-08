@@ -1,8 +1,9 @@
-package org.ale.scan2zotero.web;
+package org.ale.scan2zotero.web.googlebooks;
 
 import java.util.ArrayList;
 
 import org.ale.scan2zotero.PendingListAdapter;
+import org.ale.scan2zotero.web.APIHandler;
 import org.ale.scan2zotero.web.APIRequest.APIResponse;
 import org.apache.http.StatusLine;
 import org.json.JSONObject;
@@ -28,6 +29,10 @@ public class GoogleBooksHandler extends APIHandler{
         mResponses.clear();
     }
 
+    public boolean continueAfterStatus(int code){
+        return true;
+    }
+
     // mActivity (from APIHandler) is guaranteed to be non-null
     // when the methods below are called
     protected void onStart(String id) {
@@ -38,8 +43,8 @@ public class GoogleBooksHandler extends APIHandler{
         
     }
 
-    protected void onFailure(String id, StatusLine reason) {
-        APIHandler.mActivity.itemFailed(id, PendingListAdapter.STATUS_FAILED);
+    protected void onStatusLine(String id, StatusLine reason) {
+        //APIHandler.mActivity.itemFailed(id, PendingListAdapter.STATUS_FAILED);
     }
 
     protected void onException(String id, Exception exc) {

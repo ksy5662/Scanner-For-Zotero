@@ -1,4 +1,4 @@
-package org.ale.scan2zotero.web;
+package org.ale.scan2zotero.web.googlebooks;
 
 import java.net.URI;
 
@@ -6,12 +6,15 @@ import org.ale.scan2zotero.Util;
 import org.ale.scan2zotero.data.CreatorType;
 import org.ale.scan2zotero.data.ItemField;
 import org.ale.scan2zotero.data.ItemType;
+import org.ale.scan2zotero.web.APIHandler;
+import org.ale.scan2zotero.web.APIRequest;
+import org.ale.scan2zotero.web.HttpsClient;
+import org.ale.scan2zotero.web.RequestQueue;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-import android.os.Handler;
 import android.text.TextUtils;
 
 public class GoogleBooksAPIClient {
@@ -22,21 +25,25 @@ public class GoogleBooksAPIClient {
 
     private RequestQueue mRequestQueue;
 
-    private Handler mHandler;
-
+    private APIHandler mHandler;
+    
     public GoogleBooksAPIClient() {
         mHandler = GoogleBooksHandler.getInstance();
         mHttpsClient = HttpsClient.getInstance();
         mRequestQueue = RequestQueue.getInstance();
     }
 
-    public void isbnLookup(String isbn) {
-        APIRequest g = new APIRequest(mHandler, mHttpsClient);
-        g.setRequestType(APIRequest.GET);
-        g.setURI(URI.create(BOOK_SEARCH_ISBN+isbn));
-        g.setReturnIdentifier(isbn);
+    private APIRequest newRequest(){
+        return new APIRequest(mHandler, mHttpsClient);
+    }
 
-        mRequestQueue.enqueue(g);
+    public void isbnLookup(String isbn) {
+        APIRequest r = newRequest();
+        r.setRequestType(APIRequest.GET);
+        r.setURI(URI.create(BOOK_SEARCH_ISBN+isbn));
+        r.setReturnIdentifier(isbn);
+
+        mRequestQueue.enqueue(r);
     }
 
     public static JSONObject translateJsonResponse(String isbn, String resp){

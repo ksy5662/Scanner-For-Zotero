@@ -12,7 +12,6 @@ import org.json.JSONObject;
 import android.content.Context;
 import android.database.Cursor;
 import android.graphics.Color;
-import android.net.Uri;
 import android.os.Message;
 import android.text.TextUtils;
 import android.util.SparseBooleanArray;
@@ -89,8 +88,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
     public void addItem(final BibItem item){
         new Thread(new Runnable() {
             public void run(){
-                Uri row = mContext.getContentResolver().insert(S2ZDatabase.BIBINFO_URI, item.toContentValues());
-                item.setId(Integer.parseInt(row.getLastPathSegment()));
+                item.writeToDB(mContext.getContentResolver());
                 mHandler.sendMessage(Message.obtain(mHandler, 
                                        BibItemListAdapter.INSERTED_ITEM, item));
             }

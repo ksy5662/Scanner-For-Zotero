@@ -26,7 +26,7 @@ public class RequestQueue {
         }
     }
 
-    private void startNext() {
+    private synchronized void startNext() {
         if(!queue.isEmpty()){
             APIRequest next = queue.poll();
             active.add(next);

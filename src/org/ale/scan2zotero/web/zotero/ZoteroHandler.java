@@ -1,12 +1,14 @@
-package org.ale.scan2zotero.web;
+package org.ale.scan2zotero.web.zotero;
 
 import java.util.ArrayList;
 
-import org.ale.scan2zotero.S2ZMainActivity;
 import org.ale.scan2zotero.data.Access;
+import org.ale.scan2zotero.data.Group;
+import org.ale.scan2zotero.web.APIHandler;
 import org.ale.scan2zotero.web.APIRequest.APIResponse;
 import org.apache.http.StatusLine;
 
+import android.content.ContentResolver;
 import android.widget.Toast;
 
 public class ZoteroHandler extends APIHandler {
@@ -41,10 +43,34 @@ public class ZoteroHandler extends APIHandler {
 
     }
 
-    protected void onFailure(String id, StatusLine reason) {
-        if(id.equals("permissions"))
-            APIHandler.mActivity.postAccountPermissions(null);
-        Toast.makeText(APIHandler.mActivity, id+" Failed", Toast.LENGTH_LONG).show();
+    protected void onStatusLine(String id, StatusLine status) {
+        switch(status.getStatusCode()){
+        case 404: // Not Found
+            if(id.equals(ZoteroAPIClient.PERMISSIONS))
+                APIHandler.mActivity.postAccountPermissions(null);
+            break;
+        case 409: // Conflict (Target library locked)
+        case 412: // Precondition failed (X-Zotero-Write-Token duplicate)
+        case 413: // Request Entity Too Large
+            break;
+        case 500: // Internal Server Error
+        case 503: // Service Unavailable
+            Toast.makeText(
+                    APIHandler.mActivity, 
+                    "Zotero server error, try again later.",
+                    Toast.LENGTH_LONG).show();
+            break;
+        // We don't actually have to handle any of these, but I'm leaving them
+        // here in case of future API changes.
+        case 200: // OK
+        case 201: // Created
+        case 204: // No Content
+        case 304: // Not Modified
+        case 400: // Bad Request
+        case 405: // Method Not Allowed
+        default:
+            break;
+        }
     }
 
     protected void onException(String id, Exception exc) {
@@ -60,6 +86,7 @@ public class ZoteroHandler extends APIHandler {
         }else if(id.equals("permissions")){
             handlePermissions(resp);
         }else if(id.equals("groups")){
+            handleGroups(resp);
         }else if(id.equals("newCollection")){
         }
     }
@@ -69,9 +96,27 @@ public class ZoteroHandler extends APIHandler {
             @Override
             public void run() {
                 final Access perms = ZoteroAPIClient.parsePermissions(xml);
-                if(perms != null)
+                if(perms != null) {
                     perms.writeToDB(APIHandler.mActivity.getContentResolver());
+                }
                 APIHandler.mActivity.postAccountPermissions(perms);
+            }
+        }).start();
+    }
+
+    private void handleGroups(final String xml){
+        new Thread(new Runnable(){
+            @Override
+            public void run() {
+                final Group[] groups = ZoteroAPIClient.parseGroups(xml);
+                int howMany = 0;
+                if(groups != null){
+                    ContentResolver cr = APIHandler.mActivity.getContentResolver();
+                    howMany = groups.length;
+                    for(int i=0; i<howMany; i++){
+                        groups[i].writeToDB(cr);
+                    }
+                }
             }
         }).start();
     }

@@ -1,16 +1,17 @@
 package org.ale.scan2zotero;
 
 import java.util.ArrayList;
+import java.util.Set;
 
 import org.ale.scan2zotero.data.Access;
 import org.ale.scan2zotero.data.Account;
 import org.ale.scan2zotero.data.BibItem;
 import org.ale.scan2zotero.data.Group;
 import org.ale.scan2zotero.data.S2ZDatabase;
-import org.ale.scan2zotero.web.GoogleBooksAPIClient;
-import org.ale.scan2zotero.web.GoogleBooksHandler;
-import org.ale.scan2zotero.web.ZoteroAPIClient;
-import org.ale.scan2zotero.web.ZoteroHandler;
+import org.ale.scan2zotero.web.googlebooks.GoogleBooksAPIClient;
+import org.ale.scan2zotero.web.googlebooks.GoogleBooksHandler;
+import org.ale.scan2zotero.web.zotero.ZoteroAPIClient;
+import org.ale.scan2zotero.web.zotero.ZoteroHandler;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -18,10 +19,12 @@ import org.json.JSONObject;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
+import android.content.ContentValues;
 import android.content.Intent;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.os.Handler;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
@@ -48,6 +51,7 @@ public class S2ZMainActivity extends Activity {
     public static final String RC_PEND_STAT = "STATUS";
     public static final String RC_CHECKED = "CHECKED";
     public static final String RC_ACCESS = "ACCESS";
+    public static final String RC_NUM_GROUPS = "GROUPS";
 
     private ZoteroAPIClient mZAPI;
     private GoogleBooksAPIClient mBooksAPI;
@@ -63,9 +67,11 @@ public class S2ZMainActivity extends Activity {
 
     private Account mAccount;
 
-    private Access mAccountAccess = null;
+    private Access mAccountAccess;
 
     private Handler mHandler;
+
+    private int mNumGroups;
 
     @Override
     public void onCreate(Bundle state) {
@@ -103,20 +109,27 @@ public class S2ZMainActivity extends Activity {
         // Initialize list adapters
         mItemAdapter = new BibItemListAdapter(S2ZMainActivity.this);
 
-        if(state == null){
+        if(state == null){ // Fresh activity
             mPendingItems = new ArrayList<String>(2);
             mPendingStatus = new ArrayList<Integer>(2);
-        }else{
+            mAccountAccess = null; // will check for permissions in onResume
+            mNumGroups = -1;
+        }else{ // Recreating activity
+            // Rebuild pending list
             mAccountAccess = state.getParcelable(RC_ACCESS);
             if(state.containsKey(RC_PEND) &&
                state.containsKey(RC_PEND_STAT)) {
                 mPendingItems = state.getStringArrayList(RC_PEND);
                 mPendingStatus = state.getIntegerArrayList(RC_PEND_STAT);
             }
+            
+            // Set checked items
             if(state.containsKey(RC_CHECKED)) {
                 boolean[] checked = state.getBooleanArray(RC_CHECKED);
                 mItemAdapter.setChecked(checked);
             }
+
+            mNumGroups = state.getInt(RC_NUM_GROUPS);
         }
 
         registerForContextMenu(bibItemList);
@@ -158,14 +171,15 @@ public class S2ZMainActivity extends Activity {
 
         mItemAdapter.readyToGo();
 
-        if(mAccountAccess == null){
+        if(mAccountAccess == null
+                && S2ZDialogs.displayedDialog != S2ZDialogs.DIALOG_NO_PERMS){
             S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_CREDENTIALS;
             lookupAuthorizations();
         }
 
         int pendVis = mPendingAdapter.getCount() > 0 ? View.VISIBLE : View.GONE;
         mPendingList.setVisibility(pendVis);
-        
+
         showOrHideUploadButton();
 
         // Display any dialogs we were displaying before being destroyed
@@ -175,6 +189,9 @@ public class S2ZMainActivity extends Activity {
             break;
         case(S2ZDialogs.DIALOG_CREDENTIALS):
             mAlertDialog = S2ZDialogs.showCheckingCredentialsDialog(S2ZMainActivity.this);
+            break;
+        case(S2ZDialogs.DIALOG_NO_PERMS):
+            mAlertDialog = S2ZDialogs.showNoPermissionsDialog(S2ZMainActivity.this);
             break;
         }
     }
@@ -186,6 +203,7 @@ public class S2ZMainActivity extends Activity {
         state.putIntegerArrayList(RC_PEND_STAT, mPendingStatus);
         state.putBooleanArray(RC_CHECKED, mItemAdapter.getChecked());
         state.putParcelable(RC_ACCESS, mAccountAccess);
+        state.putInt(RC_NUM_GROUPS, mNumGroups);
     }
 
     public void logout(){
@@ -206,11 +224,12 @@ public class S2ZMainActivity extends Activity {
                                     new String[] {String.valueOf(mAccount.getDbId())},
                                     null);
                 if(c.getCount() == 0) { // Found no permissions
-                    Log.d(CLASS_TAG, "Looking up online...");
+                    // Will call postAccountPermissions in ZoteroHandler if successful
                     mZAPI.getPermissions();
+                    mNumGroups = -1; // Force group fetching
                 }else{
-                    Log.d(CLASS_TAG, "Loading from database...");
                     Access access = Access.fromCursor(c, mAccount.getDbId());
+                    mNumGroups = access.getGroupCount();
                     postAccountPermissions(access);
                 }
                 c.close();
@@ -219,6 +238,9 @@ public class S2ZMainActivity extends Activity {
     }
 
     public void postAccountPermissions(final Access perms){
+        // Access perms is always returned from a background thread, so here
+        // we save the permissions and launch new threads to fetch group titles
+        // and collections.
         mHandler.post(new Runnable() {
         public void run() {
             if(S2ZDialogs.displayedDialog == S2ZDialogs.DIALOG_CREDENTIALS){
@@ -228,9 +250,13 @@ public class S2ZMainActivity extends Activity {
             }
 
             if(perms == null || !perms.canWrite()){
+                // Results in user logging out
                 mAlertDialog = S2ZDialogs.showNoPermissionsDialog(S2ZMainActivity.this);
             }else{
+                // User should be ready to go, lookup their groups and collections
+                // in the background.
                 mAccountAccess = perms;
+                lookupGroups();
             }
         }
         });
@@ -238,23 +264,42 @@ public class S2ZMainActivity extends Activity {
 
     public void lookupGroups() {
         new Thread(new Runnable(){
-            @Override
             public void run() {
-                Cursor c = getContentResolver()
-                            .query(S2ZDatabase.GROUP_URI,
-                                    new String[]{Group.COL_TITLE}, 
-                                    Access.COL_KEY+"=?",
-                                    new String[] {String.valueOf(mAccount.getDbId())},
-                                    null);
-                if(c.getCount() == 0) { // Found no permissions
-                    Log.d(CLASS_TAG, "Looking up online...");
-                    mZAPI.getPermissions();
-                }else{
-                    Log.d(CLASS_TAG, "Loading from database...");
-                    Access access = Access.fromCursor(c, mAccount.getDbId());
-                    postAccountPermissions(access);
+                if(mNumGroups < 0){ // Brand new key
+                    mZAPI.getGroups();
+                }else if(mNumGroups > 0){ // Check if we have all the group titles
+                    Set<Integer> groups = mAccountAccess.getGroupIds();
+                    String selection = TextUtils.join(",", groups);
+                    Cursor c = getContentResolver()
+                                .query(S2ZDatabase.GROUP_URI,
+                                        new String[]{Group._ID}, 
+                                        Access.COL_KEY+" IN (?)",
+                                        new String[] {selection},
+                                        null);
+
+                    // Figure out which groups we don't have
+                    c.moveToFirst();
+                    while(!c.isAfterLast()){
+                        int haveGroupId = c.getInt(0);
+                        groups.remove(haveGroupId);
+                        c.moveToNext();
+                    }
+                    if(groups.size() > 0){
+                        // Make new database entries for any new groups. Mapping each
+                        // id to "<unknown>" temporarily.
+                        ContentValues[] values = new ContentValues[groups.size()];
+                        int i = 0;
+                        for(Integer gid : groups){
+                            values[i] = new ContentValues();
+                            values[i].put(Group._ID, gid);
+                            values[i].put(Group.COL_TITLE, "<unknown>");
+                            i++;
+                        }
+                        getContentResolver().bulkInsert(S2ZDatabase.GROUP_URI, values);
+                        mZAPI.getGroups();
+                    }
+                    c.close();
                 }
-                c.close();
             }
         }).start();
     }

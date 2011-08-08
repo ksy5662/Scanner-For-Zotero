@@ -1,4 +1,4 @@
-package org.ale.scan2zotero.web;
+package org.ale.scan2zotero.web.zotero;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -7,32 +7,36 @@ import java.util.Random;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
-import javax.xml.parsers.FactoryConfigurationError;
 import javax.xml.parsers.ParserConfigurationException;
 
 import org.ale.scan2zotero.data.Access;
 import org.ale.scan2zotero.data.Account;
 import org.ale.scan2zotero.data.Group;
+import org.ale.scan2zotero.web.APIRequest;
+import org.ale.scan2zotero.web.HttpsClient;
+import org.ale.scan2zotero.web.RequestQueue;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import android.text.TextUtils;
 import android.util.Log;
 
 public class ZoteroAPIClient {
     private static final boolean DEBUG = false;
     
-    private static final int R_ADD_ITEMS = 0;
-    private static final int R_PERMISSIONS = 1;
-    private static final int R_GROUPS = 2;
-    private static final int R_NEW_COLLECTION = 3;
-
     //private static final String CLASS_TAG = ZoteroAPIClient.class.getCanonicalName();
+
+    public static final String GROUPS = "groups";
+    public static final String ITEMS = "items";
+    public static final String PERMISSIONS = "keys";
+
 
     private static final String ZOTERO_BASE_URL = DEBUG ? "http://10.13.37.64" : "https://api.zotero.org";
     private static final String ZOTERO_USERS_URL = ZOTERO_BASE_URL + "/users";
@@ -40,6 +44,9 @@ public class ZoteroAPIClient {
 
     private static final String HDR_WRITE_TOKEN = "X-Zotero-Write-Token";
     
+    private static final String XML_NS_ZAPI = "http://zotero.org/ns/api";
+    private static final String XML_NS_ZXFER = "http://zotero.org/ns/transfer";
+
     private Account mAccount;
 
     private DefaultHttpClient mHttpsClient;
@@ -47,6 +54,7 @@ public class ZoteroAPIClient {
     private RequestQueue mRequestQueue;
 
     private ZoteroHandler mHandler;
+
 
     public ZoteroAPIClient() {
         mHandler = ZoteroHandler.getInstance();
@@ -58,8 +66,15 @@ public class ZoteroAPIClient {
         mAccount = acct;
     }
 
+    public APIRequest newRequest(){
+        return new APIRequest(mHandler, mHttpsClient);
+    }
+
     public void addItems(JSONObject items) {
-        APIRequest r = new APIRequest(mHandler, mHttpsClient);
+        // https://apis.zotero.org/users/<userid>/items
+
+        // TODO: Allow no more than 50 items at a time
+        APIRequest r = newRequest();
         r.setRequestType(APIRequest.POST);
         r.setURI(buildURI(mAccount.getUid(), "items"));
         r.setContent(items.toString(), "application/json");
@@ -70,30 +85,33 @@ public class ZoteroAPIClient {
     }
 
     public void getPermissions() {
-        APIRequest r = new APIRequest(mHandler, mHttpsClient);
+        // https://apis.zotero.org/users/<userid>/keys/<apikey>
+        APIRequest r = newRequest();
         r.setRequestType(APIRequest.GET);
-        r.setURI(buildURI(mAccount.getUid(), "keys", mAccount.getKey()));
-        r.setReturnIdentifier("permissions");
+        r.setURI(buildURI(mAccount.getUid(), PERMISSIONS, mAccount.getKey()));
+        r.setReturnIdentifier(PERMISSIONS);
 
         mRequestQueue.enqueue(r);
     }
-    
-    public void getUsersGroups() {
-        APIRequest r = new APIRequest(mHandler, mHttpsClient);
+
+    public void getGroups() {
+        // https://apis.zotero.org/users/<userid>/groups
+        APIRequest r = newRequest();
         r.setRequestType(APIRequest.GET);
-        r.setURI(buildURI(mAccount.getUid(), "groups"));
-        r.setReturnIdentifier("groups");
+        r.setURI(buildURI(mAccount.getUid(), GROUPS));
+        r.setReturnIdentifier(GROUPS);
 
         mRequestQueue.enqueue(r);
     }
 
     public void newCollection(String name, String parent){
+        // https://apis.zotero.org/users/<userid>/collections
         JSONObject collection = new JSONObject();
 
         try {
             collection.put("name", name);
             collection.put("parent", parent);
-            APIRequest r = new APIRequest(mHandler, mHttpsClient);
+            APIRequest r = newRequest();
             r.setRequestType(APIRequest.POST);
             r.setURI(buildURI(mAccount.getUid(), "collections"));
             r.setContent(collection.toString(), "application/json");
@@ -143,23 +161,11 @@ public class ZoteroAPIClient {
           <key key="xxx">
           <access library="1" files="1" notes="1" write="1"/>
           <access group="12345" write="1"/>
+          <access group="all" write="1"/>
           </key>
          */
         Log.d("APIClient", resp);
-        DocumentBuilder builder = null;
-        Document doc = null;
-
-        try {
-            builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
-            ByteArrayInputStream encXML = new ByteArrayInputStream(resp.getBytes("UTF8"));
-            doc = builder.parse(encXML);
-        } catch (ParserConfigurationException e) {
-            e.printStackTrace();
-        } catch (SAXException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        Document doc = ZoteroAPIClient.parseXML(resp);
         if(doc == null) return null;
 
         NodeList keys = doc.getElementsByTagName("key");
@@ -205,5 +211,90 @@ public class ZoteroAPIClient {
             }
         }
         return new Access(groups, permissions);
-    }    
+    }
+
+    public static Group[] parseGroups(String resp) {
+        /* example:
+          <!-- tons of garbage -->
+            <zapi:totalResults>1</zapi:totalResults>
+            <zapi:apiVersion>1</zapi:apiVersion>
+            <updated>2011-07-15T22:46:21Z</updated>
+            <entry xmlns:zxfer="http://zotero.org/ns/transfer">
+                <title>group title</title>
+                <author>
+                  <name>some_user</name>
+                  <uri>http://zotero.org/some_user</uri>
+                </author>
+                <id>http://zotero.org/groups/12345</id>
+                <published>2011-07-15T22:46:01Z</published>
+                <updated>2011-07-15T22:46:21Z</updated>
+                <link rel="self" type="application/atom+xml" href="https://api.zotero.org/groups/12345"/>
+                <link rel="alternate" type="text/html" href="http://zotero.org/groups/12345"/>
+                <zapi:numItems>10</zapi:numItems>
+                <content type="html">
+                <!-- more garbage -->
+                </content>
+            </entry>
+         */
+
+        /* Returns null for parsing errors */
+        Document doc = ZoteroAPIClient.parseXML(resp);
+        if(doc == null)
+            return null;
+
+        NodeList totalResults = doc.getElementsByTagNameNS(XML_NS_ZAPI, "totalResults");
+        if(totalResults.getLength() == 0)
+            return null;
+
+        String trStr = totalResults.item(0).getTextContent();
+        if(trStr == null || !TextUtils.isDigitsOnly(trStr))
+            return null;
+
+        int numGroups = Integer.parseInt(trStr);
+        Group[] groups = new Group[numGroups];
+
+        NodeList entries = doc.getElementsByTagName("entry");
+        if(entries.getLength() != numGroups)
+            return null;
+
+        for(int i=0; i<numGroups; i++){
+            if(entries.item(i).getNodeType() != Node.ELEMENT_NODE)
+                return null;
+            NodeList titles = ((Element) entries.item(i)).getElementsByTagName("title");
+            NodeList ids = ((Element) entries.item(i)).getElementsByTagName("id");
+            if(titles.getLength() != 1 || ids.getLength() != 1)
+                return null;
+            String title = titles.item(0).getTextContent();
+            String idUri = ids.item(0).getTextContent();
+            if(title == null || idUri == null)
+                return null;
+            int lastSeg = idUri.lastIndexOf("/");
+            if(lastSeg < 0)
+                return null;
+            String idstr = idUri.substring(lastSeg+1);
+            if(!TextUtils.isDigitsOnly(idstr))
+                return null;
+            int id = Integer.parseInt(idstr);
+            groups[i] = new Group(id, title);
+        }
+
+        return groups;
+    }
+    
+    public static Document parseXML(String xml){
+        DocumentBuilder builder = null;
+        Document doc = null;
+        try {
+            builder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+            ByteArrayInputStream encXML = new ByteArrayInputStream(xml.getBytes("UTF8"));
+            doc = builder.parse(encXML);
+        } catch (ParserConfigurationException e) {
+            e.printStackTrace();
+        } catch (SAXException e) {
+            e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+        return doc;
+    }
 }

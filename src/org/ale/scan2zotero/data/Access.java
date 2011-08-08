@@ -60,6 +60,25 @@ public class Access implements Parcelable {
         return false;
     }
 
+    public Set<Integer> getGroupIds() {
+        Set<Integer> groupIds = mPermMap.keySet();
+        groupIds.remove(Group.GROUP_ALL);
+        groupIds.remove(Group.GROUP_LIBRARY);
+        return groupIds;
+    }
+
+    public int getGroupCount() {
+        // Number of groups this user has access to
+        int count = mGroups.length;
+        if(mPermMap.containsKey(Group.GROUP_ALL)){
+            count--;
+        }
+        if(mPermMap.containsKey(Group.GROUP_LIBRARY)){
+            count--;
+        }
+        return count;
+    }
+
     public static final Creator<Access> CREATOR = new Creator<Access>() {
         public Access createFromParcel(Parcel in) {
             int key;
@@ -118,7 +137,10 @@ public class Access implements Parcelable {
                     new String[]{String.valueOf(mKeyDbId)},
                     null);
     
-            if(keyCur.getCount() == 0) return; // Not in database
+            if(keyCur.getCount() != 0){
+                keyCur.close();
+                return; // Not in database
+            }
             keyCur.moveToFirst();
             mKeyDbId = keyCur.getInt(0);
             keyCur.close();
