@@ -1,17 +1,11 @@
 package org.ale.scan2zotero.web.googlebooks;
 
-import java.util.ArrayList;
-
 import org.ale.scan2zotero.PendingListAdapter;
 import org.ale.scan2zotero.web.APIHandler;
-import org.ale.scan2zotero.web.APIRequest.APIResponse;
 import org.apache.http.StatusLine;
 import org.json.JSONObject;
 
 public class GoogleBooksHandler extends APIHandler{
-
-    protected static ArrayList<Integer> mResponseTypes = new ArrayList<Integer>();
-    protected static ArrayList<APIResponse> mResponses = new ArrayList<APIResponse>();
 
     private static GoogleBooksHandler mInstance = null;
 
@@ -33,8 +27,8 @@ public class GoogleBooksHandler extends APIHandler{
         return true;
     }
 
-    // mActivity (from APIHandler) is guaranteed to be non-null
-    // when the methods below are called
+    // APIHandler.mActivity is guaranteed to be non-null
+    // when these methods are called
     protected void onStart(String id) {
         
     }
@@ -43,8 +37,26 @@ public class GoogleBooksHandler extends APIHandler{
         
     }
 
-    protected void onStatusLine(String id, StatusLine reason) {
-        //APIHandler.mActivity.itemFailed(id, PendingListAdapter.STATUS_FAILED);
+    protected void onStatusLine(String id, StatusLine status) {
+        int statusCode = status.getStatusCode();
+        if(statusCode >= 400) {
+            int errReason;
+            switch(statusCode){
+            case 400:
+                errReason = PendingListAdapter.STATUS_BAD_REQUEST;
+                break;
+            case 403:
+                errReason = PendingListAdapter.STATUS_QUOTA_EXCEEDED;
+                break;
+            case 500:
+                errReason = PendingListAdapter.STATUS_SERVER_ERROR;
+                break;
+            default:
+                errReason = PendingListAdapter.STATUS_FAILED;
+                break;
+            }
+            APIHandler.mActivity.itemFailed(id, errReason);
+        }
     }
 
     protected void onException(String id, Exception exc) {
@@ -53,9 +65,26 @@ public class GoogleBooksHandler extends APIHandler{
         APIHandler.mActivity.itemFailed(id, PendingListAdapter.STATUS_NO_NETWORK);
     }
 
-    protected void onSuccess(String isbn, String res){
-        JSONObject translated = GoogleBooksAPIClient
-                                    .translateJsonResponse(isbn, res);
-        APIHandler.mActivity.gotBibInfo(isbn, translated);
+    protected void onSuccess(final String isbn, final String res){
+        new Thread(new Runnable() {
+            public void run(){
+                // Extract bibliographic information from Google's response and
+                // put it in a format we can submit to Zotero later.
+                final JSONObject translated =
+                        GoogleBooksAPIClient.translateJsonResponse(isbn, res);
+
+                // Since that might have taken some time, check that the 
+                // activity is still around and post the BibInfo.
+                checkActivityAndRun(new Runnable(){
+                    public void run(){
+                        if(translated == null){
+                            APIHandler.mActivity.itemFailed(isbn, PendingListAdapter.STATUS_FAILED);
+                        }else{
+                            APIHandler.mActivity.gotBibInfo(isbn, translated);
+                        }
+                    }
+                });
+            }
+        }).start();
     }
 }

@@ -20,8 +20,9 @@ public abstract class APIHandler extends Handler {
     public static final int SUCCESS = 4;
     public static final int FINISH = 5;
 
-    protected ArrayList<Integer> mResponseTypes; // Make static in implementing classes
-    protected ArrayList<APIResponse> mResponses; // Make static in implementing classes
+    protected ArrayList<Integer> mResponseTypes = new ArrayList<Integer>();
+    protected ArrayList<APIResponse> mResponses = new ArrayList<APIResponse>();
+    protected ArrayList<Runnable> mUIThreadEvents = new ArrayList<Runnable>();
 
     protected static S2ZMainActivity mActivity = null;
 
@@ -33,25 +34,33 @@ public abstract class APIHandler extends Handler {
     protected abstract void onException(String id, Exception exc);
     protected abstract void onSuccess(String id, String res);
 
-    public void registerActivity(S2ZMainActivity activity){
+    public synchronized void registerActivity(S2ZMainActivity activity){
         if(APIHandler.mActivity != null || activity == null)
             return;
         APIHandler.mActivity = activity;
         dequeueMessages();
+        for(Runnable r : mUIThreadEvents){
+            mActivity.post(r);
+        }
+        mUIThreadEvents.clear();
     }
 
-    public void unregisterActivity(){
+    public synchronized void unregisterActivity(){
         APIHandler.mActivity = null;
+    }
+
+    public static synchronized boolean hasActivity() {
+        return APIHandler.mActivity != null;
     }
 
     public void handleMessage(Message msg){
         APIResponse resp = (APIResponse)msg.obj;
 
-        if(APIHandler.mActivity == null){
+        if(APIHandler.hasActivity()){ // Process
+            handleMessage(msg.what, resp);
+        }else{ // Or queue
             mResponseTypes.add(new Integer(msg.what));
             mResponses.add(resp);
-        }else{
-            handleMessage(msg.what, resp);
         }
     }
 
@@ -77,6 +86,14 @@ public abstract class APIHandler extends Handler {
         case APIHandler.FINISH:
             RequestQueue.getInstance().taskComplete((APIRequest)resp.getData());
             break;
+        }
+    }
+
+    public void checkActivityAndRun(Runnable r){
+        if(APIHandler.hasActivity()){
+            mActivity.post(r);
+        }else{
+            mUIThreadEvents.add(r);
         }
     }
 }

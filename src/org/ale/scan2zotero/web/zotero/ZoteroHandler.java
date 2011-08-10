@@ -1,11 +1,9 @@
 package org.ale.scan2zotero.web.zotero;
 
-import java.util.ArrayList;
-
 import org.ale.scan2zotero.data.Access;
+import org.ale.scan2zotero.data.Account;
 import org.ale.scan2zotero.data.Group;
 import org.ale.scan2zotero.web.APIHandler;
-import org.ale.scan2zotero.web.APIRequest.APIResponse;
 import org.apache.http.StatusLine;
 
 import android.content.ContentResolver;
@@ -13,9 +11,11 @@ import android.widget.Toast;
 
 public class ZoteroHandler extends APIHandler {
 
-    protected static ArrayList<Integer> mResponseTypes = new ArrayList<Integer>();
-    protected static ArrayList<APIResponse> mResponses = new ArrayList<APIResponse>();
-    
+    // Inherits from APIHandler
+    // protected ArrayList<Integer> mResponseTypes;
+    // protected ArrayList<APIResponse> mResponses;
+    // protected ArrayList<Runnable> mUIThreadEvents;
+
     private static ZoteroHandler mInstance = null;
 
     public static ZoteroHandler getInstance(){
@@ -74,49 +74,69 @@ public class ZoteroHandler extends APIHandler {
     }
 
     protected void onException(String id, Exception exc) {
-        if(id.equals("permissions"))
+        if(id.equals(ZoteroAPIClient.PERMISSIONS))
             APIHandler.mActivity.postAccountPermissions(null);
+        //if(id.equals(ZoteroAPIClient.ITEMS))
+        //    APIHandler.mActivity.postItemResponse(null);
         exc.printStackTrace();
         Toast.makeText(APIHandler.mActivity, id+" Exception", Toast.LENGTH_LONG).show();
     }
 
     protected void onSuccess(final String id, String resp) {
         Toast.makeText(APIHandler.mActivity, id+" Success", Toast.LENGTH_LONG).show();
-        if(id.equals("addItems")){
-        }else if(id.equals("permissions")){
+        if(id.equals(ZoteroAPIClient.ITEMS)){
+        }else if(id.equals(ZoteroAPIClient.PERMISSIONS)){
             handlePermissions(resp);
-        }else if(id.equals("groups")){
+        }else if(id.equals(ZoteroAPIClient.GROUPS)){
             handleGroups(resp);
-        }else if(id.equals("newCollection")){
+        }else if(id.equals(ZoteroAPIClient.COLLECTIONS)){
+        }else if(id.equals(ZoteroAPIClient.ITEMS)){
+            handleItems(resp);
         }
     }
 
     private void handlePermissions(final String xml){
+        final ContentResolver cr = APIHandler.mActivity.getContentResolver();
+        final Account user = APIHandler.mActivity.getUserAccount();
+
         new Thread(new Runnable(){
-            @Override
             public void run() {
-                final Access perms = ZoteroAPIClient.parsePermissions(xml);
+                final Access perms = ZoteroAPIClient.parsePermissions(xml, user);
                 if(perms != null) {
-                    perms.writeToDB(APIHandler.mActivity.getContentResolver());
+                    perms.writeToDB(cr);
                 }
-                APIHandler.mActivity.postAccountPermissions(perms);
+
+                checkActivityAndRun(new Runnable(){
+                    public void run(){
+                        APIHandler.mActivity.postAccountPermissions(perms);
+                    }
+                });
             }
         }).start();
     }
 
     private void handleGroups(final String xml){
+        // Write responses to database and be done with it.
+        final ContentResolver cr = APIHandler.mActivity.getContentResolver();
         new Thread(new Runnable(){
-            @Override
             public void run() {
                 final Group[] groups = ZoteroAPIClient.parseGroups(xml);
                 int howMany = 0;
                 if(groups != null){
-                    ContentResolver cr = APIHandler.mActivity.getContentResolver();
                     howMany = groups.length;
                     for(int i=0; i<howMany; i++){
                         groups[i].writeToDB(cr);
                     }
                 }
+            }
+        }).start();
+    }
+
+    private void handleItems(final String xml){
+        final ContentResolver cr = APIHandler.mActivity.getContentResolver();
+        new Thread(new Runnable(){
+            public void run() {
+                String itemIds = ZoteroAPIClient.parseItems(xml);
             }
         }).start();
     }

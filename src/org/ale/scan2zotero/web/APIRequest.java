@@ -75,7 +75,6 @@ public class APIRequest implements Runnable {
         }
     }
 
-    @Override
     public void run() {
         mHandler.sendMessage(
                 Message.obtain(mHandler, APIHandler.START, new APIResponse(mId, null)));
