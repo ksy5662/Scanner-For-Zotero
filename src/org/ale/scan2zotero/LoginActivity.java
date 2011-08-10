@@ -26,9 +26,9 @@ import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.ViewFlipper;
 
-public class S2ZLoginActivity extends Activity {
+public class LoginActivity extends Activity {
 
-    private static final String CLASS_TAG = S2ZLoginActivity.class.getCanonicalName();
+    private static final String CLASS_TAG = LoginActivity.class.getCanonicalName();
 
     public static final String PREFS_NAME = "config";
 
@@ -118,6 +118,8 @@ public class S2ZLoginActivity extends Activity {
     public void onResume(){
         super.onResume();
         if(mLoggedIn){ // Might still be logged in from last session
+            ViewFlipper vf = (ViewFlipper)findViewById(R.id.login_view_flipper);
+            vf.setDisplayedChild(2);
             if(mAcctCursor != null){
                 doLogin();
             }else{
@@ -126,13 +128,13 @@ public class S2ZLoginActivity extends Activity {
         }
 
         // Display any dialogs we were displaying before being destroyed
-        switch(S2ZDialogs.displayedDialog) {
-        case(S2ZDialogs.DIALOG_NO_DIALOG):
+        switch(Dialogs.displayedDialog) {
+        case(Dialogs.DIALOG_NO_DIALOG):
             break;
-        case(S2ZDialogs.DIALOG_ZOTERO_LOGIN):
-            mAlertDialog = S2ZDialogs.informUserAboutLogin(S2ZLoginActivity.this);
+        case(Dialogs.DIALOG_ZOTERO_LOGIN):
+            mAlertDialog = Dialogs.informUserAboutLogin(LoginActivity.this);
             break;
-        case(S2ZDialogs.DIALOG_SAVED_KEYS):
+        case(Dialogs.DIALOG_SAVED_KEYS):
             mOnRecvCursor = RECV_CURSOR_PROMPT;
             break;
         }
@@ -195,9 +197,9 @@ public class S2ZLoginActivity extends Activity {
                                  // to prefs. If the user didn't check "Remember Me"
                                  // we won't automatically log them in.
         // Transition to Main activity
-        Intent intent = new Intent(S2ZLoginActivity.this, S2ZMainActivity.class);
-        intent.putExtra(S2ZMainActivity.INTENT_EXTRA_ACCOUNT, mAccount);
-        S2ZLoginActivity.this.startActivity(intent);
+        Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+        intent.putExtra(MainActivity.INTENT_EXTRA_ACCOUNT, mAccount);
+        LoginActivity.this.startActivity(intent);
         finish();
     }
 
@@ -243,8 +245,8 @@ public class S2ZLoginActivity extends Activity {
                 // we need to immediately call promptToUseSavedKey if the dialog
                 // was displayed prior to the activity being destroyed.
                 case RECV_CURSOR_PROMPT:
-                    mAlertDialog = S2ZDialogs.promptToUseSavedKey(
-                                        S2ZLoginActivity.this, mAcctCursor);
+                    mAlertDialog = Dialogs.promptToUseSavedKey(
+                                        LoginActivity.this, mAcctCursor);
                     break;
                 // And sometimes we're resuming a previous session and just need the
                 // cursor to determine the account id
@@ -326,8 +328,8 @@ public class S2ZLoginActivity extends Activity {
     protected void showPrevious() {
         ViewFlipper vf = (ViewFlipper)findViewById(R.id.login_view_flipper);
         if(vf.getCurrentView().getId() == R.id.login_view_editables){
-            vf.setInAnimation(AnimationUtils.loadAnimation(S2ZLoginActivity.this, R.anim.slide_in_previous));
-            vf.setOutAnimation(AnimationUtils.loadAnimation(S2ZLoginActivity.this, R.anim.slide_out_previous));
+            vf.setInAnimation(AnimationUtils.loadAnimation(LoginActivity.this, R.anim.slide_in_previous));
+            vf.setOutAnimation(AnimationUtils.loadAnimation(LoginActivity.this, R.anim.slide_out_previous));
             vf.showPrevious();
         }
     }
@@ -335,8 +337,8 @@ public class S2ZLoginActivity extends Activity {
     protected void showNext() {
         ViewFlipper vf = (ViewFlipper)findViewById(R.id.login_view_flipper);
         if(vf.getCurrentView().getId() == R.id.login_view_options){
-            vf.setInAnimation(AnimationUtils.loadAnimation(S2ZLoginActivity.this, R.anim.slide_in_next));
-            vf.setOutAnimation(AnimationUtils.loadAnimation(S2ZLoginActivity.this, R.anim.slide_out_next));
+            vf.setInAnimation(AnimationUtils.loadAnimation(LoginActivity.this, R.anim.slide_in_next));
+            vf.setOutAnimation(AnimationUtils.loadAnimation(LoginActivity.this, R.anim.slide_out_next));
             vf.showNext();
         }
     }
@@ -367,19 +369,19 @@ public class S2ZLoginActivity extends Activity {
     public boolean onOptionsItemSelected(MenuItem item) {
         switch (item.getItemId()) {
         case R.id.opt_manage_keys:
-            Intent intent = new Intent(S2ZLoginActivity.this, ManageAccountsActivity.class);
+            Intent intent = new Intent(LoginActivity.this, ManageAccountsActivity.class);
             startActivity(intent);
             return true;
         case R.id.opt_use_saved_key:
             if (mAcctCursor != null) {
-                mAlertDialog = S2ZDialogs.promptToUseSavedKey(
-                                    S2ZLoginActivity.this, mAcctCursor);
+                mAlertDialog = Dialogs.promptToUseSavedKey(
+                                    LoginActivity.this, mAcctCursor);
             } else {
                 mOnRecvCursor = RECV_CURSOR_PROMPT;
             }
             return true;
         case R.id.opt_help:
-            mAlertDialog = S2ZDialogs.showLoginHelp(S2ZLoginActivity.this);
+            mAlertDialog = Dialogs.showLoginHelp(LoginActivity.this);
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -392,15 +394,15 @@ public class S2ZLoginActivity extends Activity {
             switch(v.getId()){
             case R.id.login_saved_key:
                 if (mAcctCursor != null) {
-                    mAlertDialog = S2ZDialogs.promptToUseSavedKey(
-                                        S2ZLoginActivity.this, mAcctCursor);
+                    mAlertDialog = Dialogs.promptToUseSavedKey(
+                                        LoginActivity.this, mAcctCursor);
                 }else{
                     mOnRecvCursor = RECV_CURSOR_PROMPT;
                 }
                 break;
 
             case R.id.login_by_web:
-                mAlertDialog = S2ZDialogs.informUserAboutLogin(S2ZLoginActivity.this);
+                mAlertDialog = Dialogs.informUserAboutLogin(LoginActivity.this);
                 break;
             
             case R.id.login_manually:

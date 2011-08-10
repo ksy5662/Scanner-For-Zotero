@@ -39,7 +39,7 @@ public class ManageAccountsActivity extends ListActivity {
         if(mAlertDialog != null){
             mAlertDialog.dismiss();
             mAlertDialog = null;
-            S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+            Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
         }
     }
 
@@ -85,7 +85,7 @@ public class ManageAccountsActivity extends ListActivity {
         switch (item.getItemId()) {
         case R.id.ctx_rename:
             String orig = c.getString(S2ZDatabase.ACCOUNT_ALIAS_INDEX);
-            mAlertDialog = S2ZDialogs.showRenameKeyDialog(
+            mAlertDialog = Dialogs.showRenameKeyDialog(
                                         ManageAccountsActivity.this, orig, row);
             break;
         case R.id.ctx_delete:

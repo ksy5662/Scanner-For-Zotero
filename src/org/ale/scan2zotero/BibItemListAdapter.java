@@ -9,7 +9,9 @@ import org.ale.scan2zotero.data.S2ZDatabase;
 import android.content.Context;
 import android.content.res.Resources;
 import android.database.Cursor;
+import android.graphics.drawable.Drawable;
 import android.os.Message;
+import android.text.TextUtils;
 import android.util.SparseBooleanArray;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -20,9 +22,6 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 public class BibItemListAdapter extends BaseExpandableListAdapter {
-
-    private final int EVEN_ROW_COLOR = 0xFFF4F9EB;
-    private final int ODD_ROW_COLOR = 0xFFF1F6DB;
 
     private static final int ACTION_ID = PersistentDBHandler.BIBITEM_ACTION_ID;
     public static final int FOUND_SAVED_ITEMS = ACTION_ID + 0;
@@ -118,7 +117,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         mItems.add(0, item);
         mAdapters.add(0, new BibDetailJSONAdapter(
                               mContext, item.getSelectedInfo()));
-        ((S2ZMainActivity)mContext).showOrHideUploadButton();
+        ((MainActivity)mContext).showOrHideUploadButton();
         notifyDataSetChanged();
     }
 
@@ -127,7 +126,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         for(BibItem b : items){
             mAdapters.add(new BibDetailJSONAdapter(mContext, b.getSelectedInfo()));
         }
-        ((S2ZMainActivity)mContext).showOrHideUploadButton();
+        ((MainActivity)mContext).showOrHideUploadButton();
         notifyDataSetChanged();
     }
 
@@ -136,7 +135,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         shiftDownSelections(indx);
         mItems.remove(indx);
         mAdapters.remove(indx);
-        ((S2ZMainActivity)mContext).showOrHideUploadButton();
+        ((MainActivity)mContext).showOrHideUploadButton();
         notifyDataSetChanged();
     }
 
@@ -146,7 +145,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         if(convert == null){
             convert = mInflater.inflate(R.layout.expandable_bib_child, parent, false);
         }
-        convert.setBackgroundColor(getRowColor(group));
+        convert.setBackgroundDrawable(getRowDrawable(group));
         BibDetailJSONAdapter adapter = mAdapters.get(group);
         adapter.fillLinearLayout((LinearLayout) convert);
         return convert;
@@ -172,7 +171,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
             vtag = (GroupViewComponents) convert.getTag();
         }
 
-        convert.setBackgroundColor(getRowColor(group));
+        convert.setBackgroundDrawable(getRowDrawable(group));
 
         // The checkbox's click listener checks this tag
         vtag.tv_checkbox.setTag(new Integer(group));
@@ -189,8 +188,10 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         return convert;
     }
 
-    private int getRowColor(int group){
-        return (mItems.size()-group) % 2 == 0 ? EVEN_ROW_COLOR : ODD_ROW_COLOR;
+    private Drawable getRowDrawable(int group){
+        if((mItems.size()-group) % 2 == 0)
+            return mResources.getDrawable(R.drawable.group_selector_even);
+        return mResources.getDrawable(R.drawable.group_selector_odd);
     }
 
     @Override
@@ -234,13 +235,13 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
     }
 
     public String getTitleOfGroup(int group){
-        try {
-            return mItems.get(group).getSelectedInfo().getString(ItemField.title);
-        } catch (Exception e) {
-            return "<unknown>";
-        }
+        String title = mItems.get(group).getCachedTitleString();
+        if(TextUtils.isEmpty(title))
+            return mContext.getString(R.string.unknown);
+        return title;
     }
 
+    /* Selection management */
     public void shiftDownSelections(int indx){
         // Update selections to reflect removal of an item at indx
         mChecked.delete(indx);
@@ -276,8 +277,9 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
             result[i] = mChecked.get(i, false);
         return result;
     }
-    
-    private final class GroupViewComponents {
+
+    /* View tag */
+    protected final class GroupViewComponents {
         public CheckBox tv_checkbox;
         public TextView tv_author_lbl;
         public TextView tv_author;

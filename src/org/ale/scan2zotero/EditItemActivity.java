@@ -6,7 +6,7 @@ import org.json.JSONObject;
 import android.app.Activity;
 import android.os.Bundle;
 
-public class S2ZEditActivity extends Activity {
+public class EditItemActivity extends Activity {
 
     public static final String INTENT_EXTRA_BIBITEM = "ITEMID";
 

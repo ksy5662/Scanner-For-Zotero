@@ -9,5 +9,10 @@
     <color name="s2z_light_beige">#FFF4F9EB</color>
     <color name="s2z_dark_red">#FF8A2A37</color>
     <color name="s2z_white">#FFFFFFFF</color>
-    <color name="s2z_yellow">#FFFF00FF</color>
+    <color name="s2z_yellow">#FFFFFF00</color>
+    <color name="s2z_light_grey">#FFC0C0C0</color>    
+    <color name="s2z_even_row">#FFF4F9EB</color>    
+    <color name="s2z_even_row_halfa">#80F4F9EB</color>    
+    <color name="s2z_odd_row">#FFF1F6DB</color>    
+    <color name="s2z_odd_row_halfa">#80F1F6DB</color>    
 </resources>

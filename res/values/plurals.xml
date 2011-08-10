@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <plurals name="author">
+        <item quantity="other">Author</item>
         <item quantity="zero">Author</item>
         <item quantity="one">Author</item>
         <item quantity="few">Authors</item>

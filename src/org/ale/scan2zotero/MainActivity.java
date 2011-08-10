@@ -40,9 +40,9 @@ import android.widget.Toast;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.ExpandableListView.ExpandableListContextMenuInfo;
 
-public class S2ZMainActivity extends Activity {
+public class MainActivity extends Activity {
 
-    private static final String CLASS_TAG = S2ZMainActivity.class.getCanonicalName();
+    private static final String CLASS_TAG = MainActivity.class.getCanonicalName();
 
     private static final int RESULT_SCAN = 0;
 
@@ -70,7 +70,7 @@ public class S2ZMainActivity extends Activity {
 
     private Access mAccountAccess;
 
-    private Handler mHandler;
+    public Handler mHandler;
 
     private int mNumGroups;
 
@@ -108,7 +108,7 @@ public class S2ZMainActivity extends Activity {
         bibItemList.addHeaderView(pendingListHolder);
 
         // Initialize list adapters
-        mItemAdapter = new BibItemListAdapter(S2ZMainActivity.this);
+        mItemAdapter = new BibItemListAdapter(MainActivity.this);
 
         if(state == null){ // Fresh activity
             mPendingItems = new ArrayList<String>(2);
@@ -136,7 +136,7 @@ public class S2ZMainActivity extends Activity {
         registerForContextMenu(bibItemList);
         registerForContextMenu(mPendingList);
 
-        mPendingAdapter = new PendingListAdapter(S2ZMainActivity.this,
+        mPendingAdapter = new PendingListAdapter(MainActivity.this,
                                                    R.layout.pending_item,
                                                    R.id.pending_item_id,
                                                    mPendingItems,
@@ -167,14 +167,14 @@ public class S2ZMainActivity extends Activity {
     public void onResume() {
         super.onResume();
 
-        GoogleBooksHandler.getInstance().registerActivity(S2ZMainActivity.this);
-        ZoteroHandler.getInstance().registerActivity(S2ZMainActivity.this);
+        GoogleBooksHandler.getInstance().registerActivity(MainActivity.this);
+        ZoteroHandler.getInstance().registerActivity(MainActivity.this);
 
         mItemAdapter.readyToGo();
 
         if(mAccountAccess == null
-                && S2ZDialogs.displayedDialog != S2ZDialogs.DIALOG_NO_PERMS){
-            S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_CREDENTIALS;
+                && Dialogs.displayedDialog != Dialogs.DIALOG_NO_PERMS){
+            Dialogs.displayedDialog = Dialogs.DIALOG_CREDENTIALS;
             lookupAuthorizations();
         }
 
@@ -184,27 +184,23 @@ public class S2ZMainActivity extends Activity {
         showOrHideUploadButton();
 
         // Display any dialogs we were displaying before being destroyed
-        switch(S2ZDialogs.displayedDialog) {
-        case(S2ZDialogs.DIALOG_ZXING):
-            mAlertDialog = S2ZDialogs.getZxingScanner(S2ZMainActivity.this);
+        switch(Dialogs.displayedDialog) {
+        case(Dialogs.DIALOG_ZXING):
+            mAlertDialog = Dialogs.getZxingScanner(MainActivity.this);
             break;
-        case(S2ZDialogs.DIALOG_CREDENTIALS):
-            mAlertDialog = S2ZDialogs.showCheckingCredentialsDialog(S2ZMainActivity.this);
+        case(Dialogs.DIALOG_CREDENTIALS):
+            mAlertDialog = Dialogs.showCheckingCredentialsDialog(MainActivity.this);
             break;
-        case(S2ZDialogs.DIALOG_NO_PERMS):
-            mAlertDialog = S2ZDialogs.showNoPermissionsDialog(S2ZMainActivity.this);
+        case(Dialogs.DIALOG_NO_PERMS):
+            mAlertDialog = Dialogs.showNoPermissionsDialog(MainActivity.this);
             break;
         }
     }
 
     public Account getUserAccount(){
         // hack for ZoteroHandler, which needs to know which user
-        // is logged in so as to create an Access object. :/
+        // is logged in so as to create Access objects. :/
         return mAccount;
-    }
-
-    public void post(Runnable r) {
-        mHandler.post(r);
     }
 
     @Override
@@ -218,9 +214,9 @@ public class S2ZMainActivity extends Activity {
     }
 
     public void logout(){
-        Intent intent = new Intent(S2ZMainActivity.this, S2ZLoginActivity.class);
-        intent.putExtra(S2ZLoginActivity.INTENT_EXTRA_CLEAR_FIELDS, true);
-        S2ZMainActivity.this.startActivity(intent);
+        Intent intent = new Intent(MainActivity.this, LoginActivity.class);
+        intent.putExtra(LoginActivity.INTENT_EXTRA_CLEAR_FIELDS, true);
+        MainActivity.this.startActivity(intent);
         finish();
     }
 
@@ -254,15 +250,15 @@ public class S2ZMainActivity extends Activity {
         // and collections.
         mHandler.post(new Runnable() {
         public void run() {
-            if(S2ZDialogs.displayedDialog == S2ZDialogs.DIALOG_CREDENTIALS){
+            if(Dialogs.displayedDialog == Dialogs.DIALOG_CREDENTIALS){
                 if(mAlertDialog != null)
                     mAlertDialog.dismiss();
-                S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
             }
 
             if(perms == null || !perms.canWrite()){
                 // Results in user logging out
-                mAlertDialog = S2ZDialogs.showNoPermissionsDialog(S2ZMainActivity.this);
+                mAlertDialog = Dialogs.showNoPermissionsDialog(MainActivity.this);
             }else{
                 // User should be ready to go, lookup their groups and collections
                 // in the background.
@@ -343,9 +339,9 @@ public class S2ZMainActivity extends Activity {
 
     public void showOrHideUploadButton(){
        if(mItemAdapter.getGroupCount() > 0)
-           findViewById(R.id.upload).setVisibility(View.VISIBLE);
+           findViewById(R.id.upload_bar).setVisibility(View.VISIBLE);
        else
-           findViewById(R.id.upload).setVisibility(View.GONE);
+           findViewById(R.id.upload_bar).setVisibility(View.GONE);
     }
 
     @Override
@@ -402,8 +398,8 @@ public class S2ZMainActivity extends Activity {
             ExpandableListContextMenuInfo einfo = (ExpandableListContextMenuInfo) item.getMenuInfo();
 
             BibItem toEdit = (BibItem) mItemAdapter.getGroup((int) einfo.id);
-            Intent intent = new Intent(S2ZMainActivity.this, S2ZEditActivity.class);
-            intent.putExtra(S2ZEditActivity.INTENT_EXTRA_BIBITEM, toEdit);
+            Intent intent = new Intent(MainActivity.this, EditItemActivity.class);
+            intent.putExtra(EditItemActivity.INTENT_EXTRA_BIBITEM, toEdit);
             break;
         case R.id.ctx_delete:
             ExpandableListContextMenuInfo dinfo = (ExpandableListContextMenuInfo) item.getMenuInfo();
@@ -449,7 +445,7 @@ public class S2ZMainActivity extends Activity {
     private void handleBarcode(String content, String format){
         if(mPendingAdapter.hasItem(content)){
             Toast.makeText(
-                    S2ZMainActivity.this,
+                    MainActivity.this,
                     "Already processing "+content+".",
                     Toast.LENGTH_LONG).show();
             return;
@@ -488,7 +484,7 @@ public class S2ZMainActivity extends Activity {
                 startActivityForResult(intent, RESULT_SCAN);
             } catch (ActivityNotFoundException e) {
                 // Ask the user if we should install ZXing scanner
-                S2ZDialogs.getZxingScanner(S2ZMainActivity.this);
+                Dialogs.getZxingScanner(MainActivity.this);
             }
         }
     };

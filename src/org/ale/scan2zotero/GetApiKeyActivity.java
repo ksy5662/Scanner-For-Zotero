@@ -88,18 +88,18 @@ public class GetApiKeyActivity extends Activity {
         super.onResume();
 
         // Display any dialogs we were displaying before being destroyed
-        switch(S2ZDialogs.displayedDialog) {
-        case(S2ZDialogs.DIALOG_NO_DIALOG):
+        switch(Dialogs.displayedDialog) {
+        case(Dialogs.DIALOG_NO_DIALOG):
             break;
-        case(S2ZDialogs.DIALOG_SSL):
-            mAlertDialog = S2ZDialogs.showSSLDialog(GetApiKeyActivity.this);
+        case(Dialogs.DIALOG_SSL):
+            mAlertDialog = Dialogs.showSSLDialog(GetApiKeyActivity.this);
             break;
-        case(S2ZDialogs.DIALOG_NO_KEYS):
-            mAlertDialog = S2ZDialogs.showNoKeysDialog(GetApiKeyActivity.this);
+        case(Dialogs.DIALOG_NO_KEYS):
+            mAlertDialog = Dialogs.showNoKeysDialog(GetApiKeyActivity.this);
             break;
-        case(S2ZDialogs.DIALOG_FOUND_KEYS):
+        case(Dialogs.DIALOG_FOUND_KEYS):
             if(mFoundNames != null && mFoundIDs != null && mFoundKeys != null){
-                mAlertDialog = S2ZDialogs.showSelectKeyDialog(
+                mAlertDialog = Dialogs.showSelectKeyDialog(
                                         GetApiKeyActivity.this,
                                         mFoundNames, mFoundIDs, mFoundKeys);
             }
@@ -129,7 +129,7 @@ public class GetApiKeyActivity extends Activity {
         if(item.getItemId() != R.id.ctx_webview_showssl){
             return super.onOptionsItemSelected(item);
         }
-        mAlertDialog = S2ZDialogs.showSSLDialog(GetApiKeyActivity.this);
+        mAlertDialog = Dialogs.showSSLDialog(GetApiKeyActivity.this);
         return true;
     }
 
@@ -169,7 +169,7 @@ public class GetApiKeyActivity extends Activity {
                 // Check if any keys were found
                 String[] keyrows = ((String)msg.obj).split(",");
                 if(TextUtils.isEmpty(keyrows[0])){
-                    mAlertDialog = S2ZDialogs.showNoKeysDialog(GetApiKeyActivity.this);
+                    mAlertDialog = Dialogs.showNoKeysDialog(GetApiKeyActivity.this);
                     return;
                 }
 
@@ -196,7 +196,7 @@ public class GetApiKeyActivity extends Activity {
                         mFoundKeys.add(apiKey);
                     }
                 }
-                mAlertDialog = S2ZDialogs.showSelectKeyDialog(GetApiKeyActivity.this,
+                mAlertDialog = Dialogs.showSelectKeyDialog(GetApiKeyActivity.this,
                                             mFoundNames, mFoundIDs, mFoundKeys);
                 break;
             }

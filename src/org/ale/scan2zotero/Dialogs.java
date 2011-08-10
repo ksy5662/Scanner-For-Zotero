@@ -25,14 +25,14 @@ import android.widget.EditText;
 import android.widget.Toast;
 import android.widget.ViewFlipper;
 
-public class S2ZDialogs {
+public class Dialogs {
 
     protected static final int DIALOG_NO_DIALOG = -1;
-    // Used by S2ZLoginActivity
+    // Used by LoginActivity
     protected static final int DIALOG_SAVED_KEYS = 0;
     protected static final int DIALOG_ZOTERO_LOGIN = 2;
     protected static final int DIALOG_LOGIN_HELP = 3;
-    // Used by S2ZMainActivity
+    // Used by MainActivity
     protected static final int DIALOG_ZXING = 4;
     protected static final int DIALOG_CREDENTIALS = 5;
     protected static final int DIALOG_NO_PERMS = 6;
@@ -47,25 +47,25 @@ public class S2ZDialogs {
 
     protected static DialogInterface.OnCancelListener ON_CANCEL = new DialogInterface.OnCancelListener(){
         public void onCancel(DialogInterface arg0) {
-            S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+            Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
         } 
     };
 
-    /* S2ZLoginActivity Dialogs */
+    /* LoginActivity Dialogs */
     /* Dialog to ask user if we may go to Zotero.org to manage API keys*/
-    protected static AlertDialog informUserAboutLogin(final S2ZLoginActivity parent){
-        S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_ZOTERO_LOGIN;
+    protected static AlertDialog informUserAboutLogin(final LoginActivity parent){
+        Dialogs.displayedDialog = Dialogs.DIALOG_ZOTERO_LOGIN;
         AlertDialog.Builder builder = new AlertDialog.Builder(parent);
 
         DialogInterface.OnClickListener clickListener = new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int i) {
                 if(i == DialogInterface.BUTTON_POSITIVE){
                     Intent intent = new Intent(parent, GetApiKeyActivity.class);
-                    parent.startActivityForResult(intent, S2ZLoginActivity.RESULT_APIKEY);
-                    S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                    parent.startActivityForResult(intent, LoginActivity.RESULT_APIKEY);
+                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
                 }else{
                     dialog.dismiss();
-                    S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
                 }
             }
         };
@@ -78,8 +78,8 @@ public class S2ZDialogs {
         return builder.show();
     }
 
-    protected static AlertDialog showLoginHelp(final S2ZLoginActivity parent){
-        S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_LOGIN_HELP;
+    protected static AlertDialog showLoginHelp(final LoginActivity parent){
+        Dialogs.displayedDialog = Dialogs.DIALOG_LOGIN_HELP;
         AlertDialog.Builder builder = new AlertDialog.Builder(parent);
 
         builder.setOnCancelListener((AlertDialog.OnCancelListener)ON_CANCEL);
@@ -89,20 +89,20 @@ public class S2ZDialogs {
     }
 
     /* Dialog to present the user with saved keys */
-    protected static AlertDialog promptToUseSavedKey(final S2ZLoginActivity parent, final Cursor c){
+    protected static AlertDialog promptToUseSavedKey(final LoginActivity parent, final Cursor c){
         if(c.getCount() == 0){
             Toast.makeText(parent, "No saved keys", Toast.LENGTH_SHORT).show();
             return null;
         }
 
-        S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_SAVED_KEYS;
+        Dialogs.displayedDialog = Dialogs.DIALOG_SAVED_KEYS;
         AlertDialog.Builder dialogBuilder = new AlertDialog.Builder(parent);
         DialogInterface.OnClickListener clickListener = 
                     new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int i) {
                 if(i == DialogInterface.BUTTON_NEGATIVE){
                     // User cancelled dialog
-                    S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
                     dialog.dismiss();
                 }else{ // User selected a key
                     c.moveToPosition(i);
@@ -114,7 +114,7 @@ public class S2ZDialogs {
                     parent.setUserAndKey(acct);
                     dialog.dismiss();
                     parent.showNext();
-                    S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
                 }
             }
         };
@@ -127,10 +127,10 @@ public class S2ZDialogs {
         return dialogBuilder.show();
     }
 
-    /* S2ZMainActivity Dialogs */
+    /* MainActivity Dialogs */
     /* Dialog for asking the user to install ZXing Scanner */
-    protected static AlertDialog getZxingScanner(final S2ZMainActivity parent) {
-        S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_ZXING;
+    protected static AlertDialog getZxingScanner(final MainActivity parent) {
+        Dialogs.displayedDialog = Dialogs.DIALOG_ZXING;
         AlertDialog.Builder downloadDialog = new AlertDialog.Builder(parent);
 
         DialogInterface.OnClickListener clickListener = new DialogInterface.OnClickListener() {
@@ -139,10 +139,10 @@ public class S2ZDialogs {
                     Uri uri = Uri.parse(parent.getString(R.string.zxing_uri));
                     Intent intent = new Intent(Intent.ACTION_VIEW, uri);
                     parent.startActivity(intent);
-                    S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
                 }else{
                     dialog.dismiss();
-                    S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
                 }
             }
         };
@@ -157,13 +157,13 @@ public class S2ZDialogs {
     }
 
     // Checking the user's credentials
-    protected static AlertDialog showCheckingCredentialsDialog(final S2ZMainActivity parent){
-        S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_CREDENTIALS;
+    protected static AlertDialog showCheckingCredentialsDialog(final MainActivity parent){
+        Dialogs.displayedDialog = Dialogs.DIALOG_CREDENTIALS;
 
         ProgressDialog dialog = ProgressDialog.show(parent, "Checking library and group access", "Please wait", true, true);
         dialog.setOnCancelListener(new ProgressDialog.OnCancelListener(){
             public void onCancel(DialogInterface view) {
-                S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
                 parent.logout();
             }
         });
@@ -171,13 +171,13 @@ public class S2ZDialogs {
         return dialog;
     }
 
-    protected static AlertDialog showNoPermissionsDialog(final S2ZMainActivity parent){
-        S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_PERMS;
+    protected static AlertDialog showNoPermissionsDialog(final MainActivity parent){
+        Dialogs.displayedDialog = Dialogs.DIALOG_NO_PERMS;
         AlertDialog.Builder builder = new AlertDialog.Builder(parent);
 
         DialogInterface.OnClickListener clickListener = new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int i) {
-                S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
                 parent.logout();
             }
         };
@@ -197,7 +197,7 @@ public class S2ZDialogs {
             ((WebView) parent.findViewById(R.id.webView)).getCertificate();
         if(cert == null)
             return null;
-        S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_SSL;
+        Dialogs.displayedDialog = Dialogs.DIALOG_SSL;
         SslCertificate.DName issuer = cert.getIssuedBy();
         SslCertificate.DName owner = cert.getIssuedTo();
 
@@ -219,7 +219,7 @@ public class S2ZDialogs {
         builder.setMessage(msg.toString());
         builder.setNeutralButton("Done", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int i) {
-                S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
                 dialog.dismiss();
             }
         });
@@ -232,7 +232,7 @@ public class S2ZDialogs {
     // No keys were found, provide shortcut to key creation page on zotero.org
     // or let the user abort.
     protected static AlertDialog showNoKeysDialog(final GetApiKeyActivity parent){
-        S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_KEYS;
+        Dialogs.displayedDialog = Dialogs.DIALOG_NO_KEYS;
         AlertDialog.Builder builder = new AlertDialog.Builder(parent);
 
         DialogInterface.OnClickListener clickListener = new DialogInterface.OnClickListener() {
@@ -244,7 +244,7 @@ public class S2ZDialogs {
                     parent.setResult(Activity.RESULT_CANCELED, null);
                     parent.finish();
                 }
-                S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
                 dialog.dismiss();
             }
         };
@@ -264,15 +264,15 @@ public class S2ZDialogs {
                                                      final ArrayList<String> names,
                                                      final ArrayList<String> ids,
                                                      final ArrayList<String> keys){
-        S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_FOUND_KEYS;
+        Dialogs.displayedDialog = Dialogs.DIALOG_FOUND_KEYS;
         AlertDialog.Builder builder = new AlertDialog.Builder(parent);
         
         DialogInterface.OnClickListener clickListener = new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int i) {
                 if(i == DialogInterface.BUTTON_POSITIVE){
-                    String userName = names.get(S2ZDialogs.selectedNewKey);
-                    String userId = ids.get(S2ZDialogs.selectedNewKey);
-                    String userKey = keys.get(S2ZDialogs.selectedNewKey);
+                    String userName = names.get(Dialogs.selectedNewKey);
+                    String userId = ids.get(Dialogs.selectedNewKey);
+                    String userKey = keys.get(Dialogs.selectedNewKey);
                     if(!TextUtils.isEmpty(userId) && !TextUtils.isEmpty(userKey)){
                         Intent resultIntent = new Intent();
                         resultIntent.putExtra(GetApiKeyActivity.ACCOUNT, 
@@ -280,12 +280,12 @@ public class S2ZDialogs {
                         parent.setResult(Activity.RESULT_OK, resultIntent);
                         parent.finish();
                     }
-                    S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
                 }else if(i == DialogInterface.BUTTON_NEGATIVE){ // User cancelled dialog
-                    S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
                     dialog.dismiss();
                 }else{ // User clicked a key, but did not yet confirm their choice
-                    S2ZDialogs.selectedNewKey = i;
+                    Dialogs.selectedNewKey = i;
                 }
             }
         };
@@ -294,7 +294,7 @@ public class S2ZDialogs {
         // Make radio buttons w/ key names and select first key
         CharSequence uglyHackNames[] = new CharSequence[names.size()];
         uglyHackNames = names.toArray(uglyHackNames);
-        builder.setSingleChoiceItems(uglyHackNames, S2ZDialogs.selectedNewKey, clickListener);
+        builder.setSingleChoiceItems(uglyHackNames, Dialogs.selectedNewKey, clickListener);
         builder.setPositiveButton("Use selected key", clickListener);
         builder.setNegativeButton("None of these", clickListener);
         builder.setOnCancelListener(ON_CANCEL);
@@ -307,7 +307,7 @@ public class S2ZDialogs {
     protected static AlertDialog showRenameKeyDialog(final ManageAccountsActivity parent,
                                                      final String original,
                                                      final int row){
-        S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_RENAME_KEY;
+        Dialogs.displayedDialog = Dialogs.DIALOG_RENAME_KEY;
         AlertDialog.Builder builder = new AlertDialog.Builder(parent);
         
         final EditText input = new EditText(parent);
@@ -319,10 +319,10 @@ public class S2ZDialogs {
                 if(i == DialogInterface.BUTTON_POSITIVE){
                     String newAlias = input.getText().toString();
                     Account.renameAccount(parent.getContentResolver(), row, newAlias);
-                    S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
                     parent.updateList();
                 }else if(i == DialogInterface.BUTTON_NEGATIVE){ // User cancelled dialog
-                    S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
                 }
             }
         };

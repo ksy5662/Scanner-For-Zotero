@@ -2,8 +2,7 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
                 android:id="@+id/s2z_home"
                 android:layout_height="match_parent"
-                android:layout_width="match_parent"
-                android:background="@color/s2z_light_beige">
+                android:layout_width="match_parent">
 
     <Button android:text="Scan New Item"
             android:id="@+id/scan_isbn"
@@ -13,19 +12,35 @@
             android:background="@drawable/fancy_selector"
             style="@style/ScanButton" />
 
-    <Button android:text="Upload selected"
-            android:id="@+id/upload"
-            android:layout_width="match_parent"
-            android:layout_height="75dp"
+    <LinearLayout android:layout_width="match_parent"
+            android:layout_height="40dp"
+            android:orientation="horizontal"
+            android:id="@+id/upload_bar"
             android:layout_alignParentBottom="true"
-            android:background="@drawable/fancy_selector"
-            style="@style/ScanButton" />
+            android:background="@drawable/upload_bar_gradient">
+            <Spinner android:id="@+id/upload_group"
+                     android:layout_height="match_parent"
+                     android:layout_width="match_parent" 
+                     android:layout_weight="1" />
+            <Spinner android:id="@+id/upload_collection"
+                     android:layout_height="match_parent"
+                     android:layout_width="match_parent" 
+                     android:layout_weight="1"/>
+            <Button android:text="Upload"
+                    android:id="@+id/upload"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:layout_weight="1" />
+    </LinearLayout>
+          
 
     <ExpandableListView android:id="@+id/bib_items"
                         android:layout_height="wrap_content"
                         android:layout_width="match_parent"
                         android:layout_above="@id/upload"
                         android:layout_below="@id/scan_isbn"
+                        android:groupIndicator="@drawable/expander"
+                        android:indicatorRight="?android:attr/expandableListPreferredItemPaddingLeft"
                         android:childDivider="@color/s2z_light_blue"
                         android:divider="@color/s2z_light_blue"
                         android:dividerHeight="1dp"

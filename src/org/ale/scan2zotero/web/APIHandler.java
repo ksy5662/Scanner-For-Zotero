@@ -2,7 +2,7 @@ package org.ale.scan2zotero.web;
 
 import java.util.ArrayList;
 
-import org.ale.scan2zotero.S2ZMainActivity;
+import org.ale.scan2zotero.MainActivity;
 import org.ale.scan2zotero.web.APIRequest.APIResponse;
 import org.apache.http.StatusLine;
 
@@ -24,7 +24,7 @@ public abstract class APIHandler extends Handler {
     protected ArrayList<APIResponse> mResponses = new ArrayList<APIResponse>();
     protected ArrayList<Runnable> mUIThreadEvents = new ArrayList<Runnable>();
 
-    protected static S2ZMainActivity mActivity = null;
+    protected static MainActivity mActivity = null;
 
     protected abstract void dequeueMessages();
 
@@ -34,13 +34,13 @@ public abstract class APIHandler extends Handler {
     protected abstract void onException(String id, Exception exc);
     protected abstract void onSuccess(String id, String res);
 
-    public synchronized void registerActivity(S2ZMainActivity activity){
+    public synchronized void registerActivity(MainActivity activity){
         if(APIHandler.mActivity != null || activity == null)
             return;
         APIHandler.mActivity = activity;
         dequeueMessages();
         for(Runnable r : mUIThreadEvents){
-            mActivity.post(r);
+            mActivity.mHandler.post(r);
         }
         mUIThreadEvents.clear();
     }
@@ -91,7 +91,7 @@ public abstract class APIHandler extends Handler {
 
     public void checkActivityAndRun(Runnable r){
         if(APIHandler.hasActivity()){
-            mActivity.post(r);
+            mActivity.mHandler.post(r);
         }else{
             mUIThreadEvents.add(r);
         }

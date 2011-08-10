@@ -11,18 +11,19 @@ public class PersistentDBHandler extends Handler {
 
     public static final int BIBITEM_ACTION_ID = 1000;
 
-    private static BibItemListAdapter mAdapter = null;
-
     private static PersistentDBHandler mInstance = null;
-
-    private static ArrayList<BibItem> mToInsert = new ArrayList<BibItem>();
-    private static ArrayList<BibItem> mToRemove = new ArrayList<BibItem>();
 
     public static PersistentDBHandler getInstance(){
         if(mInstance == null)
             mInstance = new PersistentDBHandler();
         return mInstance;
     }
+
+    private BibItemListAdapter mAdapter = null;
+
+    private ArrayList<BibItem> mToInsert = new ArrayList<BibItem>();
+
+    private ArrayList<BibItem> mToRemove = new ArrayList<BibItem>();
 
     public void registerAdapter(BibItemListAdapter adapter){
         if(mAdapter != null || adapter == null)

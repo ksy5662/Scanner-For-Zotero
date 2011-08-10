@@ -1,5 +1,6 @@
 package org.ale.scan2zotero;
 
+import android.content.res.Resources;
 import android.graphics.Color;
 import android.text.TextUtils;
 import android.widget.TextView;
@@ -47,12 +48,13 @@ public class Util {
     }
 
     public static void fillBibTextField(TextView tv, String data){
+        Resources res = tv.getResources();
         if(!TextUtils.isEmpty(data)){
             tv.setText(data);
-            tv.setTextColor(tv.getResources().getColor(android.R.color.primary_text_light));
+            tv.setTextColor(res.getColor(android.R.color.primary_text_light));
         }else{
-            tv.setText("<unknown>");
-            tv.setTextColor(Color.LTGRAY);
+            tv.setText(res.getString(R.string.unknown));
+            tv.setTextColor(res.getColor(android.R.color.tertiary_text_light));
         }
     }
 }

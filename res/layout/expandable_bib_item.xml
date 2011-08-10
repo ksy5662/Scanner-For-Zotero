@@ -8,6 +8,7 @@
 
     <CheckBox android:id="@+id/bib_row_checkbox"
               android:checked="false"
+              android:layout_marginRight="10dp"
               android:layout_height="wrap_content"
               android:layout_width="wrap_content"
               android:layout_centerVertical="true"
