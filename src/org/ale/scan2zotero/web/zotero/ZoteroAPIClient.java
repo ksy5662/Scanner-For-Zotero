@@ -29,8 +29,6 @@ import android.text.TextUtils;
 import android.util.Log;
 
 public class ZoteroAPIClient {
-    private static final boolean DEBUG = false;
-    
     //private static final String CLASS_TAG = ZoteroAPIClient.class.getCanonicalName();
 
     public static final String GROUPS = "groups";
@@ -38,7 +36,7 @@ public class ZoteroAPIClient {
     public static final String PERMISSIONS = "keys";
 
 
-    private static final String ZOTERO_BASE_URL = DEBUG ? "http://10.13.37.64" : "https://api.zotero.org";
+    private static final String ZOTERO_BASE_URL = "https://api.zotero.org";
     private static final String ZOTERO_USERS_URL = ZOTERO_BASE_URL + "/users";
     private static final String ZOTERO_GROUPS_URL = ZOTERO_BASE_URL + "/groups";
 

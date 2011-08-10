@@ -1,7 +1,6 @@
 package org.ale.scan2zotero.web;
 
 import org.apache.http.HttpVersion;
-import org.apache.http.conn.scheme.PlainSocketFactory;
 import org.apache.http.conn.scheme.Scheme;
 import org.apache.http.conn.scheme.SchemeRegistry;
 import org.apache.http.conn.scheme.SocketFactory;
@@ -48,9 +47,6 @@ public class HttpsClient extends DefaultHttpClient {
 
     public static ThreadSafeClientConnManager setupSSLConnMan(HttpParams params){
         SchemeRegistry registry = new SchemeRegistry();
-
-        // XXX: Disallow HTTP in production release
-        registry.register(new Scheme("http", PlainSocketFactory.getSocketFactory(), 80));
 
         SSLSocketFactory sf = SSLSocketFactory.getSocketFactory();
         sf.setHostnameVerifier(SSLSocketFactory.BROWSER_COMPATIBLE_HOSTNAME_VERIFIER);
