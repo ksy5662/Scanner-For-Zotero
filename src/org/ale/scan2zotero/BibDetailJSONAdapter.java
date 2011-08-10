@@ -37,6 +37,8 @@ public class BibDetailJSONAdapter extends BaseAdapter implements ListAdapter {
         mNames = new ArrayList<String>();
         try {
             JSONArray names = obj.names();
+            if(names == null)
+                return;
             for(int i=0; i < names.length(); i++){
                 String name = (String) names.get(i);
                 // Don't include creator or title fields
@@ -99,11 +101,10 @@ public class BibDetailJSONAdapter extends BaseAdapter implements ListAdapter {
         }
         String name = mNames.get(position);
         String value = mBacker.optString(name);
-        ((TextView)convertView.findViewById(R.id.entry_lbl))
-                        .setText(name);
-        ((TextView)convertView.findViewById(R.id.entry_content))
-                        .setText(value);
+        TextView tv_name = (TextView) convertView.findViewById(R.id.entry_lbl);
+        TextView tv_value = (TextView) convertView.findViewById(R.id.entry_content);
+        tv_name.setText(name);
+        Util.fillBibTextField(tv_value, value);
         return convertView;
     }
-
 }

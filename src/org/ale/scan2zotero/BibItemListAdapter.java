@@ -5,15 +5,11 @@ import java.util.ArrayList;
 import org.ale.scan2zotero.data.BibItem;
 import org.ale.scan2zotero.data.ItemField;
 import org.ale.scan2zotero.data.S2ZDatabase;
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
 
 import android.content.Context;
+import android.content.res.Resources;
 import android.database.Cursor;
-import android.graphics.Color;
 import android.os.Message;
-import android.text.TextUtils;
 import android.util.SparseBooleanArray;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -40,10 +36,18 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
     private PersistentDBHandler mHandler;
 
     private final Context mContext;
+    private final Resources mResources;
     private final LayoutInflater mInflater;
+    
+    private CheckBox.OnClickListener CHECK_LISTENER = new CheckBox.OnClickListener(){
+        public void onClick(View cb) {
+            mChecked.put(((Integer)cb.getTag()).intValue(), ((CheckBox)cb).isChecked());
+        }
+    };
 
     public BibItemListAdapter(Context context) {
         mContext = context;
+        mResources = mContext.getResources();
         mInflater = 
             (LayoutInflater) context.getSystemService(Context.LAYOUT_INFLATER_SERVICE);
         mItems = new ArrayList<BibItem>();
@@ -137,64 +141,55 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
     }
 
     @Override
-    public View getChildView(int group, int child, boolean last,
-            View convert, ViewGroup parent) {
+    public View getChildView(
+            int group, int child, boolean last, View convert, ViewGroup parent){
         if(convert == null){
             convert = mInflater.inflate(R.layout.expandable_bib_child, parent, false);
         }
-        convert.setBackgroundColor(getColor(group));
+        convert.setBackgroundColor(getRowColor(group));
         BibDetailJSONAdapter adapter = mAdapters.get(group);
         adapter.fillLinearLayout((LinearLayout) convert);
         return convert;
     }
 
     @Override
-    public View getGroupView(final int group, boolean expanded, View convert, ViewGroup parent) {
-        BibItem item = mItems.get(group);
-        if(convert == null){      
+    public View getGroupView(
+            final int group, boolean expanded, View convert, ViewGroup parent) {
+
+        GroupViewComponents vtag;
+        if(convert == null){ // Create a new view
             convert = mInflater.inflate(R.layout.expandable_bib_item, parent, false);
-        }
-
-        CheckBox cb = (CheckBox) convert.findViewById(R.id.bib_row_checkbox);
-        cb.setChecked(mChecked.get(group, false));
-        cb.setOnClickListener(new CheckBox.OnClickListener(){
-            @Override
-            public void onClick(View cb) {
-                mChecked.put(group, ((CheckBox)cb).isChecked());
-            }
-        });
-        convert.findViewById(R.id.bib_row).setBackgroundColor(getColor(group));
-        TextView tv_author_lbl = (TextView) convert.findViewById(R.id.bib_author_lbl);
-        TextView tv_author = (TextView) convert.findViewById(R.id.bib_author);
-        TextView tv_title = (TextView) convert.findViewById(R.id.bib_title);
-
-        JSONObject data = item.getSelectedInfo();
-        JSONArray creators = data.optJSONArray(ItemField.creators);
-        if(creators != null){
-            int numAuthors = creators.length();
-            if(numAuthors > 1) tv_author_lbl.setText("Authors");
-            else tv_author_lbl.setText("Author");
-            ArrayList<String> creatorNames = new ArrayList<String>(numAuthors);
-            try {
-                for(int i=0; i<creators.length(); i++){
-                    String name = ((JSONObject)creators.get(i)).optString(ItemField.Creator.name);
-                    if(!TextUtils.isEmpty(name))
-                        creatorNames.add(name);
-                }
-                tv_author.setText(TextUtils.join(", ", creatorNames));
-            } catch (JSONException e) {
-                tv_author.setText("<unknown>");
-                tv_author.setTextColor(Color.GRAY);
-            }
+            // Avoid a bunch of calls to findViewById by tagging this view w/
+            // references to its children
+            vtag = new GroupViewComponents();
+            vtag.tv_checkbox = (CheckBox) convert.findViewById(R.id.bib_row_checkbox);
+            vtag.tv_author_lbl = (TextView) convert.findViewById(R.id.bib_author_lbl);
+            vtag.tv_author = (TextView) convert.findViewById(R.id.bib_author);
+            vtag.tv_title = (TextView) convert.findViewById(R.id.bib_title);
+            vtag.tv_checkbox.setOnClickListener(CHECK_LISTENER);
+            convert.setTag(vtag);
         }else{
-            tv_author.setText("<unknown>");
+            vtag = (GroupViewComponents) convert.getTag();
         }
 
-        tv_title.setText(data.optString(ItemField.title));
+        convert.setBackgroundColor(getRowColor(group));
+
+        // The checkbox's click listener checks this tag
+        vtag.tv_checkbox.setTag(new Integer(group));
+        vtag.tv_checkbox.setChecked(mChecked.get(group, false));
+
+        BibItem item = mItems.get(group);
+        if(!item.hasCachedValues())
+            item.cacheForViews();
+
+        vtag.tv_author_lbl.setText(mResources.getQuantityString(
+                                R.plurals.author, item.getCachedNumAuthors()));
+        Util.fillBibTextField(vtag.tv_title, item.getCachedTitleString());
+        Util.fillBibTextField(vtag.tv_author, item.getCachedAuthorString());
         return convert;
     }
 
-    private int getColor(int group){
+    private int getRowColor(int group){
         return (mItems.size()-group) % 2 == 0 ? EVEN_ROW_COLOR : ODD_ROW_COLOR;
     }
 
@@ -280,5 +275,12 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         for(int i=0; i<result.length; i++)
             result[i] = mChecked.get(i, false);
         return result;
+    }
+    
+    private final class GroupViewComponents {
+        public CheckBox tv_checkbox;
+        public TextView tv_author_lbl;
+        public TextView tv_author;
+        public TextView tv_title;
     }
 }

@@ -1,6 +1,8 @@
 package org.ale.scan2zotero;
 
+import android.graphics.Color;
 import android.text.TextUtils;
+import android.widget.TextView;
 
 public class Util {
 
@@ -42,5 +44,15 @@ public class Util {
         if(isbn2.length() == 13)
             isbn2 = isbn2.substring(3,12);
         return isbn1.equals(isbn2);
+    }
+
+    public static void fillBibTextField(TextView tv, String data){
+        if(!TextUtils.isEmpty(data)){
+            tv.setText(data);
+            tv.setTextColor(tv.getResources().getColor(android.R.color.primary_text_light));
+        }else{
+            tv.setText("<unknown>");
+            tv.setTextColor(Color.LTGRAY);
+        }
     }
 }
