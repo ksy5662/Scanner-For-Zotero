@@ -54,26 +54,32 @@ public class GoogleBooksAPIClient {
             jsonResp = new JSONObject(resp);
 
             // Google search always returns "books#volumes"
-            if(!jsonResp.optString("kind").equals("books#volumes")){
+            String kind = jsonResp.optString("kind");
+            JSONArray respItems = jsonResp.optJSONArray("items");
+            if(kind == null || !kind.equals("books#volumes") || respItems == null) {
+                translation.put(ItemField.ISBN, isbn);
                 return translation;
             }
 
-            JSONArray respItems = jsonResp.optJSONArray("items");
             JSONArray transItems = new JSONArray();
             for(int i=0; i < respItems.length(); i++){
                 // oItem is google's result, tItem is our translation of it
                 JSONObject orig = respItems.getJSONObject(i);
                 JSONObject volInfo = orig.optJSONObject("volumeInfo");
                 JSONObject trans = new JSONObject();
+                if(volInfo == null){
+                    transItems.put(trans);
+                    continue;
+                }
 
                 /* Set the itemType XXX: Always 'book' */
                 trans.put(ItemType.type, ItemType.book);
 
                 /* Get ISBN/ISSN info */
-                String bestId = null;
+                String bestId = isbn;
                 String bestType = ItemField.ISBN;
-                JSONArray identifiers = volInfo.getJSONArray("industryIdentifiers");
-                for(int j=0; j<identifiers.length(); j++){
+                JSONArray identifiers = volInfo.optJSONArray("industryIdentifiers");
+                for(int j=0; identifiers != null && j<identifiers.length(); j++){
                     JSONObject identifier = identifiers.getJSONObject(j);
                     String idType = identifier.getString("type");
 
@@ -103,14 +109,15 @@ public class GoogleBooksAPIClient {
 
                 /* Get Creators  */
                 JSONArray creators = new JSONArray();
-                JSONArray authors = volInfo.getJSONArray("authors");
-                for(int j=0; j<authors.length(); j++){
+                JSONArray authors = volInfo.optJSONArray("authors");
+                for(int j=0; authors != null && j<authors.length(); j++){
                     JSONObject author = new JSONObject();
                     author.put(CreatorType.type, CreatorType.Book.author);
                     author.put(ItemField.Creator.name, authors.get(j));
                     creators.put(author);
                 }
-                trans.put(ItemField.creators, creators);
+                if(creators.length() > 0)
+                    trans.put(ItemField.creators, creators);
 
                 /* Get Other info  */
                 trans.put(ItemField.publisher, volInfo.optString("publisher"));
@@ -125,7 +132,7 @@ public class GoogleBooksAPIClient {
             } // Otherwise we're returning an empty JSONObject
         } catch (JSONException e) {
             e.printStackTrace();
-            return translation;
+            return null;
         }
         return translation;
     }
