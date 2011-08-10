@@ -3,7 +3,10 @@ package org.ale.scan2zotero.web.zotero;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.net.URI;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Random;
+import java.util.Map.Entry;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -34,6 +37,7 @@ public class ZoteroAPIClient {
     public static final String GROUPS = "groups";
     public static final String ITEMS = "items";
     public static final String PERMISSIONS = "keys";
+    public static final String COLLECTIONS = "collections";
 
 
     private static final String ZOTERO_BASE_URL = "https://api.zotero.org";
@@ -41,9 +45,6 @@ public class ZoteroAPIClient {
     private static final String ZOTERO_GROUPS_URL = ZOTERO_BASE_URL + "/groups";
 
     private static final String HDR_WRITE_TOKEN = "X-Zotero-Write-Token";
-    
-    private static final String XML_NS_ZAPI = "http://zotero.org/ns/api";
-    private static final String XML_NS_ZXFER = "http://zotero.org/ns/transfer";
 
     private Account mAccount;
 
@@ -74,7 +75,10 @@ public class ZoteroAPIClient {
         // TODO: Allow no more than 50 items at a time
         APIRequest r = newRequest();
         r.setRequestType(APIRequest.POST);
-        r.setURI(buildURI(mAccount.getUid(), "items"));
+        HashMap<String, String> queryTerms = new HashMap<String,String>();
+        queryTerms.put("content", "json");
+        queryTerms.put("key", mAccount.getKey());
+        r.setURI(buildURI(queryTerms, mAccount.getUid(), "items"));
         r.setContent(items.toString(), "application/json");
         r.addHeader(HDR_WRITE_TOKEN, newWriteToken());
         r.setReturnIdentifier("addItems");
@@ -86,7 +90,7 @@ public class ZoteroAPIClient {
         // https://apis.zotero.org/users/<userid>/keys/<apikey>
         APIRequest r = newRequest();
         r.setRequestType(APIRequest.GET);
-        r.setURI(buildURI(mAccount.getUid(), PERMISSIONS, mAccount.getKey()));
+        r.setURI(buildURI(null, mAccount.getUid(), PERMISSIONS, mAccount.getKey()));
         r.setReturnIdentifier(PERMISSIONS);
 
         mRequestQueue.enqueue(r);
@@ -96,7 +100,7 @@ public class ZoteroAPIClient {
         // https://apis.zotero.org/users/<userid>/groups
         APIRequest r = newRequest();
         r.setRequestType(APIRequest.GET);
-        r.setURI(buildURI(mAccount.getUid(), GROUPS));
+        r.setURI(buildURI(null, mAccount.getUid(), GROUPS));
         r.setReturnIdentifier(GROUPS);
 
         mRequestQueue.enqueue(r);
@@ -111,10 +115,10 @@ public class ZoteroAPIClient {
             collection.put("parent", parent);
             APIRequest r = newRequest();
             r.setRequestType(APIRequest.POST);
-            r.setURI(buildURI(mAccount.getUid(), "collections"));
+            r.setURI(buildURI(null, mAccount.getUid(), COLLECTIONS));
             r.setContent(collection.toString(), "application/json");
             r.addHeader(HDR_WRITE_TOKEN, newWriteToken());
-            r.setReturnIdentifier("newCollection");
+            r.setReturnIdentifier(COLLECTIONS);
 
             mRequestQueue.enqueue(r);
         } catch (JSONException e) {
@@ -122,30 +126,32 @@ public class ZoteroAPIClient {
         }
     }
 
-    public URI buildURI(String persona, String action) {
+    public URI buildURI(Map<String, String> queryTerms, String...pathSections) {
         // Returns:
         // https://api.zotero.org/<user or group>/<persona>/<action>?key=<key>
         String base;
-        String query = "?key=" + mAccount.getKey();
-        if(persona.equals(mAccount.getUid())){
-            base = ZOTERO_USERS_URL;
+        StringBuilder queryB = new StringBuilder();
+        if(queryTerms == null){
+            queryB.append("key=").append(mAccount.getKey());
         }else{
-            base = ZOTERO_GROUPS_URL;
+            for(Entry<String, String> e : queryTerms.entrySet()){
+                queryB.append(e.getKey())
+                    .append("=")
+                    .append(e.getValue())
+                    .append("&");
+            }
+            // Delete the last ampersand
+            queryB.deleteCharAt(queryB.length()-1);
         }
-        return URI.create(base+"/"+persona+"/"+action+query);
-    }
 
-    public URI buildURI(String persona, String action, String selection) {
-        // Returns:
-        // https://api.zotero.org/<user or group>/<persona>/<action>/<selection>?key=<key>
-        String base;
-        String query = "?key=" + mAccount.getKey();
+        String persona = pathSections[0];
         if(persona.equals(mAccount.getUid())){
             base = ZOTERO_USERS_URL;
         }else{
             base = ZOTERO_GROUPS_URL;
         }
-        return URI.create(base+"/"+persona+"/"+action+"/"+selection+query);
+        String path = TextUtils.join("/", pathSections);
+        return URI.create(base+"/"+path+"?"+queryB.toString());
     }
 
     public static String newWriteToken(){
@@ -154,7 +160,7 @@ public class ZoteroAPIClient {
         return Integer.toHexString(rng.nextInt()) + Integer.toHexString(rng.nextInt());
     }
 
-    public static Access parsePermissions(String resp) {
+    public static Access parsePermissions(String resp, Account user) {
         /* example:
           <key key="xxx">
           <access library="1" files="1" notes="1" write="1"/>
@@ -169,12 +175,12 @@ public class ZoteroAPIClient {
         NodeList keys = doc.getElementsByTagName("key");
         if(keys.getLength() == 0) return null;
 
-        Node key = keys.item(0);
-        Node keyIdNode = key.getAttributes().getNamedItem("key");
-        if(keyIdNode == null) return null;
+        Node keyNode = keys.item(0);
+        Node keyAttr = keyNode.getAttributes().getNamedItem("key");
+        if(keyAttr == null) return null;
 
-        String keyId = keyIdNode.getNodeValue();
-        Log.d("ZPIClient", keyId);
+        String key = keyAttr.getNodeValue();
+        if(!key.equals(user.getKey())) return null;
 
         NodeList accessTags = doc.getElementsByTagName("access");
         int[] groups = new int[accessTags.getLength()];
@@ -208,7 +214,7 @@ public class ZoteroAPIClient {
                 permissions[i] |= Access.NOTE;
             }
         }
-        return new Access(groups, permissions);
+        return new Access(user.getDbId(), groups, permissions);
     }
 
     public static Group[] parseGroups(String resp) {
@@ -240,7 +246,7 @@ public class ZoteroAPIClient {
         if(doc == null)
             return null;
 
-        NodeList totalResults = doc.getElementsByTagNameNS(XML_NS_ZAPI, "totalResults");
+        NodeList totalResults = doc.getElementsByTagName("zapi:totalResults");
         if(totalResults.getLength() == 0)
             return null;
 
