@@ -47,7 +47,7 @@ public class S2ZLoginActivity extends Activity {
     // Transient state
     private Account mAccount;
 
-    private boolean mFirstRun;
+    private boolean mHasSavedKeys;
 
     private boolean mLoggedIn;
 
@@ -74,12 +74,14 @@ public class S2ZLoginActivity extends Activity {
         // Load the saved state, fills user/key fields, sets checkboxes etc.
         loadConfig();
 
+        findViewById(R.id.login_saved_key)
+                    .setVisibility(mHasSavedKeys ? View.VISIBLE : View.GONE);
+
         // All listeners are defined at the bottom of this file.
         // Login option buttons:
         findViewById(R.id.login_saved_key).setOnClickListener(loginButtonListener);
         findViewById(R.id.login_by_web).setOnClickListener(loginButtonListener);
         findViewById(R.id.login_manually).setOnClickListener(loginButtonListener);
-        findViewById(R.id.register_new_account).setOnClickListener(loginButtonListener);
         findViewById(R.id.login_submit).setOnClickListener(loginButtonListener);
         findViewById(R.id.login_cancel).setOnClickListener(loginButtonListener);
 
@@ -89,12 +91,10 @@ public class S2ZLoginActivity extends Activity {
         ((CheckBox)findViewById(R.id.save_login)).setChecked(mRememberMe);
 
         // These update mAccount when an edittext changes
-        findViewById(R.id.useralias_edittext).setOnKeyListener(editableTextListener);
         findViewById(R.id.userid_edittext).setOnKeyListener(editableTextListener);
         findViewById(R.id.apikey_edittext).setOnKeyListener(editableTextListener);
         
         // These validate edittext content on focus change
-        findViewById(R.id.useralias_edittext).setOnFocusChangeListener(focusTextListener);
         findViewById(R.id.userid_edittext).setOnFocusChangeListener(focusTextListener);
         findViewById(R.id.apikey_edittext).setOnFocusChangeListener(focusTextListener);
 
@@ -111,11 +111,6 @@ public class S2ZLoginActivity extends Activity {
         if(extras != null && extras.getBoolean(INTENT_EXTRA_CLEAR_FIELDS, false)){
             setUserAndKey("","","");
             mLoggedIn = false;
-        }
-
-        // Until the user logs in successfully, some instructions are provided.
-        if(!mFirstRun){
-            findViewById(R.id.login_instructions).setVisibility(View.GONE);
         }
     }
 
@@ -134,13 +129,8 @@ public class S2ZLoginActivity extends Activity {
         switch(S2ZDialogs.displayedDialog) {
         case(S2ZDialogs.DIALOG_NO_DIALOG):
             break;
-        case(S2ZDialogs.DIALOG_ZOTERO_REGISTER):
-            mAlertDialog = S2ZDialogs.informUserAboutLogin(S2ZLoginActivity.this,
-                                GetApiKeyActivity.NEW_ACCOUNT);
-            break;
         case(S2ZDialogs.DIALOG_ZOTERO_LOGIN):
-            mAlertDialog = S2ZDialogs.informUserAboutLogin(S2ZLoginActivity.this,
-                                GetApiKeyActivity.EXISTING_ACCOUNT);
+            mAlertDialog = S2ZDialogs.informUserAboutLogin(S2ZLoginActivity.this);
             break;
         case(S2ZDialogs.DIALOG_SAVED_KEYS):
             mOnRecvCursor = RECV_CURSOR_PROMPT;
@@ -168,11 +158,10 @@ public class S2ZLoginActivity extends Activity {
     private void doLogin(){ 
         // mAcctCursor MUST be open before this is called
 
-        boolean validAlias = validateUserAlias(); // These have side effects
-        boolean validId = validateUserId();       //
+        boolean validId = validateUserId();       // These have side effects
         boolean validKey = validateApiKey();      //
 
-        if(!(validAlias && validId && validKey))
+        if(!(validId && validKey))
             return;
 
         // Try to find a matching account in the database
@@ -244,6 +233,11 @@ public class S2ZLoginActivity extends Activity {
             public void run() {
                 mAcctCursor = c;
                 startManagingCursor(mAcctCursor); 
+
+                mHasSavedKeys = (mAcctCursor.getCount() > 0);
+                findViewById(R.id.login_saved_key)
+                        .setVisibility(mHasSavedKeys ? View.VISIBLE : View.GONE);
+
                 switch(mOnRecvCursor){
                 // On an activity recreate (following orientation change, etc)
                 // we need to immediately call promptToUseSavedKey if the dialog
@@ -266,12 +260,12 @@ public class S2ZLoginActivity extends Activity {
     /* Saved Preferences */
     protected void loadConfig(){
         SharedPreferences prefs = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
-        String alias = prefs.getString(getString(R.string.alias_pref_key), "");
-        String uid = prefs.getString(getString(R.string.userid_pref_key), "");
-        String key = prefs.getString(getString(R.string.apikey_pref_key), "");
-        mFirstRun = prefs.getBoolean(getString(R.string.firstrun_pref_key), true);
-        mRememberMe = prefs.getBoolean(getString(R.string.rememberme_pref_key), true);
-        mLoggedIn = prefs.getBoolean(getString(R.string.logged_in_pref_key), false);
+        String alias = prefs.getString(getString(R.string.pref_alias), "");
+        String uid = prefs.getString(getString(R.string.pref_userid), "");
+        String key = prefs.getString(getString(R.string.pref_apikey), "");
+        mHasSavedKeys = prefs.getBoolean(getString(R.string.pref_savedkeys), false);
+        mRememberMe = prefs.getBoolean(getString(R.string.pref_rememberme), true);
+        mLoggedIn = prefs.getBoolean(getString(R.string.pref_loggedin), false);
 
         setUserAndKey(alias, uid, key);
     }
@@ -280,16 +274,16 @@ public class S2ZLoginActivity extends Activity {
         SharedPreferences config = getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
         SharedPreferences.Editor editor = config.edit();
 
-        editor.putString(getString(R.string.alias_pref_key), mAccount.getAlias());
-        editor.putString(getString(R.string.userid_pref_key), mAccount.getUid());
-        editor.putString(getString(R.string.apikey_pref_key), mAccount.getKey());
+        editor.putString(getString(R.string.pref_alias), mAccount.getAlias());
+        editor.putString(getString(R.string.pref_userid), mAccount.getUid());
+        editor.putString(getString(R.string.pref_apikey), mAccount.getKey());
 
-        editor.putBoolean(getString(R.string.rememberme_pref_key), mRememberMe);
+        editor.putBoolean(getString(R.string.pref_rememberme), mRememberMe);
 
-        editor.putBoolean(getString(R.string.logged_in_pref_key), mLoggedIn);
+        editor.putBoolean(getString(R.string.pref_loggedin), mLoggedIn);
 
         // Set firstrun to false the first time the user logs in
-        editor.putBoolean(getString(R.string.firstrun_pref_key), mFirstRun && !mLoggedIn);
+        editor.putBoolean(getString(R.string.pref_savedkeys), mHasSavedKeys);
 
         editor.commit();
     }
@@ -302,7 +296,6 @@ public class S2ZLoginActivity extends Activity {
 
     protected void setUserAndKey(Account acct){
         mAccount = acct;
-        ((EditText) findViewById(R.id.useralias_edittext)).setText(acct.getAlias());
         ((EditText) findViewById(R.id.userid_edittext)).setText(acct.getUid());
         ((EditText) findViewById(R.id.apikey_edittext)).setText(acct.getKey());
         validateUserId();
@@ -310,16 +303,6 @@ public class S2ZLoginActivity extends Activity {
     }
 
     /* Input validation */
-    private boolean validateUserAlias(){
-        boolean valid = !(mRememberMe && TextUtils.isEmpty(mAccount.getAlias()));
-        if(valid || TextUtils.isEmpty(mAccount.getAlias())){
-            ((EditText) findViewById(R.id.useralias_edittext)).setError(null);
-        }else{
-            ((EditText) findViewById(R.id.useralias_edittext)).setError("Alias required");
-        }
-        return valid;
-    }
-
     private boolean validateUserId(){
         boolean valid = mAccount.hasValidUserId();
         if(valid || TextUtils.isEmpty(mAccount.getUid()))
@@ -331,7 +314,6 @@ public class S2ZLoginActivity extends Activity {
 
     private boolean validateApiKey(){
         boolean valid = mAccount.hasValidApiKey();
-        Log.d(CLASS_TAG, valid + "\t" + mAccount.getKey());
         if(valid || TextUtils.isEmpty(mAccount.getKey()))
             ((EditText) findViewById(R.id.apikey_edittext)).setError(null);
         else
@@ -341,7 +323,7 @@ public class S2ZLoginActivity extends Activity {
 
 
     /* View Flipping */
-    private void showPrevious() {
+    protected void showPrevious() {
         ViewFlipper vf = (ViewFlipper)findViewById(R.id.login_view_flipper);
         if(vf.getCurrentView().getId() == R.id.login_view_editables){
             vf.setInAnimation(AnimationUtils.loadAnimation(S2ZLoginActivity.this, R.anim.slide_in_previous));
@@ -350,7 +332,7 @@ public class S2ZLoginActivity extends Activity {
         }
     }
 
-    private void showNext() {
+    protected void showNext() {
         ViewFlipper vf = (ViewFlipper)findViewById(R.id.login_view_flipper);
         if(vf.getCurrentView().getId() == R.id.login_view_options){
             vf.setInAnimation(AnimationUtils.loadAnimation(S2ZLoginActivity.this, R.anim.slide_in_next));
@@ -396,7 +378,8 @@ public class S2ZLoginActivity extends Activity {
                 mOnRecvCursor = RECV_CURSOR_PROMPT;
             }
             return true;
-        case R.id.opt_about:
+        case R.id.opt_help:
+            mAlertDialog = S2ZDialogs.showLoginHelp(S2ZLoginActivity.this);
             return true;
         }
         return super.onOptionsItemSelected(item);
@@ -417,19 +400,12 @@ public class S2ZLoginActivity extends Activity {
                 break;
 
             case R.id.login_by_web:
-                mAlertDialog = S2ZDialogs.informUserAboutLogin(
-                                    S2ZLoginActivity.this,
-                                    GetApiKeyActivity.EXISTING_ACCOUNT);
+                mAlertDialog = S2ZDialogs.informUserAboutLogin(S2ZLoginActivity.this);
                 break;
             
             case R.id.login_manually:
+                setUserAndKey("","","");
                 showNext();
-                break;
-
-            case R.id.register_new_account:
-                mAlertDialog = S2ZDialogs.informUserAboutLogin(
-                                    S2ZLoginActivity.this,
-                                    GetApiKeyActivity.NEW_ACCOUNT);
                 break;
 
             case R.id.login_submit:
@@ -441,7 +417,6 @@ public class S2ZLoginActivity extends Activity {
                 break;
 
             case R.id.login_cancel:
-                showPrevious();
                 setUserAndKey("", "", "");
                 break;
 
@@ -454,9 +429,6 @@ public class S2ZLoginActivity extends Activity {
         @Override
         public boolean onKey(View v, int keyCode, KeyEvent event) {
             switch(v.getId()){
-            case R.id.useralias_edittext:
-                mAccount.setAlias(((EditText)v).getText().toString());
-                break;
             case R.id.userid_edittext:
                 mAccount.setUid(((EditText)v).getText().toString());
                 if(mAccount.hasValidUserId()) // Doesn't use validateUserId so as
@@ -476,10 +448,6 @@ public class S2ZLoginActivity extends Activity {
         @Override
         public void onFocusChange(View v, boolean hasFocus) {
             switch(v.getId()){
-            case R.id.useralias_edittext:
-                mAccount.setAlias(((EditText)v).getText().toString());
-                validateUserAlias();
-                break;
             case R.id.userid_edittext:
                 mAccount.setUid(((EditText)v).getText().toString());
                 validateUserId();
@@ -496,12 +464,6 @@ public class S2ZLoginActivity extends Activity {
         @Override
         public void onCheckedChanged(CompoundButton checkbox, boolean checked) {
             mRememberMe = checked;
-            if(checked){
-                findViewById(R.id.useralias_edittext).setVisibility(View.VISIBLE);
-                validateUserAlias();
-            }else{
-                findViewById(R.id.useralias_edittext).setVisibility(View.GONE);
-            }
         }
     };
 }

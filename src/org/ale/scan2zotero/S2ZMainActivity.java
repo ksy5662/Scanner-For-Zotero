@@ -36,6 +36,7 @@ import android.widget.Button;
 import android.widget.ExpandableListView;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
+import android.widget.Toast;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.ExpandableListView.ExpandableListContextMenuInfo;
 
@@ -196,6 +197,16 @@ public class S2ZMainActivity extends Activity {
         }
     }
 
+    public Account getUserAccount(){
+        // hack for ZoteroHandler, which needs to know which user
+        // is logged in so as to create an Access object. :/
+        return mAccount;
+    }
+
+    public void post(Runnable r) {
+        mHandler.post(r);
+    }
+
     @Override
     public void onSaveInstanceState(Bundle state){
         super.onSaveInstanceState(state);
@@ -273,7 +284,7 @@ public class S2ZMainActivity extends Activity {
                     Cursor c = getContentResolver()
                                 .query(S2ZDatabase.GROUP_URI,
                                         new String[]{Group._ID}, 
-                                        Access.COL_KEY+" IN (?)",
+                                        Group._ID+" IN (?)",
                                         new String[] {selection},
                                         null);
 
@@ -304,19 +315,30 @@ public class S2ZMainActivity extends Activity {
         }).start();
     }
 
-    public void gotBibInfo(String isbn, JSONObject info){
-        // Fill in form from online info.
-        BibItem item = new BibItem(BibItem.TYPE_BOOK, info, mAccount.getDbId());
-        mPendingAdapter.remove(isbn);
-        if(mPendingAdapter.getCount() == 0)
-            mPendingList.setVisibility(View.GONE);
-        if(mItemAdapter.getGroupCount() > 0)
-            findViewById(R.id.upload).setVisibility(View.VISIBLE);
-        mItemAdapter.addItem(item);
+    public void gotBibInfo(final String isbn, final JSONObject info){
+        mHandler.post(new Runnable() {
+            public void run(){
+                BibItem item = new BibItem(BibItem.TYPE_BOOK, info, mAccount.getDbId());
+                mPendingAdapter.remove(isbn);
+                if(mPendingAdapter.getCount() == 0)
+                    mPendingList.setVisibility(View.GONE);
+                if(mItemAdapter.getGroupCount() > 0)
+                    findViewById(R.id.upload).setVisibility(View.VISIBLE);
+                mItemAdapter.addItem(item);
+            }
+        });
     }
-    
+
     public void itemFailed(String isbn, Integer status){
         mPendingAdapter.setStatus(isbn, status);
+    }
+
+    public void itemFailedExt(final String isbn, final Integer status){
+        mHandler.post(new Runnable(){
+            public void run(){
+                mPendingAdapter.setStatus(isbn, status);
+            }
+        });
     }
 
     public void showOrHideUploadButton(){
@@ -425,9 +447,15 @@ public class S2ZMainActivity extends Activity {
     }
 
     private void handleBarcode(String content, String format){
+        if(mPendingAdapter.hasItem(content)){
+            Toast.makeText(
+                    S2ZMainActivity.this,
+                    "Already processing "+content+".",
+                    Toast.LENGTH_LONG).show();
+            return;
+        }
         switch(Util.parseBarcode(content, format)) {
             case(Util.SCAN_PARSE_ISBN):
-                Log.d(CLASS_TAG, "Looking up ISBN:"+content);
                 // Don't do anything if we're still loading the item
                 // Otherwise, try looking it up again.
                 if(mPendingAdapter.hasItem(content)){
@@ -443,11 +471,10 @@ public class S2ZMainActivity extends Activity {
                 mBooksAPI.isbnLookup(content);
                 break;
             case(Util.SCAN_PARSE_ISSN):
-                Log.d(CLASS_TAG, "Looking up ISSN:"+content);
                 break;
             default:
-                Log.d(CLASS_TAG, "Could not handle code: "+content+" of type "+format);
-                // XXX: Report scan failure
+                mPendingAdapter.add(content);
+                mPendingAdapter.setStatus(content, PendingListAdapter.STATUS_UNKNOWN_TYPE);
                 break;
         }
     }

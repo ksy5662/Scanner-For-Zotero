@@ -11,7 +11,7 @@
             android:layout_height="75dp"
             android:layout_alignParentTop="true"
             android:background="@drawable/fancy_selector"
-            style="@style/S2ZButton" />
+            style="@style/ScanButton" />
 
     <Button android:text="Upload selected"
             android:id="@+id/upload"
@@ -19,7 +19,7 @@
             android:layout_height="75dp"
             android:layout_alignParentBottom="true"
             android:background="@drawable/fancy_selector"
-            style="@style/S2ZButton" />
+            style="@style/ScanButton" />
 
     <ExpandableListView android:id="@+id/bib_items"
                         android:layout_height="wrap_content"

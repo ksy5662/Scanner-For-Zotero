@@ -22,11 +22,12 @@ public class Access implements Parcelable {
     public static final int NOTE = 1;
     public static final int WRITE = 2;
     public static final int READ = 4;
-    
+
     public int mKeyDbId;
     public final int[] mGroups;
     public final int[] mPerms;
     public final HashMap<Integer, Integer> mPermMap;
+
     
     public Access(int key, int[] groups, int[] permissions){
         mKeyDbId = key;
@@ -35,10 +36,9 @@ public class Access implements Parcelable {
         mPermMap = new HashMap<Integer, Integer>();
         for(int i = 0; i < groups.length; i++){
             mPermMap.put(groups[i], permissions[i]);
-            Log.d("I'm an access!", groups[i] + " : " + permissions[i]);
         }
     }
-    
+
     public Access(int[] groups, int[] permissions){
         this(Account.NOT_IN_DATABASE, groups, permissions);
     }
@@ -136,8 +136,8 @@ public class Access implements Parcelable {
                     Account.COL_KEY+"=?",
                     new String[]{String.valueOf(mKeyDbId)},
                     null);
-    
-            if(keyCur.getCount() != 0){
+
+            if(keyCur.getCount() == 0){
                 keyCur.close();
                 return; // Not in database
             }

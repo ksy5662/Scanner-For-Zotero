@@ -12,9 +12,13 @@ import android.widget.ViewFlipper;
 
 public class PendingListAdapter extends ArrayAdapter<String> {
 
+    public static final Integer STATUS_UNKNOWN_TYPE = new Integer(R.string.pending_status_unknown);
     public static final Integer STATUS_LOADING = new Integer(R.string.pending_status_loading);
-    public static final Integer STATUS_FAILED = new Integer(R.string.pending_status_failed);
     public static final Integer STATUS_NO_NETWORK = new Integer(R.string.pending_status_nonet);
+    public static final Integer STATUS_BAD_REQUEST = new Integer(R.string.pending_status_bad_request);
+    public static final Integer STATUS_SERVER_ERROR = new Integer(R.string.pending_status_server_error);
+    public static final Integer STATUS_QUOTA_EXCEEDED = new Integer(R.string.pending_status_quota_exceeded);
+    public static final Integer STATUS_FAILED = new Integer(R.string.pending_status_failed);
 
     private ArrayList<Integer> mPendingStatus;
     private Context mContext;

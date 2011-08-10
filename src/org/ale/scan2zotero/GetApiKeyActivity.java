@@ -32,9 +32,6 @@ public class GetApiKeyActivity extends Activity {
 
     public static final String LOGIN_TYPE = "LOGIN_TYPE";
 
-    public static final int EXISTING_ACCOUNT = 0;
-    public static final int NEW_ACCOUNT = 1;
-
     public static final String ACCOUNT = "ACCOUNT";
 
     public static final String RECREATE_FOUND_NAMES = "RENAME";
@@ -65,24 +62,16 @@ public class GetApiKeyActivity extends Activity {
             wv.setWebViewClient(getWebViewClient());
         }
 
-        Bundle extras = getIntent().getExtras();
-        if(extras.getInt(LOGIN_TYPE, EXISTING_ACCOUNT) == EXISTING_ACCOUNT){
-            // The images are barely noticeable during this so we don't need them
-            wv.getSettings().setBlockNetworkImage(true);
+        // The images are barely noticeable during this so we don't need them
+        wv.getSettings().setBlockNetworkImage(true);
 
-            // TODO: extraHeaders doesn't exist on versions <= 2.1 - try to find workaround
-            Map<String, String> extraHeaders = new HashMap<String, String>();
-            extraHeaders.put("Referer", "https://zotero.org/settings/keys");
-            wv.getSettings().setJavaScriptEnabled(true);
-            wv.addJavascriptInterface(new KeyScraper(), "KEYSCRAPE");
-            // Cause dialog to display in onResume
-            wv.loadUrl("https://zotero.org/user/login/", extraHeaders);
-        }else{
-            // Have to do a captcha :(
-            wv.getSettings().setBlockNetworkImage(false);
-
-            wv.loadUrl("https://zotero.org/user/register/");
-        }
+        // TODO: extraHeaders doesn't exist on versions <= 2.1 - try to find workaround
+        Map<String, String> extraHeaders = new HashMap<String, String>();
+        extraHeaders.put("Referer", "https://zotero.org/settings/keys");
+        wv.getSettings().setJavaScriptEnabled(true);
+        wv.addJavascriptInterface(new KeyScraper(), "KEYSCRAPE");
+        // Cause dialog to display in onResume
+        wv.loadUrl("https://zotero.org/user/login/", extraHeaders);
     }
 
     @Override
@@ -104,9 +93,6 @@ public class GetApiKeyActivity extends Activity {
             break;
         case(S2ZDialogs.DIALOG_SSL):
             mAlertDialog = S2ZDialogs.showSSLDialog(GetApiKeyActivity.this);
-            break;
-        case(S2ZDialogs.DIALOG_EMAIL_VERIFY):
-            mAlertDialog = S2ZDialogs.showEmailValidationDialog(GetApiKeyActivity.this);
             break;
         case(S2ZDialogs.DIALOG_NO_KEYS):
             mAlertDialog = S2ZDialogs.showNoKeysDialog(GetApiKeyActivity.this);
@@ -151,15 +137,6 @@ public class GetApiKeyActivity extends Activity {
         return new WebViewClient() {
             // TODO: Block non-zotero.org sites or maybe white-list just the pages
             // we need.
-            @Override  
-            public boolean shouldOverrideUrlLoading(WebView view, String url)  
-            {  
-                if(url.indexOf("zotero.org/user/validate") > 0) {
-                    mAlertDialog = S2ZDialogs.showEmailValidationDialog(GetApiKeyActivity.this);
-                    return true;
-                }
-                return false;  
-            }
             @Override
             public void onPageFinished(WebView view, String url)  
             {

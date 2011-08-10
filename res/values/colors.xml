@@ -8,4 +8,6 @@
     <color name="s2z_dark_beige">#FFF1F6DB</color>
     <color name="s2z_light_beige">#FFF4F9EB</color>
     <color name="s2z_dark_red">#FF8A2A37</color>
+    <color name="s2z_white">#FFFFFFFF</color>
+    <color name="s2z_yellow">#FFFF00FF</color>
 </resources>

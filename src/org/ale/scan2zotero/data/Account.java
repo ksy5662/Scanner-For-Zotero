@@ -1,5 +1,6 @@
 package org.ale.scan2zotero.data;
 
+import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.os.Parcel;
@@ -116,4 +117,15 @@ public class Account implements Parcelable, BaseColumns {
         p.writeString(mKey);
     }
 
+    public static void purgeAccount(ContentResolver cr, int row){
+        String[] selection = new String[]{String.valueOf(row)};
+        cr.delete(S2ZDatabase.ACCOUNT_URI,Account._ID+"=?", selection);
+        cr.delete(S2ZDatabase.ACCESS_URI, Access.COL_KEY+"=?", selection);
+    }
+    public static void renameAccount(ContentResolver cr, int row, String name){
+        ContentValues values = new ContentValues();
+        values.put(Account.COL_ALIAS, name);
+        String[] selection = new String[]{String.valueOf(row)};
+        cr.update(S2ZDatabase.ACCOUNT_URI, values, Account._ID+"=?", selection);
+    }
 }

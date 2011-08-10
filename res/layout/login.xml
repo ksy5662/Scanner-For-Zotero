@@ -3,89 +3,98 @@
 	android:id="@+id/login_view_flipper" android:layout_height="match_parent"
 	android:layout_width="match_parent">
 
-	<RelativeLayout android:id="@+id/login_view_options"
-		android:layout_height="match_parent" android:layout_width="match_parent">
+    <LinearLayout android:id="@+id/login_view_options"
+                  android:layout_height="match_parent"
+                  android:layout_width="match_parent"
+                  android:orientation="vertical"
+                  android:paddingLeft="10dp"
+                  android:paddingRight="10dp">
 
-		<ImageView android:id="@+id/logo" android:layout_height="wrap_content"
-			android:layout_width="match_parent" android:src="@drawable/icon"
-			android:paddingBottom="15dip" android:gravity="center_horizontal"
-			android:layout_alignParentTop="true" />
+        <ImageView android:id="@+id/logo"
+            android:maxHeight="100px"
+            android:maxWidth="300px"
+            android:src="@drawable/logo"
+            android:padding="15dp"
+            android:gravity="center_horizontal"
+            android:layout_height="80dp"
+            android:layout_width="match_parent"/>
 
-		<TextView android:text="@string/login_instructions"
-			android:id="@+id/login_instructions" android:layout_width="wrap_content"
-			android:layout_height="wrap_content" android:paddingLeft="30dip"
-			android:paddingRight="30dip" android:paddingBottom="15dip"
-			android:textAppearance="?android:attr/textAppearanceSmall"
-			android:layout_below="@id/logo" />
+        <Button android:text="Use a saved key"
+            android:id="@+id/login_saved_key"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            style="@style/LoginButton" />
+        
+        <Button android:text="Get an API key online" android:id="@+id/login_by_web"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:paddingTop="10dip"
+            android:paddingBottom="10dip"
+            style="@style/LoginButton" />
 
-		<TextView android:text="Already have a Zotero.org account?"
-			android:layout_width="match_parent" android:layout_height="wrap_content"
-			android:paddingLeft="10dip" android:textColor="#FFF"
-			android:background="#888" android:id="@+id/haveacct"
-			android:textAppearance="?android:attr/textAppearanceSmall"
-			android:layout_centerVertical="true" android:layout_below="@id/login_instructions" />
+        <Button android:text="Enter an API key manually" android:id="@+id/login_manually"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            style="@style/LoginButton" />
+    </LinearLayout>
 
-		<Button android:text="Log in with saved key" android:id="@+id/login_saved_key"
-			android:drawableTop="@drawable/ic_menu_login" android:layout_width="100dp"
-			android:layout_height="100dp" android:paddingTop="10dip"
-			android:layout_below="@id/haveacct" android:layout_alignParentLeft="true" />
+    <!--  Second screen -->
+	<LinearLayout android:id="@+id/login_view_editables"
+		          android:layout_height="match_parent"
+		          android:layout_width="match_parent"
+		          android:orientation="vertical">
 
-		<Button android:text="Fetch API key" android:id="@+id/login_by_web"
-			android:drawableTop="@drawable/ic_menu_details" android:layout_width="100dp"
-			android:layout_height="100dp" android:paddingBottom="10dip"
-			android:layout_below="@id/haveacct" android:layout_centerHorizontal="true" />
+		<ImageView android:id="@+id/logo"
+		    android:layout_height="80dp"
+            android:layout_width="match_parent"
+            android:src="@drawable/logo"
+            android:padding="15dp"
+            android:gravity="center_horizontal"/>
 
-		<Button android:text="Enter key manually" android:id="@+id/login_manually"
-			android:drawableTop="@drawable/ic_menu_details" android:layout_width="100dp"
-			android:layout_height="100dp" android:paddingBottom="10dip"
-			android:layout_below="@id/haveacct" android:layout_alignParentRight="true" />
-
-		<Button android:text="Register a new Zotero account"
-			android:id="@+id/register_new_account" android:layout_width="wrap_content"
-			android:layout_height="wrap_content" android:paddingTop="10dip"
-			android:layout_centerHorizontal="true"
-			android:layout_alignParentBottom="true" />
-
-		<TextView android:text="New to Zotero?" android:layout_width="match_parent"
-			android:layout_height="wrap_content" android:paddingLeft="10dip"
-			android:textColor="#FFF" android:background="#888" android:id="@+id/newtozotero"
-			android:textAppearance="?android:attr/textAppearanceSmall"
-			android:layout_above="@id/register_new_account"
-			android:layout_alignParentLeft="true" />
-	</RelativeLayout>
-
-	<RelativeLayout android:id="@+id/login_view_editables"
-		android:layout_height="match_parent" android:layout_width="match_parent">
-		<!-- Manual login -->
-		<LinearLayout android:id="@+id/edit_id_and_key"
-			android:layout_height="wrap_content" android:layout_width="match_parent"
-			android:orientation="vertical" android:layout_below="@id/register_new_account"
-			android:layout_centerHorizontal="true">
-			<EditText android:id="@+id/useralias_edittext"
-				android:layout_height="wrap_content" android:layout_width="match_parent"
-				android:hint="Key Alias">
-			</EditText>
+        <LinearLayout android:layout_width="match_parent"
+            android:weightSum="2"
+            android:orientation="vertical" android:layout_height="wrap_content">
+			<TextView android:layout_height="wrap_content"
+                android:layout_width="wrap_content"
+                android:text="User ID:"
+                android:textColor="#000"/>
 			<EditText android:id="@+id/userid_edittext"
 				android:layout_height="wrap_content" android:layout_width="match_parent"
 				android:inputType="number|textMultiLine" android:digits="0123456789"
 				android:hint="User ID" android:lines="1">
 			</EditText>
+			<TextView android:layout_height="wrap_content"
+                android:layout_width="wrap_content"
+                android:text="API Key:"
+                android:textColor="#000"/>
 			<EditText android:id="@+id/apikey_edittext"
 				android:layout_height="wrap_content" android:layout_width="match_parent"
 				android:hint="API Key" android:lines="1" android:inputType="textMultiLine">
 			</EditText>
-			<LinearLayout android:id="@+id/edit_id_and_key"
-				android:layout_height="wrap_content" android:layout_width="match_parent"
-				android:orientation="horizontal">
-
-				<CheckBox android:id="@+id/save_login" android:text="Remember Me"
-					android:checked="true" android:layout_width="wrap_content"
-					android:layout_height="wrap_content" />
-				<Button android:text="Log in" android:id="@+id/login_submit"
-					android:layout_width="wrap_content" android:layout_height="wrap_content" />
-				<Button android:text="Clear" android:id="@+id/login_cancel"
-					android:layout_width="wrap_content" android:layout_height="wrap_content" />
-			</LinearLayout>
 		</LinearLayout>
-	</RelativeLayout>
+		<LinearLayout android:layout_height="match_parent"
+            android:layout_width="match_parent"
+			android:orientation="horizontal"
+			android:layout_weight="3"
+			android:paddingBottom="20dip">
+
+			<CheckBox android:id="@+id/save_login" android:text="Remember Me"
+				android:checked="true" 
+				android:layout_width="wrap_content"
+				android:layout_height="wrap_content" />
+			<Button android:text="Log in"
+			    android:id="@+id/login_submit"
+			    android:layout_weight="1"
+				android:layout_width="match_parent"
+				android:layout_height="60dp" />
+			<Button android:text="Clear"
+			    android:id="@+id/login_cancel"
+			    android:layout_weight="1"
+				android:layout_width="match_parent"
+				android:layout_height="60dp" />
+		</LinearLayout>
+	</LinearLayout>
 </ViewFlipper>

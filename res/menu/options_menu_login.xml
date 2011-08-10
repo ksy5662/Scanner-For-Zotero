@@ -10,8 +10,7 @@
           android:id="@+id/opt_manage_keys"
           android:icon="@drawable/ic_menu_account_list" />
 
-    <item android:title="About" 
-          android:id="@+id/opt_about"
+    <item android:title="Help" 
+          android:id="@+id/opt_help"
           android:icon="@drawable/ic_menu_details" />
-
 </menu>

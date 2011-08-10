@@ -8,14 +8,20 @@ import org.ale.scan2zotero.data.S2ZDatabase;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.net.http.SslCertificate;
 import android.text.TextUtils;
+import android.text.TextWatcher;
+import android.view.KeyEvent;
+import android.view.View;
 import android.view.animation.AnimationUtils;
 import android.webkit.WebView;
+import android.widget.Button;
+import android.widget.EditText;
 import android.widget.Toast;
 import android.widget.ViewFlipper;
 
@@ -24,23 +30,30 @@ public class S2ZDialogs {
     protected static final int DIALOG_NO_DIALOG = -1;
     // Used by S2ZLoginActivity
     protected static final int DIALOG_SAVED_KEYS = 0;
-    protected static final int DIALOG_ZOTERO_REGISTER = 1;
     protected static final int DIALOG_ZOTERO_LOGIN = 2;
+    protected static final int DIALOG_LOGIN_HELP = 3;
     // Used by S2ZMainActivity
-    protected static final int DIALOG_ZXING = 3;
-    protected static final int DIALOG_CREDENTIALS = 4;
-    protected static final int DIALOG_NO_PERMS = 5;
+    protected static final int DIALOG_ZXING = 4;
+    protected static final int DIALOG_CREDENTIALS = 5;
+    protected static final int DIALOG_NO_PERMS = 6;
     // Used by GetApiKeyActivity
-    protected static final int DIALOG_SSL = 6;
-    protected static final int DIALOG_EMAIL_VERIFY = 7;
+    protected static final int DIALOG_SSL = 7;
     protected static final int DIALOG_NO_KEYS = 8;
     protected static final int DIALOG_FOUND_KEYS = 9;
-
+    // Used by ManageAccountsActivity
+    protected static final int DIALOG_RENAME_KEY = 10;
+    
     protected static int displayedDialog = DIALOG_NO_DIALOG;
+
+    protected static DialogInterface.OnCancelListener ON_CANCEL = new DialogInterface.OnCancelListener(){
+        public void onCancel(DialogInterface arg0) {
+            S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+        } 
+    };
 
     /* S2ZLoginActivity Dialogs */
     /* Dialog to ask user if we may go to Zotero.org to manage API keys*/
-    protected static AlertDialog informUserAboutLogin(final S2ZLoginActivity parent, final int loginType){
+    protected static AlertDialog informUserAboutLogin(final S2ZLoginActivity parent){
         S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_ZOTERO_LOGIN;
         AlertDialog.Builder builder = new AlertDialog.Builder(parent);
 
@@ -48,7 +61,6 @@ public class S2ZDialogs {
             public void onClick(DialogInterface dialog, int i) {
                 if(i == DialogInterface.BUTTON_POSITIVE){
                     Intent intent = new Intent(parent, GetApiKeyActivity.class);
-                    intent.putExtra(GetApiKeyActivity.LOGIN_TYPE, loginType);
                     parent.startActivityForResult(intent, S2ZLoginActivity.RESULT_APIKEY);
                     S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
                 }else{
@@ -59,18 +71,24 @@ public class S2ZDialogs {
         };
 
         builder.setTitle(parent.getString(R.string.redirect_title));
-        if(loginType == GetApiKeyActivity.EXISTING_ACCOUNT)
-            builder.setMessage(parent.getString(R.string.redirect));
-        else
-            builder.setMessage(parent.getString(R.string.register));
+        builder.setMessage(parent.getString(R.string.redirect));
         builder.setPositiveButton(parent.getString(R.string.proceed), clickListener);
         builder.setNegativeButton(parent.getString(R.string.cancel), clickListener);
-
+        builder.setOnCancelListener(ON_CANCEL);
         return builder.show();
     }
-    
+
+    protected static AlertDialog showLoginHelp(final S2ZLoginActivity parent){
+        S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_LOGIN_HELP;
+        AlertDialog.Builder builder = new AlertDialog.Builder(parent);
+
+        builder.setOnCancelListener((AlertDialog.OnCancelListener)ON_CANCEL);
+
+        builder.setMessage(R.string.login_instructions);
+        return builder.show();
+    }
+
     /* Dialog to present the user with saved keys */
-    protected static int selectedSavedKey = 0;
     protected static AlertDialog promptToUseSavedKey(final S2ZLoginActivity parent, final Cursor c){
         if(c.getCount() == 0){
             Toast.makeText(parent, "No saved keys", Toast.LENGTH_SHORT).show();
@@ -82,8 +100,12 @@ public class S2ZDialogs {
         DialogInterface.OnClickListener clickListener = 
                     new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int i) {
-                if(i == DialogInterface.BUTTON_POSITIVE){ 
-                    c.moveToPosition(S2ZDialogs.selectedSavedKey);
+                if(i == DialogInterface.BUTTON_NEGATIVE){
+                    // User cancelled dialog
+                    S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                    dialog.dismiss();
+                }else{ // User selected a key
+                    c.moveToPosition(i);
                     int dbid = c.getInt(S2ZDatabase.ACCOUNT_ID_INDEX);
                     String alias = c.getString(S2ZDatabase.ACCOUNT_ALIAS_INDEX);
                     String uid = c.getString(S2ZDatabase.ACCOUNT_UID_INDEX);
@@ -91,29 +113,16 @@ public class S2ZDialogs {
                     Account acct = new Account(dbid, alias, uid, key);
                     parent.setUserAndKey(acct);
                     dialog.dismiss();
-                    ViewFlipper vf = (ViewFlipper)parent.findViewById(R.id.login_view_flipper);
-                    vf.setInAnimation(AnimationUtils.loadAnimation(parent, R.anim.slide_in_next));
-                    vf.setOutAnimation(AnimationUtils.loadAnimation(parent, R.anim.slide_out_next));
-                    vf.showNext();
+                    parent.showNext();
                     S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
-                    S2ZDialogs.selectedSavedKey = 0;
-                }else if(i == DialogInterface.BUTTON_NEGATIVE){
-                    // User cancelled dialog
-                    S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
-                    S2ZDialogs.selectedSavedKey = 0;
-                    dialog.dismiss();
-                }else{
-                    // User clicked a key, but did not yet confirm their choice
-                    S2ZDialogs.selectedSavedKey = i;
                 }
             }
         };
-        if(S2ZDialogs.selectedSavedKey >= c.getCount())
-            S2ZDialogs.selectedSavedKey = 0;
-        dialogBuilder.setTitle("Login with saved key?");
-        dialogBuilder.setPositiveButton("Use selected key", clickListener);
+
+        dialogBuilder.setTitle("Select a key");
         dialogBuilder.setNegativeButton(parent.getString(R.string.cancel), clickListener);
-        dialogBuilder.setSingleChoiceItems(c, S2ZDialogs.selectedSavedKey, Account.COL_ALIAS, clickListener);
+        dialogBuilder.setSingleChoiceItems(c, -1, Account.COL_ALIAS, clickListener);
+        dialogBuilder.setOnCancelListener(ON_CANCEL);
 
         return dialogBuilder.show();
     }
@@ -142,6 +151,7 @@ public class S2ZDialogs {
         downloadDialog.setMessage(parent.getString(R.string.install_bs_msg));
         downloadDialog.setPositiveButton(parent.getString(R.string.install), clickListener);
         downloadDialog.setNegativeButton(parent.getString(R.string.cancel), clickListener);
+        downloadDialog.setOnCancelListener(ON_CANCEL);
 
         return downloadDialog.show();
     }
@@ -182,22 +192,6 @@ public class S2ZDialogs {
     }
 
     /* GetApiKeyActivity Dialogs */
-    protected static AlertDialog showEmailValidationDialog(final GetApiKeyActivity parent){
-        S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_EMAIL_VERIFY;
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(parent);
-        builder.setTitle("Email Verification");
-        builder.setMessage("You will need to verify your email address before using your new account with Scan2Zotero.");
-        builder.setNeutralButton("Ok", new DialogInterface.OnClickListener(){
-            public void onClick(DialogInterface dialog, int i){
-                S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
-                parent.finish();
-            }
-        });
-        
-        return builder.show();
-    }
-
     protected static AlertDialog showSSLDialog(final GetApiKeyActivity parent){
         SslCertificate cert =
             ((WebView) parent.findViewById(R.id.webView)).getCertificate();
@@ -229,6 +223,8 @@ public class S2ZDialogs {
                 dialog.dismiss();
             }
         });
+        builder.setOnCancelListener(ON_CANCEL);
+
 
         return builder.show();
     }
@@ -256,6 +252,7 @@ public class S2ZDialogs {
         builder.setTitle("No API Keys Found");
         builder.setPositiveButton("Create a new key", clickListener);
         builder.setNegativeButton(parent.getString(R.string.cancel), clickListener);
+        builder.setOnCancelListener(ON_CANCEL);
 
         return builder.show();
     }
@@ -300,7 +297,57 @@ public class S2ZDialogs {
         builder.setSingleChoiceItems(uglyHackNames, S2ZDialogs.selectedNewKey, clickListener);
         builder.setPositiveButton("Use selected key", clickListener);
         builder.setNegativeButton("None of these", clickListener);
+        builder.setOnCancelListener(ON_CANCEL);
 
         return builder.show();
+    }
+
+    // One or more keys were found on the page, present the user with a list,
+    // by name, and let them pick the one they want to use.
+    protected static AlertDialog showRenameKeyDialog(final ManageAccountsActivity parent,
+                                                     final String original,
+                                                     final int row){
+        S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_RENAME_KEY;
+        AlertDialog.Builder builder = new AlertDialog.Builder(parent);
+        
+        final EditText input = new EditText(parent);
+        input.setText(original);
+        builder.setView(input);
+        
+        DialogInterface.OnClickListener clickListener = new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int i) {
+                if(i == DialogInterface.BUTTON_POSITIVE){
+                    String newAlias = input.getText().toString();
+                    Account.renameAccount(parent.getContentResolver(), row, newAlias);
+                    S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                    parent.updateList();
+                }else if(i == DialogInterface.BUTTON_NEGATIVE){ // User cancelled dialog
+                    S2ZDialogs.displayedDialog = S2ZDialogs.DIALOG_NO_DIALOG;
+                }
+            }
+        };
+
+        builder.setPositiveButton("Save", clickListener);
+        builder.setNegativeButton("Cancel", clickListener);
+        builder.setOnCancelListener(ON_CANCEL);
+
+        AlertDialog alert = builder.show();
+        final Button positiveButton = alert.getButton(AlertDialog.BUTTON_POSITIVE);
+
+        // Try to do some input validation... KeyListeners are apparently unreliable :(
+        alert.setOnKeyListener(new AlertDialog.OnKeyListener() {
+            public boolean onKey(DialogInterface arg0, int arg1, KeyEvent arg2) {
+                if(input.getText().toString().matches("[A-Za-z0-9 ]*")){
+                    positiveButton.setEnabled(true); 
+                    input.setError(null);
+                }else{
+                    positiveButton.setEnabled(false);
+                    input.setError("No symbols, please!");
+                }
+                return false;
+            }
+        });
+
+        return alert;
     }
 }

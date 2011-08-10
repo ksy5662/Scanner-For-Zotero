@@ -17,7 +17,7 @@ public class S2ZDatabase extends ContentProvider {
 
     private static final String DBNAME = "s2z.db";
 
-    private static final int DBVERSION = 3;
+    private static final int DBVERSION = 1;
 
     public static final String AUTHORITY = "org.ale.scan2zotero.data.s2zdatabase";
 
