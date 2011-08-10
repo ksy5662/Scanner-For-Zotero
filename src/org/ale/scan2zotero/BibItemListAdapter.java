@@ -2,9 +2,10 @@ package org.ale.scan2zotero;
 
 import java.util.ArrayList;
 
+import org.ale.scan2zotero.data.BibItemDBHandler;
 import org.ale.scan2zotero.data.BibItem;
 import org.ale.scan2zotero.data.ItemField;
-import org.ale.scan2zotero.data.S2ZDatabase;
+import org.ale.scan2zotero.data.Database;
 
 import android.content.Context;
 import android.content.res.Resources;
@@ -23,7 +24,7 @@ import android.widget.TextView;
 
 public class BibItemListAdapter extends BaseExpandableListAdapter {
 
-    private static final int ACTION_ID = PersistentDBHandler.BIBITEM_ACTION_ID;
+    private static final int ACTION_ID = BibItemDBHandler.BIBITEM_ACTION_ID;
     public static final int FOUND_SAVED_ITEMS = ACTION_ID + 0;
     public static final int INSERTED_ITEM = ACTION_ID + 1;
     public static final int REMOVED_ITEM = ACTION_ID + 2;
@@ -32,7 +33,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
     private ArrayList<BibDetailJSONAdapter> mAdapters;
     private SparseBooleanArray mChecked;
 
-    private PersistentDBHandler mHandler;
+    private BibItemDBHandler mHandler;
 
     private final Context mContext;
     private final Resources mResources;
@@ -53,7 +54,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         mAdapters = new ArrayList<BibDetailJSONAdapter>();
         mChecked = new SparseBooleanArray();
 
-        mHandler = PersistentDBHandler.getInstance();
+        mHandler = BibItemDBHandler.getInstance();
     }
 
     public void readyToGo(){
@@ -68,7 +69,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         new Thread(new Runnable() {
             public void run(){
                 Cursor c = mContext.getContentResolver()
-                                   .query(S2ZDatabase.BIBINFO_URI,
+                                   .query(Database.BIBINFO_URI,
                                            null, 
                                            BibItem.COL_ACCT+"=?",
                                            new String[] {String.valueOf(acctId)},
@@ -105,14 +106,14 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         new Thread(new Runnable() {
             public void run(){
                 mContext.getContentResolver().delete(
-                        S2ZDatabase.BIBINFO_URI, BibItem._ID+"="+item.getId(), null); 
+                        Database.BIBINFO_URI, BibItem._ID+"="+item.getId(), null); 
                 mHandler.sendMessage(Message.obtain(mHandler,
                                     BibItemListAdapter.REMOVED_ITEM, item));
             }
         }).start();
     }
 
-    protected void finishAddItem(BibItem item){
+    public void finishAddItem(BibItem item){
         shiftUpSelections(0);
         mItems.add(0, item);
         mAdapters.add(0, new BibDetailJSONAdapter(
@@ -121,7 +122,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         notifyDataSetChanged();
     }
 
-    protected void finishAddItems(ArrayList<BibItem> items){
+    public void finishAddItems(ArrayList<BibItem> items){
         mItems.addAll(items);
         for(BibItem b : items){
             mAdapters.add(new BibDetailJSONAdapter(mContext, b.getSelectedInfo()));
@@ -130,7 +131,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         notifyDataSetChanged();
     }
 
-    protected void finishDeleteItem(BibItem item){
+    public void finishDeleteItem(BibItem item){
         int indx = mItems.indexOf(item);
         shiftDownSelections(indx);
         mItems.remove(indx);

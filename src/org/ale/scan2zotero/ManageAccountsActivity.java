@@ -1,7 +1,7 @@
 package org.ale.scan2zotero;
 
 import org.ale.scan2zotero.data.Account;
-import org.ale.scan2zotero.data.S2ZDatabase;
+import org.ale.scan2zotero.data.Database;
 
 import android.app.AlertDialog;
 import android.app.ListActivity;
@@ -44,7 +44,7 @@ public class ManageAccountsActivity extends ListActivity {
     }
 
     protected void updateList(){
-        mCursor = getContentResolver().query(S2ZDatabase.ACCOUNT_URI, null, null, null, null);
+        mCursor = getContentResolver().query(Database.ACCOUNT_URI, null, null, null, null);
         startManagingCursor(mCursor);
 
         if(mAdapter == null){
@@ -72,7 +72,7 @@ public class ManageAccountsActivity extends ListActivity {
         inflater.inflate(R.menu.acct_item_context_menu, menu);
         Cursor c = (Cursor) mAdapter.getItem(
                     ((AdapterView.AdapterContextMenuInfo)menuInfo).position);
-        String title = c.getString(S2ZDatabase.ACCOUNT_ALIAS_INDEX);
+        String title = c.getString(Database.ACCOUNT_ALIAS_INDEX);
         menu.setHeaderTitle(title);
     }
 
@@ -81,10 +81,10 @@ public class ManageAccountsActivity extends ListActivity {
         AdapterView.AdapterContextMenuInfo info = 
             (AdapterView.AdapterContextMenuInfo) item.getMenuInfo();
         Cursor c = (Cursor) mAdapter.getItem(info.position);
-        int row = c.getInt(S2ZDatabase.ACCOUNT_ID_INDEX);
+        int row = c.getInt(Database.ACCOUNT_ID_INDEX);
         switch (item.getItemId()) {
         case R.id.ctx_rename:
-            String orig = c.getString(S2ZDatabase.ACCOUNT_ALIAS_INDEX);
+            String orig = c.getString(Database.ACCOUNT_ALIAS_INDEX);
             mAlertDialog = Dialogs.showRenameKeyDialog(
                                         ManageAccountsActivity.this, orig, row);
             break;

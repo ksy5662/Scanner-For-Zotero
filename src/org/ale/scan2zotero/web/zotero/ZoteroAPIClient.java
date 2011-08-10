@@ -284,7 +284,98 @@ public class ZoteroAPIClient {
 
         return groups;
     }
-    
+
+    public static String parseItems(String resp) {
+        /* example:
+          <!-- tons of garbage -->
+          <zapi:totalResults>1</zapi:totalResults>
+          <zapi:apiVersion>1</zapi:apiVersion>
+          <updated>2010-12-17T00:18:51Z</updated>
+            <entry>
+              <title>My Book</title>
+              <author>
+                  <name>Zotero User</name>
+                  <uri>http://zotero.org/zuser</uri>
+              </author>
+              <id>http://zotero.org/users/zuser/items/ABCD2345</id>
+              <published>2010-12-17T00:18:51Z</published>
+              <updated>2010-12-17T00:18:51Z</updated>
+              <link rel="self" type="application/atom+xml" href="https://api.zotero.org/users/1/items/ABCD2345?content=json"/>
+              <link rel="alternate" type="text/html" href="http://zotero.org/users/zuser/items/ABCD2345"/>
+              <zapi:key>ABCD2345</zapi:key>
+              <zapi:itemType>book</zapi:itemType>
+              <zapi:creatorSummary>McAuthor</zapi:creatorSummary>
+              <zapi:numChildren>1</zapi:numChildren>
+              <zapi:numTags>2</zapi:numTags>
+              <content type="application/json" etag="8e984e9b2a8fb560b0085b40f6c2c2b7">
+                {
+                  "itemType" : "book",
+                  "title" : "My Book",
+                  "creators" : [
+                    {
+                      "creatorType" : "author",
+                      "firstName" : "Sam",
+                      "lastName" : "McAuthor"
+                    },
+                    {
+                      "creatorType":"editor",
+                      "name" : "John T. Singlefield"
+                    }
+                  ],
+                  "tags" : [
+                    { "tag" : "awesome" },
+                    { "tag" : "rad", "type" : 1 }
+                  ]
+                }
+              </content>
+            </entry>
+        </feed>
+         */
+
+        /* Returns null for parsing errors */
+        Document doc = ZoteroAPIClient.parseXML(resp);
+        if(doc == null)
+            return null;
+
+        NodeList totalResults = doc.getElementsByTagName("zapi:totalResults");
+        if(totalResults.getLength() == 0)
+            return null;
+
+        String trStr = totalResults.item(0).getTextContent();
+        if(trStr == null || !TextUtils.isDigitsOnly(trStr))
+            return null;
+
+        int numGroups = Integer.parseInt(trStr);
+        Group[] groups = new Group[numGroups];
+
+        NodeList entries = doc.getElementsByTagName("entry");
+        if(entries.getLength() != numGroups)
+            return null;
+
+        for(int i=0; i<numGroups; i++){
+            if(entries.item(i).getNodeType() != Node.ELEMENT_NODE)
+                return null;
+            NodeList titles = ((Element) entries.item(i)).getElementsByTagName("title");
+            NodeList ids = ((Element) entries.item(i)).getElementsByTagName("id");
+            if(titles.getLength() != 1 || ids.getLength() != 1)
+                return null;
+            String title = titles.item(0).getTextContent();
+            String idUri = ids.item(0).getTextContent();
+            if(title == null || idUri == null)
+                return null;
+            int lastSeg = idUri.lastIndexOf("/");
+            if(lastSeg < 0)
+                return null;
+            String idstr = idUri.substring(lastSeg+1);
+            if(!TextUtils.isDigitsOnly(idstr))
+                return null;
+            int id = Integer.parseInt(idstr);
+            groups[i] = new Group(id, title);
+        }
+
+        return "";
+    }
+
     public static Document parseXML(String xml){
         DocumentBuilder builder = null;
         Document doc = null;

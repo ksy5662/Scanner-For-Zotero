@@ -87,10 +87,10 @@ public class Account implements Parcelable, BaseColumns {
     }
 
     public static Account fromCursor(Cursor c){
-        int dbid = c.getInt(S2ZDatabase.ACCOUNT_ID_INDEX);
-        String alias = c.getString(S2ZDatabase.ACCOUNT_ALIAS_INDEX);
-        String uid = c.getString(S2ZDatabase.ACCOUNT_UID_INDEX);
-        String key = c.getString(S2ZDatabase.ACCOUNT_KEY_INDEX);
+        int dbid = c.getInt(Database.ACCOUNT_ID_INDEX);
+        String alias = c.getString(Database.ACCOUNT_ALIAS_INDEX);
+        String uid = c.getString(Database.ACCOUNT_UID_INDEX);
+        String key = c.getString(Database.ACCOUNT_KEY_INDEX);
         return new Account(dbid, alias,uid,key);
     }
 
@@ -119,13 +119,13 @@ public class Account implements Parcelable, BaseColumns {
 
     public static void purgeAccount(ContentResolver cr, int row){
         String[] selection = new String[]{String.valueOf(row)};
-        cr.delete(S2ZDatabase.ACCOUNT_URI,Account._ID+"=?", selection);
-        cr.delete(S2ZDatabase.ACCESS_URI, Access.COL_KEY+"=?", selection);
+        cr.delete(Database.ACCOUNT_URI,Account._ID+"=?", selection);
+        cr.delete(Database.ACCESS_URI, Access.COL_KEY+"=?", selection);
     }
     public static void renameAccount(ContentResolver cr, int row, String name){
         ContentValues values = new ContentValues();
         values.put(Account.COL_ALIAS, name);
         String[] selection = new String[]{String.valueOf(row)};
-        cr.update(S2ZDatabase.ACCOUNT_URI, values, Account._ID+"=?", selection);
+        cr.update(Database.ACCOUNT_URI, values, Account._ID+"=?", selection);
     }
 }

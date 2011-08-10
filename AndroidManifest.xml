@@ -36,7 +36,7 @@
                   android:screenOrientation="landscape">
         </activity>
 
-        <provider android:name=".data.S2ZDatabase"
+        <provider android:name=".data.Database"
           android:authorities="org.ale.scan2zotero.data.s2zdatabase" />
     </application>
 </manifest>

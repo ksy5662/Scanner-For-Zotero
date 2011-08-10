@@ -25,9 +25,9 @@ public class Group implements BaseColumns {
         ContentValues values = new ContentValues();
         values.put(Group._ID, mId);
         values.put(Group.COL_TITLE, mTitle);
-        int rowc = cr.update(S2ZDatabase.GROUP_URI, values, null, null);
+        int rowc = cr.update(Database.GROUP_URI, values, null, null);
         if(rowc == 0){
-            cr.insert(S2ZDatabase.GROUP_URI, values);
+            cr.insert(Database.GROUP_URI, values);
         }
     }
 }

@@ -3,7 +3,7 @@ package org.ale.scan2zotero;
 import java.util.ArrayList;
 
 import org.ale.scan2zotero.data.Account;
-import org.ale.scan2zotero.data.S2ZDatabase;
+import org.ale.scan2zotero.data.Database;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -106,10 +106,10 @@ public class Dialogs {
                     dialog.dismiss();
                 }else{ // User selected a key
                     c.moveToPosition(i);
-                    int dbid = c.getInt(S2ZDatabase.ACCOUNT_ID_INDEX);
-                    String alias = c.getString(S2ZDatabase.ACCOUNT_ALIAS_INDEX);
-                    String uid = c.getString(S2ZDatabase.ACCOUNT_UID_INDEX);
-                    String key = c.getString(S2ZDatabase.ACCOUNT_KEY_INDEX);
+                    int dbid = c.getInt(Database.ACCOUNT_ID_INDEX);
+                    String alias = c.getString(Database.ACCOUNT_ALIAS_INDEX);
+                    String uid = c.getString(Database.ACCOUNT_UID_INDEX);
+                    String key = c.getString(Database.ACCOUNT_KEY_INDEX);
                     Account acct = new Account(dbid, alias, uid, key);
                     parent.setUserAndKey(acct);
                     dialog.dismiss();

@@ -131,7 +131,7 @@ public class Access implements Parcelable {
     
     public void writeToDB(ContentResolver cr) {
         if(mKeyDbId == Account.NOT_IN_DATABASE){
-            Cursor keyCur = cr.query(S2ZDatabase.ACCOUNT_URI,
+            Cursor keyCur = cr.query(Database.ACCOUNT_URI,
                     new String[]{Account._ID},
                     Account.COL_KEY+"=?",
                     new String[]{String.valueOf(mKeyDbId)},
@@ -153,6 +153,6 @@ public class Access implements Parcelable {
             values[i].put(COL_GROUP, mGroups[i]);
             values[i].put(COL_PERMISSION, mPerms[i]);
         }
-        cr.bulkInsert(S2ZDatabase.ACCESS_URI, values);
+        cr.bulkInsert(Database.ACCESS_URI, values);
     }
 }

@@ -13,7 +13,7 @@ import android.database.sqlite.SQLiteQueryBuilder;
 import android.net.Uri;
 import android.text.TextUtils;
 
-public class S2ZDatabase extends ContentProvider {
+public class Database extends ContentProvider {
 
     private static final String DBNAME = "s2z.db";
 

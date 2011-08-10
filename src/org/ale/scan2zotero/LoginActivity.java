@@ -1,7 +1,7 @@
 package org.ale.scan2zotero;
 
 import org.ale.scan2zotero.data.Account;
-import org.ale.scan2zotero.data.S2ZDatabase;
+import org.ale.scan2zotero.data.Database;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -174,9 +174,9 @@ public class LoginActivity extends Activity {
             String keyToInsert = mAccount.getKey();
             mAcctCursor.moveToFirst();
             while(mAcctCursor.isAfterLast() == false){
-                pKey = mAcctCursor.getString(S2ZDatabase.ACCOUNT_KEY_INDEX);
+                pKey = mAcctCursor.getString(Database.ACCOUNT_KEY_INDEX);
                 if(TextUtils.equals(pKey, keyToInsert)){
-                    acctId = mAcctCursor.getInt(S2ZDatabase.ACCOUNT_ID_INDEX);
+                    acctId = mAcctCursor.getInt(Database.ACCOUNT_ID_INDEX);
                     break;
                 }
                 mAcctCursor.moveToNext();
@@ -187,7 +187,7 @@ public class LoginActivity extends Activity {
         if(mRememberMe && acctId == Account.NOT_IN_DATABASE){
             // Yes, this blocks the UI thread.
             ContentValues values = mAccount.toContentValues();
-            Uri result = getContentResolver().insert(S2ZDatabase.ACCOUNT_URI, values);
+            Uri result = getContentResolver().insert(Database.ACCOUNT_URI, values);
             acctId = Integer.parseInt(result.getLastPathSegment());
         }
 
@@ -224,7 +224,7 @@ public class LoginActivity extends Activity {
         // run in a separate thread.
         new Thread(new Runnable() {
             public void run() {
-                Cursor cursor = getContentResolver().query(S2ZDatabase.ACCOUNT_URI, null, null, null, null);
+                Cursor cursor = getContentResolver().query(Database.ACCOUNT_URI, null, null, null, null);
                 gotAccountCursor(cursor);
             }
         }).start();

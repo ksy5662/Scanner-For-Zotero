@@ -1,21 +1,21 @@
-package org.ale.scan2zotero;
+package org.ale.scan2zotero.data;
 
 import java.util.ArrayList;
 
-import org.ale.scan2zotero.data.BibItem;
+import org.ale.scan2zotero.BibItemListAdapter;
 
 import android.os.Handler;
 import android.os.Message;
 
-public class PersistentDBHandler extends Handler {
+public class BibItemDBHandler extends Handler {
 
     public static final int BIBITEM_ACTION_ID = 1000;
 
-    private static PersistentDBHandler mInstance = null;
+    private static BibItemDBHandler mInstance = null;
 
-    public static PersistentDBHandler getInstance(){
+    public static BibItemDBHandler getInstance(){
         if(mInstance == null)
-            mInstance = new PersistentDBHandler();
+            mInstance = new BibItemDBHandler();
         return mInstance;
     }
 

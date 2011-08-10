@@ -66,11 +66,11 @@ public class BibItem implements BaseColumns, Parcelable {
     }
 
     public static BibItem fromCursor(Cursor c){
-        int id = c.getInt(S2ZDatabase.BIBINFO_ID_INDEX);
-        long date = c.getLong(S2ZDatabase.BIBINFO_DATE_INDEX);
-        int type = c.getInt(S2ZDatabase.BIBINFO_TYPE_INDEX);
-        String json = c.getString(S2ZDatabase.BIBINFO_JSON_INDEX);
-        int acct = c.getInt(S2ZDatabase.BIBINFO_ACCT_INDEX);
+        int id = c.getInt(Database.BIBINFO_ID_INDEX);
+        long date = c.getLong(Database.BIBINFO_DATE_INDEX);
+        int type = c.getInt(Database.BIBINFO_TYPE_INDEX);
+        String json = c.getString(Database.BIBINFO_JSON_INDEX);
+        int acct = c.getInt(Database.BIBINFO_ACCT_INDEX);
 
         JSONObject data;
         try {
@@ -145,11 +145,11 @@ public class BibItem implements BaseColumns, Parcelable {
     public void writeToDB(ContentResolver cr){
         ContentValues values = toContentValues();
         if(mId == NO_ID) {
-            Uri row = cr.insert(S2ZDatabase.BIBINFO_URI, values);
+            Uri row = cr.insert(Database.BIBINFO_URI, values);
             int id = Integer.parseInt(row.getLastPathSegment());
             setId(id);
         } else {
-            cr.update(S2ZDatabase.BIBINFO_URI,
+            cr.update(Database.BIBINFO_URI,
                       values, BibItem._ID+"=?",
                       new String[]{String.valueOf(mId)});
         }

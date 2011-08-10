@@ -7,7 +7,7 @@ import org.ale.scan2zotero.data.Access;
 import org.ale.scan2zotero.data.Account;
 import org.ale.scan2zotero.data.BibItem;
 import org.ale.scan2zotero.data.Group;
-import org.ale.scan2zotero.data.S2ZDatabase;
+import org.ale.scan2zotero.data.Database;
 import org.ale.scan2zotero.web.googlebooks.GoogleBooksAPIClient;
 import org.ale.scan2zotero.web.googlebooks.GoogleBooksHandler;
 import org.ale.scan2zotero.web.zotero.ZoteroAPIClient;
@@ -225,7 +225,7 @@ public class MainActivity extends Activity {
             @Override
             public void run() {
                 Cursor c = getContentResolver()
-                            .query(S2ZDatabase.ACCESS_URI,
+                            .query(Database.ACCESS_URI,
                                     new String[]{Access.COL_GROUP, Access.COL_PERMISSION}, 
                                     Access.COL_KEY+"=?",
                                     new String[] {String.valueOf(mAccount.getDbId())},
@@ -278,7 +278,7 @@ public class MainActivity extends Activity {
                     Set<Integer> groups = mAccountAccess.getGroupIds();
                     String selection = TextUtils.join(",", groups);
                     Cursor c = getContentResolver()
-                                .query(S2ZDatabase.GROUP_URI,
+                                .query(Database.GROUP_URI,
                                         new String[]{Group._ID}, 
                                         Group._ID+" IN (?)",
                                         new String[] {selection},
@@ -302,7 +302,7 @@ public class MainActivity extends Activity {
                             values[i].put(Group.COL_TITLE, "<unknown>");
                             i++;
                         }
-                        getContentResolver().bulkInsert(S2ZDatabase.GROUP_URI, values);
+                        getContentResolver().bulkInsert(Database.GROUP_URI, values);
                         mZAPI.getGroups();
                     }
                     c.close();
