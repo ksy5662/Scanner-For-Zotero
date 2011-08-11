@@ -8,22 +8,17 @@ import org.ale.scan2zotero.data.Database;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
-import android.content.ContentValues;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.database.Cursor;
 import android.net.Uri;
 import android.net.http.SslCertificate;
 import android.text.TextUtils;
-import android.text.TextWatcher;
 import android.view.KeyEvent;
-import android.view.View;
-import android.view.animation.AnimationUtils;
 import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
-import android.widget.ViewFlipper;
 
 public class Dialogs {
 
@@ -82,7 +77,7 @@ public class Dialogs {
         Dialogs.displayedDialog = Dialogs.DIALOG_LOGIN_HELP;
         AlertDialog.Builder builder = new AlertDialog.Builder(parent);
 
-        builder.setOnCancelListener((AlertDialog.OnCancelListener)ON_CANCEL);
+        builder.setOnCancelListener(ON_CANCEL);
 
         builder.setMessage(R.string.login_instructions);
         return builder.show();
@@ -332,7 +327,7 @@ public class Dialogs {
         builder.setOnCancelListener(ON_CANCEL);
 
         AlertDialog alert = builder.show();
-        final Button positiveButton = alert.getButton(AlertDialog.BUTTON_POSITIVE);
+        final Button positiveButton = alert.getButton(DialogInterface.BUTTON_POSITIVE);
 
         // Try to do some input validation... KeyListeners are apparently unreliable :(
         alert.setOnKeyListener(new AlertDialog.OnKeyListener() {

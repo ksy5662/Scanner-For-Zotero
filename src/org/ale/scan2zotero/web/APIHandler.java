@@ -40,7 +40,7 @@ public abstract class APIHandler extends Handler {
         APIHandler.mActivity = activity;
         dequeueMessages();
         for(Runnable r : mUIThreadEvents){
-            mActivity.mHandler.post(r);
+            mActivity.mUIThreadHandler.post(r);
         }
         mUIThreadEvents.clear();
     }
@@ -91,7 +91,7 @@ public abstract class APIHandler extends Handler {
 
     public void checkActivityAndRun(Runnable r){
         if(APIHandler.hasActivity()){
-            mActivity.mHandler.post(r);
+            mActivity.mUIThreadHandler.post(r);
         }else{
             mUIThreadEvents.add(r);
         }

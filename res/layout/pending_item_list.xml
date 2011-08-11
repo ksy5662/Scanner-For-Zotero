@@ -3,14 +3,9 @@
 		        android:layout_width="match_parent"
 		        android:layout_height="wrap_content"
 		        android:id="@+id/pending_item_holder">
-	<ListView
-	        android:id="@+id/pending_item_list"
-	        android:orientation="horizontal"
-	        android:layout_width="match_parent"
-	        android:layout_height="wrap_content"
-	        android:layout_below="@id/scan_isbn"
-	        android:background="@color/s2z_light_beige"
-	        android:divider="@color/s2z_dark_red">
-	</ListView>
+	<ListView android:id="@+id/pending_item_list"
+	          android:layout_width="match_parent"
+	          android:layout_height="wrap_content"
+	          android:background="@color/s2z_light_beige"/>
 </RelativeLayout>
 

@@ -54,7 +54,6 @@ public class ZoteroAPIClient {
 
     private ZoteroHandler mHandler;
 
-
     public ZoteroAPIClient() {
         mHandler = ZoteroHandler.getInstance();
         mHttpsClient = HttpsClient.getInstance();
@@ -69,7 +68,7 @@ public class ZoteroAPIClient {
         return new APIRequest(mHandler, mHttpsClient);
     }
 
-    public void addItems(JSONObject items) {
+    public void addItems(JSONObject items, int userOrGroupId) {
         // https://apis.zotero.org/users/<userid>/items
 
         // TODO: Allow no more than 50 items at a time
@@ -78,7 +77,7 @@ public class ZoteroAPIClient {
         HashMap<String, String> queryTerms = new HashMap<String,String>();
         queryTerms.put("content", "json");
         queryTerms.put("key", mAccount.getKey());
-        r.setURI(buildURI(queryTerms, mAccount.getUid(), "items"));
+        r.setURI(buildURI(queryTerms, String.valueOf(userOrGroupId), "items"));
         r.setContent(items.toString(), "application/json");
         r.addHeader(HDR_WRITE_TOKEN, newWriteToken());
         r.setReturnIdentifier("addItems");
@@ -187,15 +186,13 @@ public class ZoteroAPIClient {
         int[] permissions = new int[accessTags.getLength()];
         for(int i=0; i<accessTags.getLength(); i++){
             permissions[i] = Access.READ;
-            
+
             NamedNodeMap attr = accessTags.item(i).getAttributes();
             Node groupNode = attr.getNamedItem("group");
             if(groupNode == null){ // Library access?
                 groupNode = attr.getNamedItem("library");
-                if(groupNode == null) {
-                    groups[i] = Group.NO_GROUP;
-                    continue;
-                }
+                if(groupNode == null)
+                    return null;
                 groups[i] = Group.GROUP_LIBRARY;
             }else{ // Individual group or all groups
                 if(groupNode.getNodeValue().equals("all"))

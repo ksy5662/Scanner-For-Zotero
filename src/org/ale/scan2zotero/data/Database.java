@@ -81,7 +81,7 @@ public class Database extends ContentProvider {
 
     private static final String SQL_CREATE_ACCESS_TBL = 
         "CREATE TABLE IF NOT EXISTS "+Access.TBL_NAME+" ("
-        +Access.COL_KEY + " INTEGER, "
+        +Access.COL_ACCT + " INTEGER, "
         +Access.COL_GROUP +" INTEGER, "
         +Access.COL_PERMISSION  +" INTEGER );";
 

@@ -3,9 +3,11 @@ package org.ale.scan2zotero;
 import java.util.ArrayList;
 import java.util.Set;
 
+import org.ale.scan2zotero.PString;
 import org.ale.scan2zotero.data.Access;
 import org.ale.scan2zotero.data.Account;
 import org.ale.scan2zotero.data.BibItem;
+import org.ale.scan2zotero.data.BibItemDBHandler;
 import org.ale.scan2zotero.data.Group;
 import org.ale.scan2zotero.data.Database;
 import org.ale.scan2zotero.web.googlebooks.GoogleBooksAPIClient;
@@ -26,16 +28,19 @@ import android.os.Bundle;
 import android.os.Handler;
 import android.text.TextUtils;
 import android.util.Log;
+import android.util.SparseArray;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ExpandableListView;
 import android.widget.ListView;
 import android.widget.RelativeLayout;
+import android.widget.Spinner;
 import android.widget.Toast;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.ExpandableListView.ExpandableListContextMenuInfo;
@@ -52,7 +57,8 @@ public class MainActivity extends Activity {
     public static final String RC_PEND_STAT = "STATUS";
     public static final String RC_CHECKED = "CHECKED";
     public static final String RC_ACCESS = "ACCESS";
-    public static final String RC_NUM_GROUPS = "GROUPS";
+    public static final String RC_NEW_KEY = "NEWKEY";
+    public static final String RC_GROUPS = "GROUPS";
 
     private ZoteroAPIClient mZAPI;
     private GoogleBooksAPIClient mBooksAPI;
@@ -70,82 +76,86 @@ public class MainActivity extends Activity {
 
     private Access mAccountAccess;
 
-    public Handler mHandler;
+    public Handler mUIThreadHandler;
 
-    private int mNumGroups;
+    private boolean mNewKey;
+    
+    private SparseArray<PString> mGroups;
+    //private SparseArray<String> mCollections;
+    private SparseParcelableArrayAdapter<PString> mGroupAdapter;
+    //private SparseParcelableArrayAdapter mCollectionAdapter;
+    private int mSelectedGroup;
 
     @Override
     public void onCreate(Bundle state) {
         super.onCreate(state);
         setContentView(R.layout.main);
+        Bundle extras = getIntent().getExtras();
 
-        findViewById(R.id.scan_isbn).setOnClickListener(scanIsbn);
-        findViewById(R.id.upload).setOnClickListener(uploadSelected);
+        mUIThreadHandler = new Handler();
 
-        mHandler = new Handler();
+        // Logged in account
+        mAccount = (Account) extras.getParcelable(INTENT_EXTRA_ACCOUNT);
 
-        // Initialize Google Books API Client
+        // Initialize Clients
         mBooksAPI = new GoogleBooksAPIClient();
-
-        // Initialize Zotero API Client
-        mAccount = (Account) getIntent().getExtras()
-                                    .getParcelable(INTENT_EXTRA_ACCOUNT);
         mZAPI = new ZoteroAPIClient();
         mZAPI.setAccount(mAccount);
 
-        // BibItem list for fetched but not-yet uploaded items
-        ExpandableListView bibItemList =
-                               (ExpandableListView)findViewById(R.id.bib_items);
-        bibItemList.setChoiceMode(ExpandableListView.CHOICE_MODE_MULTIPLE);
+        // BibItem list
+        ExpandableListView bibItemList = (ExpandableListView) findViewById(R.id.bib_items);
 
-        // Pending item list for items being fetched (resides as header inside
-        // BibItem list)
-        RelativeLayout pendingListHolder = (RelativeLayout) getLayoutInflater()
-                                            .inflate(R.layout.pending_item_list,
-                                                     bibItemList, false);
+        // Pending item list
+        View pendingListHolder = getLayoutInflater().inflate(
+                R.layout.pending_item_list, bibItemList, false);
 
         mPendingList = (ListView) pendingListHolder.findViewById(R.id.pending_item_list);
         bibItemList.addHeaderView(pendingListHolder);
+        Spinner groupList = (Spinner) findViewById(R.id.upload_group);
 
-        // Initialize list adapters
-        mItemAdapter = new BibItemListAdapter(MainActivity.this);
-
+        boolean[] checked;
         if(state == null){ // Fresh activity
-            mPendingItems = new ArrayList<String>(2);
-            mPendingStatus = new ArrayList<Integer>(2);
             mAccountAccess = null; // will check for permissions in onResume
-            mNumGroups = -1;
+            mPendingItems = new ArrayList<String>(2); // RC_PEND
+            mPendingStatus = new ArrayList<Integer>(2); // RC_PEND_STAT
+            checked = new boolean[0];
+            mNewKey = true;
+            mGroups = new SparseArray<PString>();
         }else{ // Recreating activity
             // Rebuild pending list
             mAccountAccess = state.getParcelable(RC_ACCESS);
-            if(state.containsKey(RC_PEND) &&
-               state.containsKey(RC_PEND_STAT)) {
-                mPendingItems = state.getStringArrayList(RC_PEND);
-                mPendingStatus = state.getIntegerArrayList(RC_PEND_STAT);
-            }
-            
+            mPendingItems = state.getStringArrayList(RC_PEND);
+            mPendingStatus = state.getIntegerArrayList(RC_PEND_STAT);
             // Set checked items
-            if(state.containsKey(RC_CHECKED)) {
-                boolean[] checked = state.getBooleanArray(RC_CHECKED);
-                mItemAdapter.setChecked(checked);
-            }
+            checked = state.getBooleanArray(RC_CHECKED);
 
-            mNumGroups = state.getInt(RC_NUM_GROUPS);
+            mNewKey = state.getBoolean(RC_NEW_KEY);
+            mGroups = state.getSparseParcelableArray(RC_GROUPS);
         }
+
+        // Initialize list adapters
+        mItemAdapter = new BibItemListAdapter(MainActivity.this);
+        mItemAdapter.setChecked(checked);
+
+        mGroupAdapter = new SparseParcelableArrayAdapter<PString>(
+                MainActivity.this, mGroups);
+        mPendingAdapter = new PendingListAdapter(MainActivity.this,
+                R.layout.pending_item, R.id.pending_item_id, mPendingItems,
+                mPendingStatus);
+
+        bibItemList.setAdapter(mItemAdapter);
+        groupList.setAdapter(mGroupAdapter);
+        mPendingList.setAdapter(mPendingAdapter);
+
+        mItemAdapter.fillFromDatabase(mAccount.getDbId());
 
         registerForContextMenu(bibItemList);
         registerForContextMenu(mPendingList);
 
-        mPendingAdapter = new PendingListAdapter(MainActivity.this,
-                                                   R.layout.pending_item,
-                                                   R.id.pending_item_id,
-                                                   mPendingItems,
-                                                   mPendingStatus);
-
-        mPendingList.setAdapter(mPendingAdapter);
-        bibItemList.setAdapter(mItemAdapter);
-
-        mItemAdapter.fillFromDatabase(mAccount.getDbId());
+        // Listeners
+        groupList.setOnItemSelectedListener(spinnerListener);
+        findViewById(R.id.scan_isbn).setOnClickListener(scanIsbn);
+        findViewById(R.id.upload).setOnClickListener(uploadSelected);
     }
 
     @Override
@@ -154,8 +164,7 @@ public class MainActivity extends Activity {
 
         GoogleBooksHandler.getInstance().unregisterActivity();
         ZoteroHandler.getInstance().unregisterActivity();
-
-        mItemAdapter.prepForDestruction();
+        BibItemDBHandler.getInstance().unregisterAdapter();
 
         if(mAlertDialog != null){
             mAlertDialog.dismiss();
@@ -169,8 +178,7 @@ public class MainActivity extends Activity {
 
         GoogleBooksHandler.getInstance().registerActivity(MainActivity.this);
         ZoteroHandler.getInstance().registerActivity(MainActivity.this);
-
-        mItemAdapter.readyToGo();
+        BibItemDBHandler.getInstance().registerAdapter(mItemAdapter);
 
         if(mAccountAccess == null
                 && Dialogs.displayedDialog != Dialogs.DIALOG_NO_PERMS){
@@ -210,7 +218,8 @@ public class MainActivity extends Activity {
         state.putIntegerArrayList(RC_PEND_STAT, mPendingStatus);
         state.putBooleanArray(RC_CHECKED, mItemAdapter.getChecked());
         state.putParcelable(RC_ACCESS, mAccountAccess);
-        state.putInt(RC_NUM_GROUPS, mNumGroups);
+        state.putBoolean(RC_NEW_KEY, mNewKey);
+        state.putSparseParcelableArray(RC_GROUPS, mGroups);
     }
 
     public void logout(){
@@ -220,6 +229,21 @@ public class MainActivity extends Activity {
         finish();
     }
 
+    public void refreshPermissions() {
+        mZAPI.getPermissions();
+    }
+    
+    public void erasePermissions(){
+        final int keyid = mAccount.getDbId();
+        new Thread(new Runnable(){
+            public void run(){
+                getContentResolver().delete(Database.ACCESS_URI,
+                        Access.COL_ACCT + "=?",
+                        new String[] { String.valueOf(keyid) });
+            }
+        });
+    }
+
     public void lookupAuthorizations() {
         new Thread(new Runnable(){
             @Override
@@ -227,16 +251,14 @@ public class MainActivity extends Activity {
                 Cursor c = getContentResolver()
                             .query(Database.ACCESS_URI,
                                     new String[]{Access.COL_GROUP, Access.COL_PERMISSION}, 
-                                    Access.COL_KEY+"=?",
+                                    Access.COL_ACCT+"=?",
                                     new String[] {String.valueOf(mAccount.getDbId())},
                                     null);
                 if(c.getCount() == 0) { // Found no permissions
                     // Will call postAccountPermissions in ZoteroHandler if successful
                     mZAPI.getPermissions();
-                    mNumGroups = -1; // Force group fetching
                 }else{
                     Access access = Access.fromCursor(c, mAccount.getDbId());
-                    mNumGroups = access.getGroupCount();
                     postAccountPermissions(access);
                 }
                 c.close();
@@ -248,7 +270,7 @@ public class MainActivity extends Activity {
         // Access perms is always returned from a background thread, so here
         // we save the permissions and launch new threads to fetch group titles
         // and collections.
-        mHandler.post(new Runnable() {
+        mUIThreadHandler.post(new Runnable() {
         public void run() {
             if(Dialogs.displayedDialog == Dialogs.DIALOG_CREDENTIALS){
                 if(mAlertDialog != null)
@@ -257,62 +279,79 @@ public class MainActivity extends Activity {
             }
 
             if(perms == null || !perms.canWrite()){
-                // Results in user logging out
+                // Tell the user they don't have sufficient permission
+                // and log them out
                 mAlertDialog = Dialogs.showNoPermissionsDialog(MainActivity.this);
             }else{
                 // User should be ready to go, lookup their groups and collections
                 // in the background.
                 mAccountAccess = perms;
-                lookupGroups();
+                loadGroups();
             }
         }
         });
     }
 
-    public void lookupGroups() {
+    public void loadGroups(){
+        final SparseArray<PString> newGroupList = new SparseArray<PString>();
+        if(mAccountAccess.getGroupCount() == 0
+                && mAccountAccess.canWriteLibrary()) {
+            newGroupList.put(Group.GROUP_LIBRARY, new PString(getString(R.string.my_library)));
+            mGroupAdapter.replaceData(newGroupList);
+            ((Spinner)findViewById(R.id.upload_group)).invalidate();
+            return;
+        }
+        // Check that we have all the group titles
         new Thread(new Runnable(){
-            public void run() {
-                if(mNumGroups < 0){ // Brand new key
-                    mZAPI.getGroups();
-                }else if(mNumGroups > 0){ // Check if we have all the group titles
-                    Set<Integer> groups = mAccountAccess.getGroupIds();
-                    String selection = TextUtils.join(",", groups);
-                    Cursor c = getContentResolver()
-                                .query(Database.GROUP_URI,
-                                        new String[]{Group._ID}, 
-                                        Group._ID+" IN (?)",
-                                        new String[] {selection},
-                                        null);
+            public void run(){
+                Set<Integer> groups = mAccountAccess.getGroupIds();
+                if(mAccountAccess.canWriteLibrary()){
+                    newGroupList.put(Group.GROUP_LIBRARY, new PString(getString(R.string.my_library)));
+                }
+                String selection = TextUtils.join(",", groups);
+                Cursor c = getContentResolver()
+                            .query(Database.GROUP_URI,
+                                    new String[]{Group._ID, Group.COL_TITLE}, 
+                                    Group._ID+" IN (?)",
+                                    new String[] {selection},
+                                    null);
 
-                    // Figure out which groups we don't have
-                    c.moveToFirst();
-                    while(!c.isAfterLast()){
-                        int haveGroupId = c.getInt(0);
-                        groups.remove(haveGroupId);
-                        c.moveToNext();
+                // Figure out which groups we don't have
+                c.moveToFirst();
+                while(!c.isAfterLast()){
+                    int haveGroupId = c.getInt(0);
+                    groups.remove(haveGroupId);
+                    newGroupList.put(haveGroupId, new PString(c.getString(1)));
+                    c.moveToNext();
+                }
+                c.close();
+                // Update the spinner
+                mUIThreadHandler.post(new Runnable(){
+                    public void run(){
+                        mGroupAdapter.replaceData(newGroupList);
                     }
-                    if(groups.size() > 0){
-                        // Make new database entries for any new groups. Mapping each
-                        // id to "<unknown>" temporarily.
-                        ContentValues[] values = new ContentValues[groups.size()];
-                        int i = 0;
-                        for(Integer gid : groups){
-                            values[i] = new ContentValues();
-                            values[i].put(Group._ID, gid);
-                            values[i].put(Group.COL_TITLE, "<unknown>");
-                            i++;
-                        }
-                        getContentResolver().bulkInsert(Database.GROUP_URI, values);
-                        mZAPI.getGroups();
+                });
+                // If we have any unknown groups, do a group lookup.
+                if(groups.size() > 0){
+                    // Make new database entries for new groups. Mapping each
+                    // id to "<Group ID>" temporarily.
+                    ContentValues[] values = new ContentValues[groups.size()];
+                    int i = 0;
+                    for(Integer gid : groups){
+                        values[i] = new ContentValues();
+                        values[i].put(Group._ID, gid);
+                        values[i].put(Group.COL_TITLE, "<"+gid+">");
+                        i++;
                     }
-                    c.close();
+                    getContentResolver().bulkInsert(Database.GROUP_URI, values);
+                    mZAPI.getGroups();
                 }
             }
         }).start();
     }
 
     public void gotBibInfo(final String isbn, final JSONObject info){
-        mHandler.post(new Runnable() {
+        mUIThreadHandler.post(new Runnable() {
             public void run(){
                 BibItem item = new BibItem(BibItem.TYPE_BOOK, info, mAccount.getDbId());
                 mPendingAdapter.remove(isbn);
@@ -329,19 +368,9 @@ public class MainActivity extends Activity {
         mPendingAdapter.setStatus(isbn, status);
     }
 
-    public void itemFailedExt(final String isbn, final Integer status){
-        mHandler.post(new Runnable(){
-            public void run(){
-                mPendingAdapter.setStatus(isbn, status);
-            }
-        });
-    }
-
     public void showOrHideUploadButton(){
-       if(mItemAdapter.getGroupCount() > 0)
-           findViewById(R.id.upload_bar).setVisibility(View.VISIBLE);
-       else
-           findViewById(R.id.upload_bar).setVisibility(View.GONE);
+       int vis = (mItemAdapter.getGroupCount() > 0) ? View.VISIBLE : View.GONE;
+       findViewById(R.id.upload_bar).setVisibility(vis);
     }
 
     @Override
@@ -356,7 +385,7 @@ public class MainActivity extends Activity {
         // Handle item selection
         switch (item.getItemId()) {
         case R.id.ctx_collection:
-            mZAPI.newCollection("Temp", "");
+            refreshPermissions();
             return true;
         case R.id.ctx_logout:
             logout();
@@ -371,7 +400,6 @@ public class MainActivity extends Activity {
     public void onCreateContextMenu(ContextMenu menu, View v, ContextMenuInfo menuInfo) {
         super.onCreateContextMenu(menu, v, menuInfo);
         MenuInflater inflater = getMenuInflater();
-        Log.d("CreateContextMenu", " "+menu+" "+v+" "+menuInfo);
         if(menuInfo instanceof ExpandableListContextMenuInfo){
             ExpandableListContextMenuInfo info = (ExpandableListContextMenuInfo) menuInfo;
             int type = ExpandableListView.getPackedPositionType(info.packedPosition);
@@ -379,7 +407,6 @@ public class MainActivity extends Activity {
             if(type != ExpandableListView.PACKED_POSITION_TYPE_NULL){
                 // It's not in the header
                 inflater.inflate(R.menu.bib_item_context_menu, menu);
-
                 menu.setHeaderTitle(mItemAdapter.getTitleOfGroup(group));
             }
         }else if(menuInfo instanceof AdapterContextMenuInfo){
@@ -446,7 +473,7 @@ public class MainActivity extends Activity {
         if(mPendingAdapter.hasItem(content)){
             Toast.makeText(
                     MainActivity.this,
-                    "Already processing "+content+".",
+                    "This item is already in your list.",
                     Toast.LENGTH_LONG).show();
             return;
         }
@@ -475,6 +502,21 @@ public class MainActivity extends Activity {
         }
     }
 
+    private final AdapterView.OnItemSelectedListener spinnerListener = new AdapterView.OnItemSelectedListener(){
+        @Override
+        public void onItemSelected(AdapterView<?> parent, View v, int position, long id) {
+            if((int)id == Group.GROUP_LIBRARY){
+                mSelectedGroup = Integer.parseInt(mAccount.getUid());
+            }else{
+                mSelectedGroup = (int)id;
+            }
+        }
+        @Override
+        public void onNothingSelected(AdapterView<?> parent) {
+            
+        }
+    };
+
     private final Button.OnClickListener scanIsbn = new Button.OnClickListener() {
         public void onClick(View v) {
             try{
@@ -491,6 +533,7 @@ public class MainActivity extends Activity {
 
     private final Button.OnClickListener uploadSelected = new Button.OnClickListener() {
         public void onClick(View v) {
+            ((Button)v).setClickable(false);
             boolean[] checked = mItemAdapter.getChecked();
             JSONObject items = new JSONObject();
             JSONObject nxt;
@@ -508,7 +551,7 @@ public class MainActivity extends Activity {
                 // Clear the selection
                 mItemAdapter.setChecked(new boolean[0]);
             }
-            mZAPI.addItems(items);
+            mZAPI.addItems(items, mSelectedGroup);
         }
     };
 }

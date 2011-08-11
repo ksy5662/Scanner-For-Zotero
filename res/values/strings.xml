@@ -21,6 +21,7 @@
     <string name="pending_status_failed">Request failed</string>
     <string name="pending_status_unknown">Unknown barcode type</string>
     <string name="unknown">&lt;unknown&gt;</string>
+    <string name="my_library">My Library</string>
     
     
 </resources>

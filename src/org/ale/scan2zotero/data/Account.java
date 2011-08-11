@@ -120,8 +120,10 @@ public class Account implements Parcelable, BaseColumns {
     public static void purgeAccount(ContentResolver cr, int row){
         String[] selection = new String[]{String.valueOf(row)};
         cr.delete(Database.ACCOUNT_URI,Account._ID+"=?", selection);
-        cr.delete(Database.ACCESS_URI, Access.COL_KEY+"=?", selection);
+        cr.delete(Database.ACCESS_URI, Access.COL_ACCT+"=?", selection);
+        cr.delete(Database.BIBINFO_URI, BibItem.COL_ACCT+"=?", selection);
     }
+
     public static void renameAccount(ContentResolver cr, int row, String name){
         ContentValues values = new ContentValues();
         values.put(Account.COL_ALIAS, name);

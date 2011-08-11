@@ -15,6 +15,7 @@ import android.view.ContextMenu.ContextMenuInfo;
 import android.widget.AdapterView;
 import android.widget.ListView;
 import android.widget.SimpleCursorAdapter;
+import android.widget.Toast;
 
 public class ManageAccountsActivity extends ListActivity {
 
@@ -91,6 +92,10 @@ public class ManageAccountsActivity extends ListActivity {
         case R.id.ctx_delete:
             Account.purgeAccount(getContentResolver(), row);
             updateList();
+            if(mAdapter.getCount() == 0){
+                Toast.makeText(ManageAccountsActivity.this, "No more accounts", Toast.LENGTH_LONG).show();
+                finish();
+            }
             break;
         }
         return true;

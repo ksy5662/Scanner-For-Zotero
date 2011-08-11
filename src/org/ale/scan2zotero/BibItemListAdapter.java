@@ -4,7 +4,6 @@ import java.util.ArrayList;
 
 import org.ale.scan2zotero.data.BibItemDBHandler;
 import org.ale.scan2zotero.data.BibItem;
-import org.ale.scan2zotero.data.ItemField;
 import org.ale.scan2zotero.data.Database;
 
 import android.content.Context;
@@ -55,14 +54,6 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         mChecked = new SparseBooleanArray();
 
         mHandler = BibItemDBHandler.getInstance();
-    }
-
-    public void readyToGo(){
-        mHandler.registerAdapter(BibItemListAdapter.this);
-    }
-
-    public void prepForDestruction(){
-        mHandler.unregisterAdapter();
     }
 
     public void fillFromDatabase(final int acctId){
@@ -156,12 +147,12 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
     public View getGroupView(
             final int group, boolean expanded, View convert, ViewGroup parent) {
 
-        GroupViewComponents vtag;
+        ViewHolder vtag;
         if(convert == null){ // Create a new view
             convert = mInflater.inflate(R.layout.expandable_bib_item, parent, false);
             // Avoid a bunch of calls to findViewById by tagging this view w/
             // references to its children
-            vtag = new GroupViewComponents();
+            vtag = new ViewHolder();
             vtag.tv_checkbox = (CheckBox) convert.findViewById(R.id.bib_row_checkbox);
             vtag.tv_author_lbl = (TextView) convert.findViewById(R.id.bib_author_lbl);
             vtag.tv_author = (TextView) convert.findViewById(R.id.bib_author);
@@ -169,7 +160,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
             vtag.tv_checkbox.setOnClickListener(CHECK_LISTENER);
             convert.setTag(vtag);
         }else{
-            vtag = (GroupViewComponents) convert.getTag();
+            vtag = (ViewHolder) convert.getTag();
         }
 
         convert.setBackgroundDrawable(getRowDrawable(group));
@@ -280,7 +271,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
     }
 
     /* View tag */
-    protected final class GroupViewComponents {
+    protected final class ViewHolder {
         public CheckBox tv_checkbox;
         public TextView tv_author_lbl;
         public TextView tv_author;

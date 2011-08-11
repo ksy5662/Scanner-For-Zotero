@@ -1,7 +1,6 @@
 package org.ale.scan2zotero;
 
 import android.content.res.Resources;
-import android.graphics.Color;
 import android.text.TextUtils;
 import android.widget.TextView;
 

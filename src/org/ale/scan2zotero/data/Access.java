@@ -1,6 +1,7 @@
 package org.ale.scan2zotero.data;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Set;
 import java.util.Map.Entry;
 
@@ -14,7 +15,7 @@ import android.util.Log;
 public class Access implements Parcelable {
     public static final String TBL_NAME = "access";
 
-    public static final String COL_KEY = "keyid";
+    public static final String COL_ACCT = "keyid";
     public static final String COL_GROUP = "groupid";
     public static final String COL_PERMISSION = "permission";
 
@@ -26,55 +27,61 @@ public class Access implements Parcelable {
     public int mKeyDbId;
     public final int[] mGroups;
     public final int[] mPerms;
-    public final HashMap<Integer, Integer> mPermMap;
-
     
     public Access(int key, int[] groups, int[] permissions){
         mKeyDbId = key;
         mGroups = groups;
         mPerms = permissions;
-        mPermMap = new HashMap<Integer, Integer>();
-        for(int i = 0; i < groups.length; i++){
-            mPermMap.put(groups[i], permissions[i]);
-        }
     }
 
     public Access(int[] groups, int[] permissions){
         this(Account.NOT_IN_DATABASE, groups, permissions);
     }
 
+    public int indexOf(int group){
+        for(int i=0; i<mGroups.length; i++){
+            if(mGroups[i] == group){
+                return i;
+            }
+        }
+        return -1;
+    }
     public boolean canWriteLibrary() {
-        if(mPermMap.containsKey(Group.GROUP_LIBRARY)){
-            int libraryPerms = mPermMap.get(Group.GROUP_LIBRARY);
+        int idx = indexOf(Group.GROUP_LIBRARY);
+        if(idx != -1){
+            int libraryPerms = mPerms[idx];
             return (libraryPerms & WRITE) == WRITE;
         }
         return false;
     }
     
     public boolean canWrite() {
-        Set<Entry<Integer, Integer>> entries = mPermMap.entrySet();
-        for(Entry<Integer,Integer> e : entries){
-            if((e.getValue() & WRITE) == WRITE)
+        for(int i=0; i<mPerms.length; i++){
+            if((mPerms[i] & WRITE) == WRITE)
                 return true;
         }
         return false;
     }
 
     public Set<Integer> getGroupIds() {
-        Set<Integer> groupIds = mPermMap.keySet();
-        groupIds.remove(Group.GROUP_ALL);
-        groupIds.remove(Group.GROUP_LIBRARY);
+        Set<Integer> groupIds = new HashSet<Integer>();
+        for(int i=0;i<mGroups.length; i++){
+            int gid = mGroups[i];
+            if(gid != Group.GROUP_ALL && gid != Group.GROUP_LIBRARY){
+                groupIds.add(new Integer(gid));
+            }
+        }
         return groupIds;
     }
 
     public int getGroupCount() {
         // Number of groups this user has access to
         int count = mGroups.length;
-        if(mPermMap.containsKey(Group.GROUP_ALL)){
-            count--;
-        }
-        if(mPermMap.containsKey(Group.GROUP_LIBRARY)){
-            count--;
+        for(int i=0; i<mGroups.length; i++){
+            int gid = mGroups[i];
+            if(gid == Group.GROUP_ALL || gid == Group.GROUP_LIBRARY){
+                count--;
+            }
         }
         return count;
     }
@@ -128,7 +135,7 @@ public class Access implements Parcelable {
         out.writeIntArray(mGroups);
         out.writeIntArray(mPerms);
     }
-    
+
     public void writeToDB(ContentResolver cr) {
         if(mKeyDbId == Account.NOT_IN_DATABASE){
             Cursor keyCur = cr.query(Database.ACCOUNT_URI,
@@ -146,13 +153,15 @@ public class Access implements Parcelable {
             keyCur.close();
         }
 
-        ContentValues[] values = new ContentValues[mGroups.length];
-        for(int i=0; i<mGroups.length; i++){
-            values[i] = new ContentValues();
-            values[i].put(COL_KEY, mKeyDbId);
-            values[i].put(COL_GROUP, mGroups[i]);
-            values[i].put(COL_PERMISSION, mPerms[i]);
+        if(mGroups.length > 0){
+            ContentValues[] values = new ContentValues[mGroups.length];
+            for(int i=0; i<mGroups.length; i++){
+                values[i] = new ContentValues();
+                values[i].put(COL_ACCT, mKeyDbId);
+                values[i].put(COL_GROUP, mGroups[i]);
+                values[i].put(COL_PERMISSION, mPerms[i]);
+            }
+            cr.bulkInsert(Database.ACCESS_URI, values);
         }
-        cr.bulkInsert(Database.ACCESS_URI, values);
     }
 }

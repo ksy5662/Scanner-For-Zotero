@@ -28,13 +28,14 @@ import android.widget.ViewFlipper;
 
 public class LoginActivity extends Activity {
 
-    private static final String CLASS_TAG = LoginActivity.class.getCanonicalName();
+    //private static final String CLASS_TAG = LoginActivity.class.getCanonicalName();
 
     public static final String PREFS_NAME = "config";
 
     public static final String INTENT_EXTRA_CLEAR_FIELDS = "CLEAR_FIELDS";
 
     public static final String RECREATE_CURRENT_DISPLAY = "CURDISP";
+    public static final String RECREATE_ACCOUNT = "ACCT";
 
     // Subactivity result codes
     public static final int RESULT_APIKEY = 0;
@@ -46,8 +47,6 @@ public class LoginActivity extends Activity {
 
     // Transient state
     private Account mAccount;
-
-    private boolean mHasSavedKeys;
 
     private boolean mLoggedIn;
 
@@ -73,9 +72,6 @@ public class LoginActivity extends Activity {
 
         // Load the saved state, fills user/key fields, sets checkboxes etc.
         loadConfig();
-
-        findViewById(R.id.login_saved_key)
-                    .setVisibility(mHasSavedKeys ? View.VISIBLE : View.GONE);
 
         // All listeners are defined at the bottom of this file.
         // Login option buttons:
@@ -103,6 +99,7 @@ public class LoginActivity extends Activity {
             int curView = savedInstanceState.getInt(RECREATE_CURRENT_DISPLAY, 0);
             ((ViewFlipper)findViewById(R.id.login_view_flipper))
                 .setDisplayedChild(curView);
+            setUserAndKey((Account) savedInstanceState.getParcelable(RECREATE_ACCOUNT));
          }
 
         // If we're called from Main via "Log out", we need to clear the login info
@@ -155,13 +152,14 @@ public class LoginActivity extends Activity {
         super.onSaveInstanceState(state);
         state.putInt(RECREATE_CURRENT_DISPLAY, 
              ((ViewFlipper)findViewById(R.id.login_view_flipper)).getDisplayedChild());
+        state.putParcelable(RECREATE_ACCOUNT, mAccount);
     }
 
     private void doLogin(){ 
         // mAcctCursor MUST be open before this is called
 
         boolean validId = validateUserId();       // These have side effects
-        boolean validKey = validateApiKey();      //
+        boolean validKey = validateApiKey();      // (error flags on textviews)
 
         if(!(validId && validKey))
             return;
@@ -236,9 +234,9 @@ public class LoginActivity extends Activity {
                 mAcctCursor = c;
                 startManagingCursor(mAcctCursor); 
 
-                mHasSavedKeys = (mAcctCursor.getCount() > 0);
                 findViewById(R.id.login_saved_key)
-                        .setVisibility(mHasSavedKeys ? View.VISIBLE : View.GONE);
+                        .setVisibility((mAcctCursor.getCount() > 0)
+                                ? View.VISIBLE : View.GONE);
 
                 switch(mOnRecvCursor){
                 // On an activity recreate (following orientation change, etc)
@@ -265,7 +263,6 @@ public class LoginActivity extends Activity {
         String alias = prefs.getString(getString(R.string.pref_alias), "");
         String uid = prefs.getString(getString(R.string.pref_userid), "");
         String key = prefs.getString(getString(R.string.pref_apikey), "");
-        mHasSavedKeys = prefs.getBoolean(getString(R.string.pref_savedkeys), false);
         mRememberMe = prefs.getBoolean(getString(R.string.pref_rememberme), true);
         mLoggedIn = prefs.getBoolean(getString(R.string.pref_loggedin), false);
 
@@ -283,9 +280,6 @@ public class LoginActivity extends Activity {
         editor.putBoolean(getString(R.string.pref_rememberme), mRememberMe);
 
         editor.putBoolean(getString(R.string.pref_loggedin), mLoggedIn);
-
-        // Set firstrun to false the first time the user logs in
-        editor.putBoolean(getString(R.string.pref_savedkeys), mHasSavedKeys);
 
         editor.commit();
     }
@@ -445,6 +439,7 @@ public class LoginActivity extends Activity {
             return false;
         }
     };
+
     private final View.OnFocusChangeListener focusTextListener = new View.OnFocusChangeListener() {
 
         @Override

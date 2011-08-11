@@ -94,18 +94,11 @@ public class APIRequest implements Runnable {
 
                 ByteArrayOutputStream content = new ByteArrayOutputStream();
 
-                // This progress stuff isn't really worth it
-                //int percentPerSeg = Math.max(1, 
-                //        Math.round(((float)BUFFER_SIZE)/entity.getContentLength()));
-                // APIResponse prog = new APIResponse(mId, new Integer(percentPerSeg));
-
                 // Read response into a buffered stream
                 int readBytes = 0;
                 byte[] sBuffer = new byte[BUFFER_SIZE];
                 while ((readBytes = inputStream.read(sBuffer)) != -1) {
                    content.write(sBuffer, 0, readBytes);
-                   //mHandler.sendMessage(Message.obtain(mHandler,
-                   //      APIHandler.PROGRESS, prog));
                 }
 
                 // Return result from buffered stream

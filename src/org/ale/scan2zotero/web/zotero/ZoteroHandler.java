@@ -2,11 +2,13 @@ package org.ale.scan2zotero.web.zotero;
 
 import org.ale.scan2zotero.data.Access;
 import org.ale.scan2zotero.data.Account;
+import org.ale.scan2zotero.data.Database;
 import org.ale.scan2zotero.data.Group;
 import org.ale.scan2zotero.web.APIHandler;
 import org.apache.http.StatusLine;
 
 import android.content.ContentResolver;
+import android.util.Log;
 import android.widget.Toast;
 
 public class ZoteroHandler extends APIHandler {
@@ -45,9 +47,22 @@ public class ZoteroHandler extends APIHandler {
 
     protected void onStatusLine(String id, StatusLine status) {
         switch(status.getStatusCode()){
-        case 404: // Not Found
-            if(id.equals(ZoteroAPIClient.PERMISSIONS))
+        case 403: // Forbidden
+            if(!id.equals(ZoteroAPIClient.PERMISSIONS)) {
+                // Maybe the key permissions changed, do a refresh
+                APIHandler.mActivity.refreshPermissions();
+            }else{
+                // This shouldn't happen, but to avoid a permission checking
+                // loop in case it does, erase key permissions and log out
+                APIHandler.mActivity.erasePermissions();
                 APIHandler.mActivity.postAccountPermissions(null);
+            }
+            break;
+        case 404: // Not Found
+            if(id.equals(ZoteroAPIClient.PERMISSIONS)){
+                APIHandler.mActivity.erasePermissions();
+                APIHandler.mActivity.postAccountPermissions(null);
+            }
             break;
         case 409: // Conflict (Target library locked)
         case 412: // Precondition failed (X-Zotero-Write-Token duplicate)
@@ -74,8 +89,6 @@ public class ZoteroHandler extends APIHandler {
     }
 
     protected void onException(String id, Exception exc) {
-        if(id.equals(ZoteroAPIClient.PERMISSIONS))
-            APIHandler.mActivity.postAccountPermissions(null);
         //if(id.equals(ZoteroAPIClient.ITEMS))
         //    APIHandler.mActivity.postItemResponse(null);
         exc.printStackTrace();
@@ -83,16 +96,15 @@ public class ZoteroHandler extends APIHandler {
     }
 
     protected void onSuccess(final String id, String resp) {
-        Toast.makeText(APIHandler.mActivity, id+" Success", Toast.LENGTH_LONG).show();
         if(id.equals(ZoteroAPIClient.ITEMS)){
+            //handleItems(resp);
         }else if(id.equals(ZoteroAPIClient.PERMISSIONS)){
             handlePermissions(resp);
         }else if(id.equals(ZoteroAPIClient.GROUPS)){
             handleGroups(resp);
-        }else if(id.equals(ZoteroAPIClient.COLLECTIONS)){
-        }else if(id.equals(ZoteroAPIClient.ITEMS)){
-            handleItems(resp);
-        }
+        }/*else if(id.equals(ZoteroAPIClient.COLLECTIONS)){
+            handleCollections(resp);
+        }*/
     }
 
     private void handlePermissions(final String xml){
@@ -103,14 +115,18 @@ public class ZoteroHandler extends APIHandler {
             public void run() {
                 final Access perms = ZoteroAPIClient.parsePermissions(xml, user);
                 if(perms != null) {
+                    cr.delete(Database.ACCESS_URI, Access.COL_ACCT + "=?",
+                            new String[] { String.valueOf(user.getDbId()) });
                     perms.writeToDB(cr);
-                }
 
-                checkActivityAndRun(new Runnable(){
-                    public void run(){
-                        APIHandler.mActivity.postAccountPermissions(perms);
-                    }
-                });
+                    checkActivityAndRun(new Runnable(){
+                        public void run(){
+                            APIHandler.mActivity.postAccountPermissions(perms);
+                        }
+                    });
+                }else{
+                    // TODO: Garbled XML? Tell the user
+                }
             }
         }).start();
     }
@@ -127,17 +143,22 @@ public class ZoteroHandler extends APIHandler {
                     for(int i=0; i<howMany; i++){
                         groups[i].writeToDB(cr);
                     }
+                    checkActivityAndRun(new Runnable(){
+                        public void run(){
+                            APIHandler.mActivity.loadGroups();
+                        }
+                    });
                 }
             }
         }).start();
     }
 
-    private void handleItems(final String xml){
+    /*private void handleItems(final String xml){
         final ContentResolver cr = APIHandler.mActivity.getContentResolver();
         new Thread(new Runnable(){
             public void run() {
                 String itemIds = ZoteroAPIClient.parseItems(xml);
             }
         }).start();
-    }
+    }*/
 }
