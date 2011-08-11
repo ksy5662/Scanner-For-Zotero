@@ -24,33 +24,31 @@ public abstract class APIHandler extends Handler {
     protected ArrayList<APIResponse> mResponses = new ArrayList<APIResponse>();
     protected ArrayList<Runnable> mUIThreadEvents = new ArrayList<Runnable>();
 
-    protected static MainActivity mActivity = null;
+    protected static MainActivity MAIN = null;
 
-    protected abstract void dequeueMessages();
-
-    protected abstract void onStart(String id);
-    protected abstract void onProgress(String id, int percent);
-    protected abstract void onStatusLine(String id, StatusLine reason);
-    protected abstract void onException(String id, Exception exc);
-    protected abstract void onSuccess(String id, String res);
+    protected abstract void onStart(APIRequest req);
+    protected abstract void onProgress(APIRequest req, int percent);
+    protected abstract void onStatusLine(APIRequest req, StatusLine reason);
+    protected abstract void onException(APIRequest req, Exception exc);
+    protected abstract void onSuccess(APIRequest req, String res);
 
     public synchronized void registerActivity(MainActivity activity){
-        if(APIHandler.mActivity != null || activity == null)
+        if(APIHandler.MAIN != null || activity == null)
             return;
-        APIHandler.mActivity = activity;
+        APIHandler.MAIN = activity;
         dequeueMessages();
         for(Runnable r : mUIThreadEvents){
-            mActivity.mUIThreadHandler.post(r);
+            APIHandler.MAIN.postToUIThread(r);
         }
         mUIThreadEvents.clear();
     }
 
     public synchronized void unregisterActivity(){
-        APIHandler.mActivity = null;
+        APIHandler.MAIN = null;
     }
 
     public static synchronized boolean hasActivity() {
-        return APIHandler.mActivity != null;
+        return APIHandler.MAIN != null;
     }
 
     public void handleMessage(Message msg){
@@ -65,35 +63,45 @@ public abstract class APIHandler extends Handler {
     }
 
     public void handleMessage(int type, APIResponse resp){
-        String id = resp.getId();
+        APIRequest req = resp.getRequest();
 
         switch(type) {
         case APIHandler.START:
-            onStart(id);
+            onStart(req);
             break;
         case APIHandler.PROGRESS:
-            onProgress(id, ((Integer)resp.getData()).intValue());
+            onProgress(req, ((Integer)resp.getData()).intValue());
             break;
         case APIHandler.EXCEPTION:
-            onException(id, (Exception)resp.getData());
+            onException(req, (Exception)resp.getData());
             break;
         case APIHandler.STATUSLINE:
-            onStatusLine(id, (StatusLine)resp.getData());
+            onStatusLine(req, (StatusLine)resp.getData());
             break;
         case APIHandler.SUCCESS:
-            onSuccess(id, (String) resp.getData());
+            onSuccess(req, (String) resp.getData());
             break;
         case APIHandler.FINISH:
-            RequestQueue.getInstance().taskComplete((APIRequest)resp.getData());
+            RequestQueue.getInstance().taskComplete(req);
             break;
         }
     }
 
-    public void checkActivityAndRun(Runnable r){
+    public void checkActivityAndRun(Runnable r) {
+        // Post a runnable to the activity UI thread if our activity reference
+        // is non-null. Otherwise queue the runnable until activity registration.
         if(APIHandler.hasActivity()){
-            mActivity.mUIThreadHandler.post(r);
+            APIHandler.MAIN.postToUIThread(r);
         }else{
             mUIThreadEvents.add(r);
         }
+    }
+
+    private void dequeueMessages(){
+        for(int i=0; i<mResponses.size(); i++){
+            handleMessage(mResponseTypes.get(i).intValue(), mResponses.get(i));
+        }
+        mResponseTypes.clear();
+        mResponses.clear();
     }
 }

@@ -2,6 +2,7 @@ package org.ale.scan2zotero.web.googlebooks;
 
 import org.ale.scan2zotero.PendingListAdapter;
 import org.ale.scan2zotero.web.APIHandler;
+import org.ale.scan2zotero.web.APIRequest;
 import org.apache.http.StatusLine;
 import org.json.JSONObject;
 
@@ -15,29 +16,18 @@ public class GoogleBooksHandler extends APIHandler{
         return mInstance;
     }
 
-    protected void dequeueMessages(){
-        for(int i=0; i<mResponses.size(); i++){
-            handleMessage(mResponseTypes.get(i).intValue(), mResponses.get(i));
-        }
-        mResponseTypes.clear();
-        mResponses.clear();
-    }
-
-    public boolean continueAfterStatus(int code){
-        return true;
-    }
-
-    // APIHandler.mActivity is guaranteed to be non-null
+    // APIHandler.MAIN is guaranteed to be non-null
     // when these methods are called
-    protected void onStart(String id) {
+    protected void onStart(APIRequest req) {
         
     }
 
-    protected void onProgress(String id, int percent) {
+    protected void onProgress(APIRequest req, int percent) {
         
     }
 
-    protected void onStatusLine(String id, StatusLine status) {
+    protected void onStatusLine(APIRequest req, StatusLine status) {
+        String id = req.getExtra().getString(GoogleBooksAPIClient.EXTRA_ISBN);
         int statusCode = status.getStatusCode();
         if(statusCode >= 400) {
             int errReason;
@@ -55,32 +45,34 @@ public class GoogleBooksHandler extends APIHandler{
                 errReason = PendingListAdapter.STATUS_FAILED;
                 break;
             }
-            APIHandler.mActivity.itemFailed(id, errReason);
+            APIHandler.MAIN.itemFailed(id, errReason);
         }
     }
 
-    protected void onException(String id, Exception exc) {
+    protected void onException(APIRequest req, Exception exc) {
+        String id = req.getExtra().getString(GoogleBooksAPIClient.EXTRA_ISBN);
         exc.printStackTrace();
         //TODO: Be more helpful here, might not be a network issue
-        APIHandler.mActivity.itemFailed(id, PendingListAdapter.STATUS_NO_NETWORK);
+        APIHandler.MAIN.itemFailed(id, PendingListAdapter.STATUS_NO_NETWORK);
     }
 
-    protected void onSuccess(final String isbn, final String res){
+    protected void onSuccess(APIRequest req, final String res){
+        final String id = req.getExtra().getString(GoogleBooksAPIClient.EXTRA_ISBN);
         new Thread(new Runnable() {
             public void run(){
                 // Extract bibliographic information from Google's response and
                 // put it in a format we can submit to Zotero later.
                 final JSONObject translated =
-                        GoogleBooksAPIClient.translateJsonResponse(isbn, res);
+                        GoogleBooksAPIClient.translateJsonResponse(id, res);
 
                 // Since that might have taken some time, check that the 
                 // activity is still around and post the BibInfo.
                 checkActivityAndRun(new Runnable(){
                     public void run(){
                         if(translated == null){
-                            APIHandler.mActivity.itemFailed(isbn, PendingListAdapter.STATUS_FAILED);
+                            APIHandler.MAIN.itemFailed(id, PendingListAdapter.STATUS_FAILED);
                         }else{
-                            APIHandler.mActivity.gotBibInfo(isbn, translated);
+                            APIHandler.MAIN.gotBibInfo(id, translated);
                         }
                     }
                 });

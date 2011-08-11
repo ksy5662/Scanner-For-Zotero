@@ -28,17 +28,19 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import android.os.Bundle;
 import android.text.TextUtils;
 import android.util.Log;
 
 public class ZoteroAPIClient {
     //private static final String CLASS_TAG = ZoteroAPIClient.class.getCanonicalName();
 
-    public static final String GROUPS = "groups";
-    public static final String ITEMS = "items";
-    public static final String PERMISSIONS = "keys";
-    public static final String COLLECTIONS = "collections";
+    public static final int COLLECTIONS = 0;
+    public static final int GROUPS = 1;
+    public static final int ITEMS = 2;
+    public static final int PERMISSIONS = 3;
 
+    public static final String EXTRA_REQ_TYPE = "RT";
 
     private static final String ZOTERO_BASE_URL = "https://api.zotero.org";
     private static final String ZOTERO_USERS_URL = ZOTERO_BASE_URL + "/users";
@@ -73,14 +75,16 @@ public class ZoteroAPIClient {
 
         // TODO: Allow no more than 50 items at a time
         APIRequest r = newRequest();
-        r.setRequestType(APIRequest.POST);
+        r.setHttpMethod(APIRequest.POST);
         HashMap<String, String> queryTerms = new HashMap<String,String>();
         queryTerms.put("content", "json");
         queryTerms.put("key", mAccount.getKey());
         r.setURI(buildURI(queryTerms, String.valueOf(userOrGroupId), "items"));
         r.setContent(items.toString(), "application/json");
         r.addHeader(HDR_WRITE_TOKEN, newWriteToken());
-        r.setReturnIdentifier("addItems");
+        Bundle extra = new Bundle();
+        extra.putInt(EXTRA_REQ_TYPE, ZoteroAPIClient.ITEMS);
+        r.setExtra(extra);
 
         mRequestQueue.enqueue(r);
     }
@@ -88,19 +92,22 @@ public class ZoteroAPIClient {
     public void getPermissions() {
         // https://apis.zotero.org/users/<userid>/keys/<apikey>
         APIRequest r = newRequest();
-        r.setRequestType(APIRequest.GET);
-        r.setURI(buildURI(null, mAccount.getUid(), PERMISSIONS, mAccount.getKey()));
-        r.setReturnIdentifier(PERMISSIONS);
-
+        r.setHttpMethod(APIRequest.GET);
+        r.setURI(buildURI(null, mAccount.getUid(), "keys", mAccount.getKey()));
+        Bundle extra = new Bundle();
+        extra.putInt(EXTRA_REQ_TYPE, ZoteroAPIClient.PERMISSIONS);
+        r.setExtra(extra);
         mRequestQueue.enqueue(r);
     }
 
     public void getGroups() {
         // https://apis.zotero.org/users/<userid>/groups
         APIRequest r = newRequest();
-        r.setRequestType(APIRequest.GET);
-        r.setURI(buildURI(null, mAccount.getUid(), GROUPS));
-        r.setReturnIdentifier(GROUPS);
+        r.setHttpMethod(APIRequest.GET);
+        r.setURI(buildURI(null, mAccount.getUid(), "groups"));
+        Bundle extra = new Bundle();
+        extra.putInt(EXTRA_REQ_TYPE, ZoteroAPIClient.GROUPS);
+        r.setExtra(extra);
 
         mRequestQueue.enqueue(r);
     }
@@ -113,11 +120,13 @@ public class ZoteroAPIClient {
             collection.put("name", name);
             collection.put("parent", parent);
             APIRequest r = newRequest();
-            r.setRequestType(APIRequest.POST);
-            r.setURI(buildURI(null, mAccount.getUid(), COLLECTIONS));
+            r.setHttpMethod(APIRequest.POST);
+            r.setURI(buildURI(null, mAccount.getUid(), "collections"));
             r.setContent(collection.toString(), "application/json");
             r.addHeader(HDR_WRITE_TOKEN, newWriteToken());
-            r.setReturnIdentifier(COLLECTIONS);
+            Bundle extra = new Bundle();
+            extra.putInt(EXTRA_REQ_TYPE, ZoteroAPIClient.COLLECTIONS);
+            r.setExtra(extra);
 
             mRequestQueue.enqueue(r);
         } catch (JSONException e) {

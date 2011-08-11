@@ -14,6 +14,7 @@ import org.apache.http.client.methods.HttpPost;
 import org.apache.http.client.methods.HttpRequestBase;
 import org.apache.http.entity.StringEntity;
 
+import android.os.Bundle;
 import android.os.Message;
 import android.util.Log;
 
@@ -33,19 +34,24 @@ public class APIRequest implements Runnable {
 
     private HttpRequestBase mRequest;
 
-    private String mId;
+    private Bundle mExtra = null;
 
     public APIRequest(APIHandler handler, HttpClient client){
         mHandler = handler;
         mHttpsClient = client;
     }
 
-    /* Returned with API response for handler to identify request */
-    public void setReturnIdentifier(String id){
-        mId = id;
+    // The Bundle extra is used to identify this request and provide 
+    // its handler w/ the information needed to process the result.
+    public void setExtra(Bundle extra){
+        mExtra = extra;
     }
-    
-    public void setRequestType(int type){
+
+    public Bundle getExtra(){
+        return mExtra;
+    }
+
+    public void setHttpMethod(int type){
         switch(type){
             case GET:
                 mRequest = new HttpGet();
@@ -77,14 +83,14 @@ public class APIRequest implements Runnable {
 
     public void run() {
         mHandler.sendMessage(
-                Message.obtain(mHandler, APIHandler.START, new APIResponse(mId, null)));
+                Message.obtain(mHandler, APIHandler.START, new APIResponse(this, null)));
         HttpResponse response = null;
         try {
             response = mHttpsClient.execute(mRequest);
 
             StatusLine status = response.getStatusLine();
             mHandler.sendMessage(Message.obtain(mHandler, 
-                        APIHandler.STATUSLINE, new APIResponse(mId, status)));
+                        APIHandler.STATUSLINE, new APIResponse(this, status)));
 
             // Check the status code if it's 400 or higher then we don't need to
             // finish reading the response, the APIHandler should know what to do.
@@ -104,25 +110,25 @@ public class APIRequest implements Runnable {
                 // Return result from buffered stream
                 String dataAsString = new String(content.toByteArray());
                 mHandler.sendMessage(Message.obtain(mHandler, 
-                        APIHandler.SUCCESS, new APIResponse(mId, dataAsString)));
+                        APIHandler.SUCCESS, new APIResponse(this, dataAsString)));
             }
         } catch (Exception e) {
             mHandler.sendMessage(Message.obtain(mHandler,
-                        APIHandler.EXCEPTION, new APIResponse(mId, e)));
+                        APIHandler.EXCEPTION, new APIResponse(this, e)));
         } finally {
             mHandler.sendMessage(Message.obtain(mHandler, 
-                        APIHandler.FINISH, new APIResponse(mId, this)));
+                        APIHandler.FINISH, new APIResponse(this, null)));
         }
     }
 
     public class APIResponse {
-        private String mId;
+        private APIRequest mRequest;
         private Object mData;
-        public APIResponse(String id, Object data){
-            mId = id;
+        public APIResponse(APIRequest req, Object data){
+            mRequest = req;
             mData = data;
         }
-        public String getId(){ return mId; }
+        public APIRequest getRequest(){ return mRequest; }
         public Object getData(){ return mData; }
     }
 }

@@ -15,11 +15,14 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import android.os.Bundle;
 import android.text.TextUtils;
 
 public class GoogleBooksAPIClient {
 
     public static final String BOOK_SEARCH_ISBN = "https://www.googleapis.com/books/v1/volumes?prettyPrint=flase&q=isbn:";
+
+    public static final String EXTRA_ISBN = "ISBN";
 
     private DefaultHttpClient mHttpsClient;
 
@@ -39,9 +42,11 @@ public class GoogleBooksAPIClient {
 
     public void isbnLookup(String isbn) {
         APIRequest r = newRequest();
-        r.setRequestType(APIRequest.GET);
+        r.setHttpMethod(APIRequest.GET);
         r.setURI(URI.create(BOOK_SEARCH_ISBN+isbn));
-        r.setReturnIdentifier(isbn);
+        Bundle extra = new Bundle();
+        extra.putString(GoogleBooksAPIClient.EXTRA_ISBN, isbn);
+        r.setExtra(extra);
 
         mRequestQueue.enqueue(r);
     }
