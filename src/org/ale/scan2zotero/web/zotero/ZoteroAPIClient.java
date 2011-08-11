@@ -41,6 +41,7 @@ public class ZoteroAPIClient {
     public static final int PERMISSIONS = 3;
 
     public static final String EXTRA_REQ_TYPE = "RT";
+    public static final String EXTRA_ITEM_ROWS = "ROWS";
 
     private static final String ZOTERO_BASE_URL = "https://api.zotero.org";
     private static final String ZOTERO_USERS_URL = ZOTERO_BASE_URL + "/users";
@@ -70,7 +71,7 @@ public class ZoteroAPIClient {
         return new APIRequest(mHandler, mHttpsClient);
     }
 
-    public void addItems(JSONObject items, int userOrGroupId) {
+    public void addItems(JSONObject items, int[] rows, int userOrGroupId) {
         // https://apis.zotero.org/users/<userid>/items
 
         // TODO: Allow no more than 50 items at a time
@@ -83,6 +84,7 @@ public class ZoteroAPIClient {
         r.setContent(items.toString(), "application/json");
         r.addHeader(HDR_WRITE_TOKEN, newWriteToken());
         Bundle extra = new Bundle();
+        extra.putIntArray(EXTRA_ITEM_ROWS, rows);
         extra.putInt(EXTRA_REQ_TYPE, ZoteroAPIClient.ITEMS);
         r.setExtra(extra);
 

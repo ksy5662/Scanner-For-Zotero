@@ -104,6 +104,27 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         }).start();
     }
 
+    public void deleteItemsWithRowIds(int[] dbid){
+        ArrayList<Integer> toDelete = new ArrayList<Integer>();
+        for(int i=0;i<mItems.size(); i++){
+            for(int j=0; j<dbid.length; j++){
+                if(mItems.get(i).getId() == dbid[i]){
+                    toDelete.add(i);
+                }
+            }
+        }
+        for(int i : toDelete){
+            deleteItem(i);
+        }
+    }
+
+    public void clear(){
+        mItems.clear();
+        mAdapters.clear();
+        mChecked.clear();
+        notifyDataSetChanged();
+    }
+
     public void finishAddItem(BibItem item){
         shiftUpSelections(0);
         mItems.add(0, item);
@@ -257,17 +278,26 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         }
     }
 
-    public void setChecked(boolean[] checks){
+    public void setChecked(int[] checks){
         mChecked.clear();
         for(int i=0; i<checks.length; i++)
-            mChecked.put(i, checks[i]);
+            mChecked.put(checks[i], true);
     }
 
-    public boolean[] getChecked(){
-        boolean[] result = new boolean[mItems.size()];
-        for(int i=0; i<result.length; i++)
-            result[i] = mChecked.get(i, false);
+    public int[] getChecked() {
+        int[] result = new int[getNumChecked()];
+        for(int i=0; i<mChecked.size(); i++)
+            result[i] = i;
         return result;
+    }
+    
+    private int getNumChecked() {
+        int count = 0;
+        for(int i=0; i<mChecked.size(); i++){
+            if(mChecked.valueAt(i))
+                count++;
+        }
+        return count;
     }
 
     /* View tag */

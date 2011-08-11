@@ -2,6 +2,7 @@ package org.ale.scan2zotero.web.zotero;
 
 import org.ale.scan2zotero.data.Access;
 import org.ale.scan2zotero.data.Account;
+import org.ale.scan2zotero.data.BibItem;
 import org.ale.scan2zotero.data.Database;
 import org.ale.scan2zotero.data.Group;
 import org.ale.scan2zotero.web.APIHandler;
@@ -9,6 +10,9 @@ import org.ale.scan2zotero.web.APIRequest;
 import org.apache.http.StatusLine;
 
 import android.content.ContentResolver;
+import android.database.Cursor;
+import android.text.TextUtils;
+import android.util.Log;
 import android.widget.Toast;
 
 public class ZoteroHandler extends APIHandler {
@@ -57,7 +61,6 @@ public class ZoteroHandler extends APIHandler {
                 APIHandler.MAIN.erasePermissions();
                 APIHandler.MAIN.postAccountPermissions(null);
             }
-            break;
         case 409: // Conflict (Target library locked)
         case 412: // Precondition failed (X-Zotero-Write-Token duplicate)
         case 413: // Request Entity Too Large
@@ -84,7 +87,7 @@ public class ZoteroHandler extends APIHandler {
 
     protected void onException(APIRequest req, Exception exc) {
         int rt = req.getExtra().getInt(ZoteroAPIClient.EXTRA_REQ_TYPE);
-        //if(id.equals(ZoteroAPIClient.ITEMS))
+        //if(rt == ZoteroAPIClient.ITEMS)
         //    APIHandler.MAIN.postItemResponse(null);
         exc.printStackTrace();
         Toast.makeText(APIHandler.MAIN, rt+" Exception", Toast.LENGTH_LONG).show();
@@ -99,6 +102,8 @@ public class ZoteroHandler extends APIHandler {
             handleGroups(resp);
             break;
         case ZoteroAPIClient.ITEMS:
+            int[] rows = req.getExtra().getIntArray(ZoteroAPIClient.EXTRA_ITEM_ROWS);
+            handleItems(rows, resp);
             break;
         case ZoteroAPIClient.PERMISSIONS:
             handlePermissions(resp);
@@ -152,12 +157,20 @@ public class ZoteroHandler extends APIHandler {
         }).start();
     }
 
-    /*private void handleItems(final String xml){
-        final ContentResolver cr = APIHandler.MAIN.getContentResolver();
+    private void handleItems(final int[] dbrows, final String xml){
         new Thread(new Runnable(){
             public void run() {
-                String itemIds = ZoteroAPIClient.parseItems(xml);
+                final String itemIds = ZoteroAPIClient.parseItems(xml);
+                String[] srows = new String[dbrows.length];
+                for(int i=0; i<srows.length; i++){
+                    srows[i] = String.valueOf(dbrows[i]);
+                }
+                checkActivityAndRun(new Runnable(){
+                    public void run(){
+                        APIHandler.MAIN.itemsUploaded(dbrows);
+                    }
+                });
             }
         }).start();
-    }*/
+    }
 }

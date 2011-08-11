@@ -13,7 +13,6 @@ import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.TextUtils;
-import android.util.Log;
 import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -194,6 +193,7 @@ public class LoginActivity extends Activity {
         mLoggedIn = mRememberMe; // This is the mLoggedIn value that gets saved
                                  // to prefs. If the user didn't check "Remember Me"
                                  // we won't automatically log them in.
+
         // Transition to Main activity
         Intent intent = new Intent(LoginActivity.this, MainActivity.class);
         intent.putExtra(MainActivity.INTENT_EXTRA_ACCOUNT, mAccount);

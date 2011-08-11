@@ -10,6 +10,7 @@ import org.ale.scan2zotero.data.BibItem;
 import org.ale.scan2zotero.data.BibItemDBHandler;
 import org.ale.scan2zotero.data.Group;
 import org.ale.scan2zotero.data.Database;
+import org.ale.scan2zotero.web.APIHandler;
 import org.ale.scan2zotero.web.googlebooks.GoogleBooksAPIClient;
 import org.ale.scan2zotero.web.googlebooks.GoogleBooksHandler;
 import org.ale.scan2zotero.web.zotero.ZoteroAPIClient;
@@ -45,7 +46,6 @@ import android.widget.Spinner;
 import android.widget.Toast;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.ExpandableListView.ExpandableListContextMenuInfo;
-import android.widget.RelativeLayout.LayoutParams;
 
 public class MainActivity extends Activity {
 
@@ -113,13 +113,13 @@ public class MainActivity extends Activity {
         bibItemList.addHeaderView(pendingListHolder);
         Spinner groupList = (Spinner) findViewById(R.id.upload_group);
 
-        boolean[] checked;
+        int[] checked;
         SparseArray<PString> groups;
         if(state == null){ // Fresh activity
             mAccountAccess = null; // will check for permissions in onResume
             mPendingItems = new ArrayList<String>(2); // RC_PEND
             mPendingStatus = new ArrayList<Integer>(2); // RC_PEND_STAT
-            checked = new boolean[0];
+            checked = new int[0];
             mNewKey = true;
             groups = new SparseArray<PString>();
         }else{ // Recreating activity
@@ -128,7 +128,7 @@ public class MainActivity extends Activity {
             mPendingItems = state.getStringArrayList(RC_PEND);
             mPendingStatus = state.getIntegerArrayList(RC_PEND_STAT);
             // Set checked items
-            checked = state.getBooleanArray(RC_CHECKED);
+            checked = state.getIntArray(RC_CHECKED);
 
             mNewKey = state.getBoolean(RC_NEW_KEY);
             groups = state.getSparseParcelableArray(RC_GROUPS);
@@ -218,7 +218,7 @@ public class MainActivity extends Activity {
         super.onSaveInstanceState(state);
         state.putStringArrayList(RC_PEND, mPendingItems);
         state.putIntegerArrayList(RC_PEND_STAT, mPendingStatus);
-        state.putBooleanArray(RC_CHECKED, mItemAdapter.getChecked());
+        state.putIntArray(RC_CHECKED, mItemAdapter.getChecked());
         state.putParcelable(RC_ACCESS, mAccountAccess);
         state.putBoolean(RC_NEW_KEY, mNewKey);
         state.putSparseParcelableArray(RC_GROUPS, mGroupAdapter.getData());
@@ -313,12 +313,12 @@ public class MainActivity extends Activity {
                 if(mAccountAccess.canWriteLibrary()){
                     newGroupList.put(Group.GROUP_LIBRARY, new PString(getString(R.string.my_library)));
                 }
-                String selection = TextUtils.join(",", groups);
+                String[] selection = new String[] {TextUtils.join(",", groups)};
                 Cursor c = getContentResolver()
                             .query(Database.GROUP_URI,
                                     new String[]{Group._ID, Group.COL_TITLE}, 
                                     Group._ID+" IN (?)",
-                                    new String[] {selection},
+                                    selection,
                                     null);
 
                 // Figure out which groups we don't have
@@ -372,6 +372,13 @@ public class MainActivity extends Activity {
 
     public void itemFailed(String isbn, Integer status){
         mPendingAdapter.setStatus(isbn, status);
+    }
+    
+    public void itemsUploaded(int[] dbrows){
+        mItemAdapter.deleteItemsWithRowIds(dbrows);
+        Toast.makeText(MainActivity.this,
+                       "Items added successfully",
+                       Toast.LENGTH_LONG).show();
     }
 
     public void showOrHideUploadButton(){
@@ -436,7 +443,6 @@ public class MainActivity extends Activity {
             break;
         case R.id.ctx_delete:
             ExpandableListContextMenuInfo dinfo = (ExpandableListContextMenuInfo) item.getMenuInfo();
-
             mItemAdapter.deleteItem((int) dinfo.id);
             if(mItemAdapter.getGroupCount() == 0)
                 findViewById(R.id.upload).setVisibility(View.GONE);
@@ -542,24 +548,23 @@ public class MainActivity extends Activity {
     private final Button.OnClickListener uploadSelected = new Button.OnClickListener() {
         public void onClick(View v) {
             ((Button)v).setClickable(false);
-            boolean[] checked = mItemAdapter.getChecked();
+            int[] checked = mItemAdapter.getChecked();
+            int[] rows = new int[checked.length];
             JSONObject items = new JSONObject();
-            JSONObject nxt;
             try {
                 items.put("items", new JSONArray());
                 for(int b=0; b<checked.length; b++){
-                    if(!checked[b]) continue;
-
-                    nxt = ((BibItem)mItemAdapter.getGroup(b)).getSelectedInfo();
-                    items.accumulate("items", nxt);
+                    BibItem bib = (BibItem)mItemAdapter.getGroup(b);
+                    rows[b] = bib.getId();
+                    items.accumulate("items", bib.getSelectedInfo());
                 }
             } catch (JSONException e) {
                 // TODO Prompt about failure
                 e.printStackTrace();
                 // Clear the selection
-                mItemAdapter.setChecked(new boolean[0]);
+                mItemAdapter.setChecked(new int[0]);
             }
-            mZAPI.addItems(items, mSelectedGroup);
+            mZAPI.addItems(items, rows, mSelectedGroup);
         }
     };
 
