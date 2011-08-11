@@ -22,6 +22,10 @@ public class SparseParcelableArrayAdapter<T extends Parcelable> extends BaseAdap
         mItems = items;
     }
 
+    public SparseArray<T> getData(){
+        return mItems;
+    }
+
     public void replaceData(SparseArray<T> items){
         mItems = items;
         notifyDataSetChanged();

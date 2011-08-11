@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import android.content.Context;
+import android.util.Log;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
@@ -22,13 +23,15 @@ public class PendingListAdapter extends ArrayAdapter<String> {
 
     private ArrayList<Integer> mPendingStatus;
     private Context mContext;
-    
+    public int _hack_childSize;
+
     public PendingListAdapter(Context context, int resource,
             int textViewResourceId, List<String> objects,
             ArrayList<Integer> status) {
         super(context, resource, textViewResourceId, objects);
         mContext = context;
         mPendingStatus = status;
+        _hack_childSize = 72;
     }
 
     public boolean hasItem(String item){
@@ -48,21 +51,21 @@ public class PendingListAdapter extends ArrayAdapter<String> {
 
     @Override
     public void add(String item){
-        super.add(item);
         mPendingStatus.add(STATUS_LOADING);
+        super.add(item);
     }
 
     @Override
     public void clear(){
-        super.clear();
         mPendingStatus.clear();
+        super.clear();
     }
 
     @Override
     public void remove(String item){
         int idx = getPosition(item);
-        super.remove(item);
         mPendingStatus.remove(idx);
+        super.remove(item);
     }
 
     @Override
@@ -80,8 +83,11 @@ public class PendingListAdapter extends ArrayAdapter<String> {
             }else{
                 vf.setDisplayedChild(0);
             }
+            int cvh = convertView.getMeasuredHeight();
+            if(cvh != 0){
+                _hack_childSize = cvh;
+            }
         }
-
         return convertView;
     }
 }

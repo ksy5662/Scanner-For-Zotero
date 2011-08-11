@@ -1,16 +1,13 @@
 package org.ale.scan2zotero.data;
 
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Set;
-import java.util.Map.Entry;
 
 import android.content.ContentResolver;
 import android.content.ContentValues;
 import android.database.Cursor;
 import android.os.Parcel;
 import android.os.Parcelable;
-import android.util.Log;
 
 public class Access implements Parcelable {
     public static final String TBL_NAME = "access";

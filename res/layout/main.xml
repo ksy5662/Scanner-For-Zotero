@@ -43,6 +43,7 @@
                         android:childDivider="@color/s2z_light_blue"
                         android:divider="@color/s2z_light_blue"
                         android:dividerHeight="1dp"
+                        android:headerDividersEnabled="false"
                         android:choiceMode="multipleChoice"
                         android:fadingEdge="none">
     </ExpandableListView>

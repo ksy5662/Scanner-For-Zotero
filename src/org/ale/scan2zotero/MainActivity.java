@@ -35,6 +35,7 @@ import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
+import android.widget.AbsListView;
 import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ExpandableListView;
@@ -44,6 +45,7 @@ import android.widget.Spinner;
 import android.widget.Toast;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.ExpandableListView.ExpandableListContextMenuInfo;
+import android.widget.RelativeLayout.LayoutParams;
 
 public class MainActivity extends Activity {
 
@@ -80,8 +82,6 @@ public class MainActivity extends Activity {
 
     private boolean mNewKey;
     
-    private SparseArray<PString> mGroups;
-    //private SparseArray<String> mCollections;
     private SparseParcelableArrayAdapter<PString> mGroupAdapter;
     //private SparseParcelableArrayAdapter mCollectionAdapter;
     private int mSelectedGroup;
@@ -114,13 +114,14 @@ public class MainActivity extends Activity {
         Spinner groupList = (Spinner) findViewById(R.id.upload_group);
 
         boolean[] checked;
+        SparseArray<PString> groups;
         if(state == null){ // Fresh activity
             mAccountAccess = null; // will check for permissions in onResume
             mPendingItems = new ArrayList<String>(2); // RC_PEND
             mPendingStatus = new ArrayList<Integer>(2); // RC_PEND_STAT
             checked = new boolean[0];
             mNewKey = true;
-            mGroups = new SparseArray<PString>();
+            groups = new SparseArray<PString>();
         }else{ // Recreating activity
             // Rebuild pending list
             mAccountAccess = state.getParcelable(RC_ACCESS);
@@ -130,7 +131,7 @@ public class MainActivity extends Activity {
             checked = state.getBooleanArray(RC_CHECKED);
 
             mNewKey = state.getBoolean(RC_NEW_KEY);
-            mGroups = state.getSparseParcelableArray(RC_GROUPS);
+            groups = state.getSparseParcelableArray(RC_GROUPS);
         }
 
         // Initialize list adapters
@@ -138,7 +139,7 @@ public class MainActivity extends Activity {
         mItemAdapter.setChecked(checked);
 
         mGroupAdapter = new SparseParcelableArrayAdapter<PString>(
-                MainActivity.this, mGroups);
+                MainActivity.this, groups);
         mPendingAdapter = new PendingListAdapter(MainActivity.this,
                 R.layout.pending_item, R.id.pending_item_id, mPendingItems,
                 mPendingStatus);
@@ -188,6 +189,7 @@ public class MainActivity extends Activity {
 
         int pendVis = mPendingAdapter.getCount() > 0 ? View.VISIBLE : View.GONE;
         mPendingList.setVisibility(pendVis);
+        redrawPendingList();
 
         showOrHideUploadButton();
 
@@ -219,9 +221,12 @@ public class MainActivity extends Activity {
         state.putBooleanArray(RC_CHECKED, mItemAdapter.getChecked());
         state.putParcelable(RC_ACCESS, mAccountAccess);
         state.putBoolean(RC_NEW_KEY, mNewKey);
-        state.putSparseParcelableArray(RC_GROUPS, mGroups);
+        state.putSparseParcelableArray(RC_GROUPS, mGroupAdapter.getData());
     }
 
+    public void postToUIThread(Runnable r) {
+        mUIThreadHandler.post(r);
+    }
     public void logout(){
         Intent intent = new Intent(MainActivity.this, LoginActivity.class);
         intent.putExtra(LoginActivity.INTENT_EXTRA_CLEAR_FIELDS, true);
@@ -360,6 +365,7 @@ public class MainActivity extends Activity {
                 if(mItemAdapter.getGroupCount() > 0)
                     findViewById(R.id.upload).setVisibility(View.VISIBLE);
                 mItemAdapter.addItem(item);
+                redrawPendingList();
             }
         });
     }
@@ -441,6 +447,7 @@ public class MainActivity extends Activity {
             mPendingAdapter.remove(mPendingAdapter.getItem(cinfo.position));
             if(mPendingAdapter.getCount() == 0)
                 mPendingList.setVisibility(View.GONE);
+            redrawPendingList();
             break;
         case R.id.ctx_retry:
             AdapterContextMenuInfo rinfo = (AdapterContextMenuInfo) item.getMenuInfo();
@@ -500,6 +507,7 @@ public class MainActivity extends Activity {
                 mPendingAdapter.setStatus(content, PendingListAdapter.STATUS_UNKNOWN_TYPE);
                 break;
         }
+        redrawPendingList();
     }
 
     private final AdapterView.OnItemSelectedListener spinnerListener = new AdapterView.OnItemSelectedListener(){
@@ -554,4 +562,15 @@ public class MainActivity extends Activity {
             mZAPI.addItems(items, mSelectedGroup);
         }
     };
+
+    private void redrawPendingList(){
+        /* Pretty terrible hack, Android doesn't like my ListView inside a
+         * relative layout as a header in an expandable list view. Go figure.
+         * It wasn't getting the height of said element correctly. */
+        int count = mPendingAdapter.getCount();
+        RelativeLayout r = ((RelativeLayout)findViewById(R.id.pending_item_holder));
+        AbsListView.LayoutParams params = (AbsListView.LayoutParams) r.getLayoutParams();
+        params.height = count * mPendingAdapter._hack_childSize;
+        r.setLayoutParams(params);
+    }
 }
