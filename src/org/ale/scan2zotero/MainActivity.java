@@ -244,6 +244,7 @@ public class MainActivity extends Activity {
     public void postToUIThread(Runnable r) {
         mUIThreadHandler.post(r);
     }
+
     public void logout(){
         Intent intent = new Intent(MainActivity.this, LoginActivity.class);
         intent.putExtra(LoginActivity.INTENT_EXTRA_CLEAR_FIELDS, true);
@@ -263,7 +264,7 @@ public class MainActivity extends Activity {
                         Access.COL_ACCT + "=?",
                         new String[] { String.valueOf(keyid) });
             }
-        });
+        }).start();
     }
 
     public void lookupAuthorizations() {
