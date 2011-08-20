@@ -55,7 +55,7 @@ public class Account implements Parcelable, BaseColumns {
 
     public boolean hasValidUserId() {
         return (mUid != null && 
-                mUid.matches("[0-9]{6}"));
+                mUid.matches("[0-9]+"));
     }
 
     public boolean hasValidApiKey(){
