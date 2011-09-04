@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name">Scan2Zotero</string>
+    <string name="app_name">Scanner For Zotero</string>
     <string name="install_bs_title">Install barcode scanner?</string>
     <string name="install_bs_msg">This feature requires a barcode scanner. Install the ZXing Barcode Scanner?</string>
     <string name="install">Install</string>
