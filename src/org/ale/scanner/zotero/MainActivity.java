@@ -68,6 +68,7 @@ public class MainActivity extends Activity {
     private static final String CLASS_TAG = MainActivity.class.getCanonicalName();
 
     private static final int RESULT_SCAN = 0;
+    private static final int RESULT_EDIT = 1;
 
     public static final String INTENT_EXTRA_ACCOUNT = "ACCOUNT";
 
@@ -454,9 +455,12 @@ public class MainActivity extends Activity {
         case R.id.ctx_edit:
             ExpandableListContextMenuInfo einfo = (ExpandableListContextMenuInfo) item.getMenuInfo();
 
-            BibItem toEdit = (BibItem) mItemAdapter.getGroup((int) einfo.id);
+            int index = (int) einfo.id;
+            BibItem toEdit = (BibItem) mItemAdapter.getGroup(index);
             Intent intent = new Intent(MainActivity.this, EditItemActivity.class);
             intent.putExtra(EditItemActivity.INTENT_EXTRA_BIBITEM, toEdit);
+            intent.putExtra(EditItemActivity.INTENT_EXTRA_INDEX, index);
+            startActivityForResult(intent, RESULT_EDIT);
             break;
         case R.id.ctx_delete:
             ExpandableListContextMenuInfo dinfo = (ExpandableListContextMenuInfo) item.getMenuInfo();
@@ -492,6 +496,16 @@ public class MainActivity extends Activity {
                     String contents = intent.getStringExtra("SCAN_RESULT"); // The scanned ISBN
                     String format = intent.getStringExtra("SCAN_RESULT_FORMAT"); // "EAN 13"
                     handleBarcode(contents, format);
+                }
+                break;
+            case RESULT_EDIT:
+                if (resultCode == RESULT_OK) {
+                    Bundle extras = intent.getExtras();
+                    int index = extras
+                        .getInt(EditItemActivity.INTENT_EXTRA_INDEX);
+                    BibItem replacement = extras
+                        .getParcelable(EditItemActivity.INTENT_EXTRA_BIBITEM);
+                    mItemAdapter.replaceItem(index, replacement);
                 }
                 break;
             default:
@@ -566,6 +580,9 @@ public class MainActivity extends Activity {
         public void onClick(View v) {
             ((Button)v).setClickable(false);
             int[] checked = mItemAdapter.getChecked();
+            if(checked.length == 0) {
+                return;
+            }
             int[] rows = new int[checked.length];
             JSONObject items = new JSONObject();
             try {

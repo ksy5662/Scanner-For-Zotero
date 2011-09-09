@@ -60,7 +60,7 @@ public class BibItemDBHandler extends Handler {
 
     @SuppressWarnings("unchecked")
     public void handleMessage(Message msg){
-        if(mAdapter == null){
+        /*if(mAdapter == null){
             switch(msg.what) {
             case BibItemListAdapter.FOUND_SAVED_ITEMS:
                 mToInsert.addAll((ArrayList<BibItem>) msg.obj);
@@ -71,8 +71,11 @@ public class BibItemDBHandler extends Handler {
             case BibItemListAdapter.REMOVED_ITEM:
                 mToRemove.add((BibItem) msg.obj);
                 break;
+            // Don't worry about replacements in this case since the activity
+            // will load the changes from the database when it is recreated.
             }
-        }else{
+        }else{*/
+        if(mAdapter != null){
             switch(msg.what) {
             case BibItemListAdapter.FOUND_SAVED_ITEMS:
                 mAdapter.finishAddItems((ArrayList<BibItem>) msg.obj);
@@ -83,7 +86,11 @@ public class BibItemDBHandler extends Handler {
             case BibItemListAdapter.REMOVED_ITEM:
                 mAdapter.finishDeleteItem((BibItem) msg.obj);
                 break;
+            case BibItemListAdapter.REPLACED_ITEM:
+                mAdapter.finishReplaceItem(msg.arg1, (BibItem) msg.obj);
+                break;
             }
         }
+        //}
     }
 }

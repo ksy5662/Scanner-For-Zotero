@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+  xmlns:android="http://schemas.android.com/apk/res/android"
+  android:id="@+id/edit_field"
+  android:orientation="horizontal"
+  android:layout_width="match_parent"
+  android:layout_height="match_parent">
+
+    <TextView android:id="@+id/label"
+              android:paddingLeft="5dp"
+              android:textAppearance="?android:attr/textAppearanceMedium"
+              android:layout_width="150dp"
+              android:layout_height="wrap_content">
+    </TextView>
+
+    <EditText android:id="@+id/content"
+              android:layout_width="match_parent"
+              android:layout_height="wrap_content">
+    </EditText>
+    
+</LinearLayout>

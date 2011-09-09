@@ -23,6 +23,7 @@ import org.ale.scanner.zotero.data.BibItem;
 import org.ale.scanner.zotero.data.BibItemDBHandler;
 import org.ale.scanner.zotero.data.Database;
 
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.res.Resources;
 import android.database.Cursor;
@@ -44,6 +45,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
     public static final int FOUND_SAVED_ITEMS = ACTION_ID + 0;
     public static final int INSERTED_ITEM = ACTION_ID + 1;
     public static final int REMOVED_ITEM = ACTION_ID + 2;
+    public static final int REPLACED_ITEM = ACTION_ID + 3;
 
     private ArrayList<BibItem> mItems;
     private ArrayList<BibDetailJSONAdapter> mAdapters;
@@ -54,7 +56,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
     private final Context mContext;
     private final Resources mResources;
     private final LayoutInflater mInflater;
-    
+
     private CheckBox.OnClickListener CHECK_LISTENER = new CheckBox.OnClickListener(){
         public void onClick(View cb) {
             mChecked.put(((Integer)cb.getTag()).intValue(), ((CheckBox)cb).isChecked());
@@ -121,6 +123,18 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         }).start();
     }
 
+    public void replaceItem(final int indx, final BibItem replacement){
+        final ContentResolver cr = mContext.getContentResolver();
+        new Thread(new Runnable() {
+            public void run(){
+                replacement.writeToDB(cr);
+                mHandler.sendMessage(Message.obtain(mHandler,
+                       BibItemListAdapter.REPLACED_ITEM, indx, 0, replacement));
+            }
+        }).start();
+        finishReplaceItem(indx, replacement);
+    }
+
     public void deleteItemsWithRowIds(int[] dbid){
         ArrayList<Integer> toDelete = new ArrayList<Integer>();
         for(int i=0;i<mItems.size(); i++){
@@ -166,6 +180,13 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         mItems.remove(indx);
         mAdapters.remove(indx);
         ((MainActivity)mContext).showOrHideUploadButton();
+        notifyDataSetChanged();
+    }
+
+    public void finishReplaceItem(int indx, BibItem item){
+        mItems.set(indx, item);
+        mAdapters.set(indx, 
+             new BibDetailJSONAdapter(mContext, item.getSelectedInfo()));
         notifyDataSetChanged();
     }
 
