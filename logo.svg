@@ -28,15 +28,15 @@
      inkscape:pageopacity="0.0"
      inkscape:pageshadow="2"
      inkscape:zoom="1.4142136"
-     inkscape:cx="138.53103"
-     inkscape:cy="36.028154"
+     inkscape:cx="109.53965"
+     inkscape:cy="7.7438835"
      inkscape:document-units="px"
      inkscape:current-layer="layer1"
      showgrid="false"
      showguides="true"
      inkscape:guide-bbox="true"
      inkscape:window-width="1024"
-     inkscape:window-height="716"
+     inkscape:window-height="718"
      inkscape:window-x="-2"
      inkscape:window-y="0"
      inkscape:window-maximized="1" />
@@ -48,7 +48,7 @@
         <dc:format>image/svg+xml</dc:format>
         <dc:type
            rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
-        <dc:title></dc:title>
+        <dc:title />
       </cc:Work>
     </rdf:RDF>
   </metadata>
@@ -117,14 +117,14 @@
     <text
        xml:space="preserve"
        style="font-size:18.41487503px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
-       x="144.4669"
-       y="983.77136"
+       x="143.7598"
+       y="984.59985"
        id="text4273"
        sodipodi:linespacing="125%"><tspan
          sodipodi:role="line"
          id="tspan4275"
-         x="144.4669"
-         y="983.77136">scan to</tspan></text>
+         x="143.7598"
+         y="984.59985">scanner</tspan></text>
     <g
        transform="matrix(0.52952078,0,0,-0.69965972,16.738295,1039.9897)"
        inkscape:label="ink_ext_XXXXXX"
@@ -393,5 +393,16 @@
            inkscape:connector-curvature="0" />
       </g>
     </g>
+    <text
+       sodipodi:linespacing="125%"
+       id="text4054"
+       y="984.59985"
+       x="223.66287"
+       style="font-size:18.41487503px;font-style:normal;font-weight:normal;line-height:125%;letter-spacing:0px;word-spacing:0px;fill:#000000;fill-opacity:1;stroke:none;font-family:Bitstream Vera Sans"
+       xml:space="preserve"><tspan
+         y="984.59985"
+         x="223.66287"
+         id="tspan4056"
+         sodipodi:role="line">for</tspan></text>
   </g>
 </svg>
