@@ -18,24 +18,29 @@
 package org.ale.scanner.zotero;
 
 import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Map;
 
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.app.ProgressDialog;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
+import android.webkit.WebChromeClient;
+import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.Toast;
 
 public class GetApiKeyActivity extends Activity {
+    public static final String CLASS_TAG = GetApiKeyActivity.class.getCanonicalName();
 
+    /* Javascript to extract keys from the /settings/keys page */ 
     private static final String JS_KEY_SCRAPE =
         "javascript:window.KEYSCRAPE.foundKeys(" +
         "(function tostr(table) { " +
@@ -45,50 +50,60 @@ public class GetApiKeyActivity extends Activity {
             "} return res; })" +
         "(document.getElementById('api-keys-table')).join(','));";
 
-    public static final String CLASS_TAG = GetApiKeyActivity.class.getCanonicalName();
-
-    public static final String LOGIN_TYPE = "LOGIN_TYPE";
-
+    /* Intent extras */
     public static final String ACCOUNT = "ACCOUNT";
 
+    /* Keys for instance state */
     public static final String RECREATE_FOUND_NAMES = "RENAME";
     public static final String RECREATE_FOUND_IDS = "REID";
     public static final String RECREATE_FOUND_KEYS = "REKEY";
+    public static final String RECREATE_LOGIN = "RELOG";
 
-    private static final int JS_FOUND_KEYS = 0;
+    /* Zotero URLs */
+    public static final String URL_LOGIN = "zotero.org/user/login/";
+    public static final String URL_KEYS = "zotero.org/settings/keys";
 
-    private AlertDialog mAlertDialog = null;
+    /* State */
+    private boolean mLoggedIn = false;
 
     protected ArrayList<String> mFoundNames;
     protected ArrayList<String> mFoundIDs;
     protected ArrayList<String> mFoundKeys;
+    
+    /* Dialogs */
+    private AlertDialog mAlertDialog = null;
+    private ProgressDialog mProgressDialog = null;
 
     @Override
     public void onCreate(Bundle state) {
         super.onCreate(state);
         setContentView(R.layout.apikeywebview);
 
-        WebView wv = (WebView) findViewById(R.id.webView);
-
         if (state != null){
-           wv.restoreState(state);
            mFoundNames = state.getStringArrayList(RECREATE_FOUND_NAMES);
            mFoundIDs = state.getStringArrayList(RECREATE_FOUND_IDS);
            mFoundKeys = state.getStringArrayList(RECREATE_FOUND_KEYS);
-        } else {
-            wv.setWebViewClient(getWebViewClient());
+           mLoggedIn = state.getBoolean(RECREATE_LOGIN);
         }
 
-        // The images are barely noticeable during this so we don't need them
-        wv.getSettings().setBlockNetworkImage(true);
+        mProgressDialog = new ProgressDialog(this);
+        mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
+        mProgressDialog.setCancelable(false);
 
-        // TODO: extraHeaders doesn't exist on versions <= 2.1 - try to find workaround
-        Map<String, String> extraHeaders = new HashMap<String, String>();
-        extraHeaders.put("Referer", "https://zotero.org/settings/keys");
-        wv.getSettings().setJavaScriptEnabled(true);
+        WebView wv = (WebView) findViewById(R.id.webView);
+        wv.setWebViewClient(getWebViewClient());
+        wv.setWebChromeClient(getWebChromeClient());
         wv.addJavascriptInterface(new KeyScraper(), "KEYSCRAPE");
-        // Cause dialog to display in onResume
-        wv.loadUrl("https://zotero.org/user/login/", extraHeaders);
+
+        WebSettings settings = wv.getSettings();
+        settings.setJavaScriptEnabled(true);
+        settings.setBlockNetworkImage(true);
+
+        if(!mLoggedIn){
+            wv.loadUrl("https://"+URL_LOGIN);
+        }else{
+            wv.loadUrl("https://"+URL_KEYS);
+        }
     }
 
     @Override
@@ -104,33 +119,35 @@ public class GetApiKeyActivity extends Activity {
     public void onResume() {
         super.onResume();
 
-        // Display any dialogs we were displaying before being destroyed
-        switch(Dialogs.displayedDialog) {
-        case(Dialogs.DIALOG_NO_DIALOG):
-            break;
-        case(Dialogs.DIALOG_SSL):
-            mAlertDialog = Dialogs.showSSLDialog(GetApiKeyActivity.this);
-            break;
-        case(Dialogs.DIALOG_NO_KEYS):
-            mAlertDialog = Dialogs.showNoKeysDialog(GetApiKeyActivity.this);
-            break;
-        case(Dialogs.DIALOG_FOUND_KEYS):
-            if(mFoundNames != null && mFoundIDs != null && mFoundKeys != null){
-                mAlertDialog = Dialogs.showSelectKeyDialog(
-                                        GetApiKeyActivity.this,
-                                        mFoundNames, mFoundIDs, mFoundKeys);
+        if(mAlertDialog == null){
+            // Display any dialogs we were displaying before being destroyed
+            switch(Dialogs.displayedDialog) {
+            case(Dialogs.DIALOG_NO_DIALOG):
+                break;
+            case(Dialogs.DIALOG_SSL):
+                mAlertDialog = Dialogs.showSSLDialog(GetApiKeyActivity.this);
+                break;
+            case(Dialogs.DIALOG_NO_KEYS):
+                mAlertDialog = Dialogs.showNoKeysDialog(GetApiKeyActivity.this);
+                break;
+            case(Dialogs.DIALOG_FOUND_KEYS):
+                if(mFoundNames != null && mFoundIDs != null && mFoundKeys != null){
+                    mAlertDialog = Dialogs.showSelectKeyDialog(
+                                            GetApiKeyActivity.this,
+                                            mFoundNames, mFoundIDs, mFoundKeys);
+                }
+                break;
             }
-            break;
         }
     }
 
     @Override
     protected void onSaveInstanceState(Bundle outState) {
         super.onSaveInstanceState(outState);
-        //((WebView)findViewById(R.id.webView)).saveState(outState);
         outState.putStringArrayList(RECREATE_FOUND_NAMES, mFoundNames);
         outState.putStringArrayList(RECREATE_FOUND_IDS, mFoundIDs);
         outState.putStringArrayList(RECREATE_FOUND_KEYS, mFoundKeys);
+        outState.putBoolean(RECREATE_LOGIN, mLoggedIn);
     }
 
     /* Options menu -- entirely for SSL at the moment */
@@ -150,15 +167,57 @@ public class GetApiKeyActivity extends Activity {
         return true;
     }
 
+    /* Web view and web chrome client initialization */
     private WebViewClient getWebViewClient(){
+        final GetApiKeyActivity parent = this;
+
         return new WebViewClient() {
-            // TODO: Block non-zotero.org sites or maybe white-list just the pages
-            // we need.
+            @Override
+            public boolean shouldOverrideUrlLoading(WebView view, String url){
+                boolean isLoginPage = url.indexOf(URL_LOGIN) > 0;
+                boolean isKeyPage = url.indexOf(URL_KEYS) > 0;
+                boolean isZotero = url.indexOf("zotero.org") > 0;
+
+                if(!isZotero) { // Keep them from leaving the Zotero site.
+                    Toast.makeText(parent,
+                            "This browser session is restricted to Zotero.org",
+                            Toast.LENGTH_LONG).show();
+                    return true;
+                }else if(!mLoggedIn && !isLoginPage){
+                    mLoggedIn = true;
+                    if(!isKeyPage) {
+                        view.loadUrl("https://"+URL_KEYS);
+                        return true;
+                    }
+                }
+                return false;
+            }
+
             @Override
             public void onPageFinished(WebView view, String url)  
             {
-                if(url.indexOf("zotero.org/settings/keys") > 0) {
+                if(url.indexOf(URL_KEYS) > 0) {
+                    view.loadUrl("javascript:window.scrollTo(0, document.getElementById('content').offsetTop);");
+                    // XXX: condition causes js to load on key edit page as well  
                     view.loadUrl(JS_KEY_SCRAPE);
+                }else if(url.indexOf(URL_LOGIN) > 0) {
+                    mLoggedIn = false;
+                    view.loadUrl("javascript:document.getElementById('username').focus()");
+                }
+            }
+        };
+    }
+    
+    private WebChromeClient getWebChromeClient(){
+        final ProgressDialog progressDialog = mProgressDialog;
+        return new WebChromeClient() {
+            public void onProgressChanged(WebView view, int progress) {
+                progressDialog.setProgress(progress);
+
+                if(!progressDialog.isShowing()){
+                    progressDialog.show();
+                }else if(progress == 100){
+                    progressDialog.dismiss();
                 }
             }
         };
@@ -169,54 +228,50 @@ public class GetApiKeyActivity extends Activity {
         @SuppressWarnings("unused")
         public void foundKeys(String result) { // This runs outside the main thread!
             mJSHandler.sendMessage(
-                    Message.obtain(mJSHandler, JS_FOUND_KEYS, result));
+                    Message.obtain(mJSHandler, 0, result));
         }
     }
 
     private final Handler mJSHandler = new Handler(){
         public void handleMessage(Message msg){
-            switch(msg.what){
-            case JS_FOUND_KEYS:
-                // We're going to display a dialog so dismiss any existing ones
-                if(mAlertDialog != null){
-                    mAlertDialog.dismiss();
-                    mAlertDialog = null;
-                }
-
-                // Check if any keys were found
-                String[] keyrows = ((String)msg.obj).split(",");
-                if(TextUtils.isEmpty(keyrows[0])){
-                    mAlertDialog = Dialogs.showNoKeysDialog(GetApiKeyActivity.this);
-                    return;
-                }
-
-                // Prepare to prompt user to select a key
-                mFoundNames = new ArrayList<String>(keyrows.length);
-                mFoundIDs = new ArrayList<String>(keyrows.length);
-                mFoundKeys = new ArrayList<String>(keyrows.length);
-                for (int i=0; i < keyrows.length; i++){
-                    int split = keyrows[i].indexOf("|");
-                    if(split > 0){
-                        String name = keyrows[i].substring(0, split);
-                        String struri = keyrows[i].substring(split+1);
-                        String userId = null;
-                        String apiKey = null;
-                        try{
-                            Uri uri = Uri.parse(struri);
-                            userId = uri.getPath().split("/")[2];
-                            apiKey = uri.getQueryParameter("key");
-                        }catch(Exception e) {
-                            continue;
-                        }
-                        mFoundNames.add(name);
-                        mFoundIDs.add(userId);
-                        mFoundKeys.add(apiKey);
-                    }
-                }
-                mAlertDialog = Dialogs.showSelectKeyDialog(GetApiKeyActivity.this,
-                                            mFoundNames, mFoundIDs, mFoundKeys);
-                break;
+            // We're going to display a dialog so dismiss any existing ones
+            if(mAlertDialog != null){
+                mAlertDialog.dismiss();
+                mAlertDialog = null;
             }
+
+            // Check if any keys were found
+            String[] keyrows = ((String)msg.obj).split(",");
+            if(TextUtils.isEmpty(keyrows[0])){
+                mAlertDialog = Dialogs.showNoKeysDialog(GetApiKeyActivity.this);
+                return;
+            }
+
+            // Prepare to prompt user to select a key
+            mFoundNames = new ArrayList<String>(keyrows.length);
+            mFoundIDs = new ArrayList<String>(keyrows.length);
+            mFoundKeys = new ArrayList<String>(keyrows.length);
+            for (int i=0; i < keyrows.length; i++){
+                int split = keyrows[i].indexOf("|");
+                if(split > 0){
+                    String name = keyrows[i].substring(0, split);
+                    String struri = keyrows[i].substring(split+1);
+                    String userId = null;
+                    String apiKey = null;
+                    try{
+                        Uri uri = Uri.parse(struri);
+                        userId = uri.getPath().split("/")[2];
+                        apiKey = uri.getQueryParameter("key");
+                    }catch(Exception e) {
+                        continue;
+                    }
+                    mFoundNames.add(name);
+                    mFoundIDs.add(userId);
+                    mFoundKeys.add(apiKey);
+                }
+            }
+            mAlertDialog = Dialogs.showSelectKeyDialog(GetApiKeyActivity.this,
+                                        mFoundNames, mFoundIDs, mFoundKeys);
         }
     };
 }

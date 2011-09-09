@@ -13,7 +13,7 @@
             style="@style/ScanButton" />
 
     <LinearLayout android:layout_width="match_parent"
-            android:layout_height="40dp"
+            android:layout_height="70dp"
             android:orientation="horizontal"
             android:id="@+id/upload_bar"
             android:layout_alignParentBottom="true"
@@ -40,12 +40,9 @@
                         android:layout_below="@id/scan_isbn"
                         android:groupIndicator="@drawable/expander"
                         android:indicatorRight="?android:attr/expandableListPreferredItemPaddingLeft"
-                        android:childDivider="@color/s2z_light_blue"
                         android:divider="@color/s2z_light_blue"
                         android:dividerHeight="1dp"
-                        android:headerDividersEnabled="false"
-                        android:choiceMode="multipleChoice"
-                        android:fadingEdge="none">
+                        android:headerDividersEnabled="true"
+                        android:choiceMode="multipleChoice">
     </ExpandableListView>
-
 </RelativeLayout>

@@ -281,6 +281,13 @@ public class Dialogs {
         
         DialogInterface.OnClickListener clickListener = new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int i) {
+                if(i >= 0){ // User clicked a key, but did not yet confirm their choice
+                    Dialogs.selectedNewKey = i;
+                }else{
+                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
+                    dialog.dismiss();
+                }
+
                 if(i == DialogInterface.BUTTON_POSITIVE){
                     String userName = names.get(Dialogs.selectedNewKey);
                     String userId = ids.get(Dialogs.selectedNewKey);
@@ -292,12 +299,9 @@ public class Dialogs {
                         parent.setResult(Activity.RESULT_OK, resultIntent);
                         parent.finish();
                     }
-                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
-                }else if(i == DialogInterface.BUTTON_NEGATIVE){ // User cancelled dialog
-                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
-                    dialog.dismiss();
-                }else{ // User clicked a key, but did not yet confirm their choice
-                    Dialogs.selectedNewKey = i;
+                }else if(i == DialogInterface.BUTTON_NEGATIVE){
+                    WebView wv = (WebView) parent.findViewById(R.id.webView);
+                    wv.loadUrl("https://zotero.org/settings/keys/new");
                 }
             }
         };
@@ -308,7 +312,7 @@ public class Dialogs {
         uglyHackNames = names.toArray(uglyHackNames);
         builder.setSingleChoiceItems(uglyHackNames, Dialogs.selectedNewKey, clickListener);
         builder.setPositiveButton("Use selected key", clickListener);
-        builder.setNegativeButton("None of these", clickListener);
+        builder.setNegativeButton("Create new key", clickListener);
         builder.setOnCancelListener(ON_CANCEL);
 
         return builder.show();

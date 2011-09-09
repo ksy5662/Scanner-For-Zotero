@@ -1,14 +1,36 @@
 <?xml version="1.0" encoding="utf-8"?>
 <RelativeLayout
   xmlns:android="http://schemas.android.com/apk/res/android"
-  android:orientation="vertical"
   android:layout_width="match_parent"
   android:layout_height="match_parent">
-    <LinearLayout android:layout_width="match_parent"
-                  android:layout_height="wrap_content">
-    </LinearLayout>
+
     <WebView android:id="@+id/webView"
              android:layout_width="match_parent"
              android:layout_height="match_parent"
              android:layout_alignParentLeft="true" />
+
+    <SlidingDrawer android:id="@+id/slidingDrawer1"
+                   android:layout_width="300dp"
+                   android:layout_height="match_parent"
+                   android:handle="@+id/handle"
+                   android:content="@+id/content"
+                   android:layout_alignParentRight="true"
+                   android:orientation="horizontal">
+        <Button android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:gravity="top"
+                android:text=" ? "
+                android:id="@+id/handle">
+        </Button>
+        <LinearLayout android:id="@+id/content"
+                      android:layout_width="match_parent"
+                      android:layout_height="match_parent"
+                      android:background="#A0F0F0F0">
+                <TextView android:id="@+id/help_text"
+                      android:text="Here is where the help will go"
+                      android:textColor="#FF000000"
+                      android:layout_width="wrap_content"
+                      android:layout_height="wrap_content"/>
+        </LinearLayout>
+    </SlidingDrawer>
 </RelativeLayout>

@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<org.ale.scanner.zotero.WorkaroundViewFlipperper xmlns:android="http://schemas.android.com/apk/res/android"
+<org.ale.scanner.zotero.WorkaroundViewFlipper xmlns:android="http://schemas.android.com/apk/res/android"
 	android:id="@+id/login_view_flipper"
 	android:layout_height="match_parent"
 	android:layout_width="match_parent">
@@ -44,10 +44,11 @@
     </LinearLayout>
 
     <!--  Second screen -->
-	<LinearLayout android:id="@+id/login_view_editables"
-		          android:layout_height="match_parent"
+    <ScrollView android:id="@+id/login_view_editables"
+                android:layout_height="match_parent"
+                android:layout_width="match_parent">
+	<LinearLayout android:layout_height="match_parent"
 		          android:layout_width="match_parent"
-		          android:gravity="center"
                   android:paddingLeft="15dp"
                   android:paddingRight="15dp"
 		          android:orientation="vertical">
@@ -101,7 +102,16 @@
 				android:layout_width="match_parent"
 				android:layout_height="60dp" />
 		</LinearLayout>
+
+        <TextView android:layout_width="match_parent"
+                  android:layout_height="wrap_content"
+                  android:background="#FFFFFFFF"
+                  android:padding="3dp"
+                  android:gravity="center"
+                  android:textColor="#FF000000"
+                  android:text="This information is available in the 'Feeds/API' section of your account settings on Zotero.org" />
 	</LinearLayout>
+	</ScrollView>
 
 	<View android:layout_width="0dp" android:layout_height="0dp"/>
-</org.ale.scanner.zotero.WorkaroundViewFlipperper>
+</org.ale.scanner.zotero.WorkaroundViewFlipper>

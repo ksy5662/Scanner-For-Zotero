@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 	<style name="S2ZTheme" parent="android:Theme.Light.NoTitleBar">
-        <item name="android:windowBackground">@color/s2z_light_blue</item>
+        <item name="android:windowBackground">@color/s2z_bg_grey</item>
 	    <item name="android:colorBackground">@color/s2z_light_blue</item>
         <item name="android:textColorPrimary">@color/s2z_dark_blue</item>
         <item name="android:textColorSecondary">@color/s2z_dark_red</item>

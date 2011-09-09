@@ -14,5 +14,7 @@
     <color name="s2z_even_row">#FFF4F9EB</color>    
     <color name="s2z_even_row_halfa">#80F4F9EB</color>    
     <color name="s2z_odd_row">#FFF1F6DB</color>    
-    <color name="s2z_odd_row_halfa">#80F1F6DB</color>    
+    <color name="s2z_odd_row_halfa">#80F1F6DB</color>
+    
+    <color name="s2z_bg_grey">#FFF0F0F0</color>
 </resources>
