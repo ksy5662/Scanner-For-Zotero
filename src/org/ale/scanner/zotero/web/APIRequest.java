@@ -92,7 +92,7 @@ public class APIRequest implements Runnable {
         mRequest.setHeader("Content-Type", contentType);
         //mRequest.setHeader("Content-Length", String.valueOf(content.length()));
         try {
-            ((HttpPost)mRequest).setEntity(new StringEntity(content));
+            ((HttpPost)mRequest).setEntity(new StringEntity(content, "UTF-8"));
         } catch (UnsupportedEncodingException e) {
             Log.e(CLASS_TAG, "Problem encoding: "+content);
         }
