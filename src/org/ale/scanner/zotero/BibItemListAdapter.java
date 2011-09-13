@@ -59,7 +59,13 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
 
     private CheckBox.OnClickListener CHECK_LISTENER = new CheckBox.OnClickListener(){
         public void onClick(View cb) {
-            mChecked.put(((Integer)cb.getTag()).intValue(), ((CheckBox)cb).isChecked());
+            boolean checked = ((CheckBox)cb).isChecked();
+            int key = ((Integer)cb.getTag()).intValue();
+            if(checked){
+                mChecked.put(key, true);
+            }else{
+                mChecked.delete(key);
+            }
         }
     };
 
@@ -83,7 +89,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
                                            null, 
                                            BibItem.COL_ACCT+"=?",
                                            new String[] {String.valueOf(acctId)},
-                                           BibItem.COL_DATE + " DESC");
+                                           BibItem.COL_DATE + " ASC");
                 if(c.getCount() > 0) {
                     ArrayList<BibItem> toadd = new ArrayList<BibItem>(c.getCount());
                     c.moveToFirst();
@@ -109,8 +115,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         }).start();
     }
 
-    public void deleteItem(int indx){
-        final BibItem item = mItems.get(indx);
+    public void deleteItem(final BibItem item){
         if(item.getId() == BibItem.NO_ID) // Item isn't in database
             return;
         new Thread(new Runnable() {
@@ -136,16 +141,16 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
     }
 
     public void deleteItemsWithRowIds(int[] dbid){
-        ArrayList<Integer> toDelete = new ArrayList<Integer>();
+        ArrayList<BibItem> toDelete = new ArrayList<BibItem>(dbid.length);
         for(int i=0;i<mItems.size(); i++){
             for(int j=0; j<dbid.length; j++){
-                if(mItems.get(i).getId() == dbid[i]){
-                    toDelete.add(i);
+                if(mItems.get(i).getId() == dbid[j]){
+                    toDelete.add(mItems.get(i));
                 }
             }
         }
-        for(int i : toDelete){
-            deleteItem(i);
+        for(BibItem item : toDelete){
+            deleteItem(item);
         }
     }
 
@@ -157,11 +162,9 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
     }
 
     public void finishAddItem(BibItem item){
-        shiftUpSelections(0);
-        mItems.add(0, item);
-        mAdapters.add(0, new BibDetailJSONAdapter(
+        mItems.add(item);
+        mAdapters.add(new BibDetailJSONAdapter(
                               mContext, item.getSelectedInfo()));
-        ((MainActivity)mContext).showOrHideUploadButton();
         notifyDataSetChanged();
     }
 
@@ -170,20 +173,24 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         for(BibItem b : items){
             mAdapters.add(new BibDetailJSONAdapter(mContext, b.getSelectedInfo()));
         }
-        ((MainActivity)mContext).showOrHideUploadButton();
         notifyDataSetChanged();
     }
 
     public void finishDeleteItem(BibItem item){
         int indx = mItems.indexOf(item);
+        if(indx < 0)
+            return;
+
         shiftDownSelections(indx);
         mItems.remove(indx);
         mAdapters.remove(indx);
-        ((MainActivity)mContext).showOrHideUploadButton();
         notifyDataSetChanged();
     }
 
     public void finishReplaceItem(int indx, BibItem item){
+        if(indx < 0 || indx >= mItems.size())
+            return;
+
         mItems.set(indx, item);
         mAdapters.set(indx, 
              new BibDetailJSONAdapter(mContext, item.getSelectedInfo()));
@@ -239,7 +246,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
     }
 
     private Drawable getRowDrawable(int group){
-        if((mItems.size()-group) % 2 == 0)
+        if((group % 2) == 0)
             return mResources.getDrawable(R.drawable.group_selector_even);
         return mResources.getDrawable(R.drawable.group_selector_odd);
     }
@@ -251,7 +258,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
 
     @Override
     public long getChildId(int group, int child) {
-        return 100000 + group;
+        return group;
     }
 
     @Override
@@ -296,22 +303,20 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         // Update selections to reflect removal of an item at indx
         mChecked.delete(indx);
         for(int key=indx+1; key<mItems.size(); key++){
-            int i = mChecked.indexOfKey(key);
-            if(i < 0) continue; // Not storing that key
-            boolean value = mChecked.get(key);
-            mChecked.delete(key);
-            mChecked.put(key-1, value);
+            if(mChecked.get(key)){ // All entries in mChecked are set to true
+                mChecked.delete(key);
+                mChecked.put(key-1, true);
+            }
         }
     }
 
     public void shiftUpSelections(int indx){
         // Update selections to reflect insertion of item at indx
         for(int key=mItems.size()-1; key >= indx; key--){
-            int i = mChecked.indexOfKey(key);
-            if(i < 0) continue; // Not storing that key
-            boolean value = mChecked.get(key);
-            mChecked.delete(key);
-            mChecked.put(key+1, value);
+            if(mChecked.get(key)){ // All entries in mChecked are set to true
+                mChecked.delete(key);
+                mChecked.put(key+1, true);
+            }
         }
     }
 
@@ -322,19 +327,11 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
     }
 
     public int[] getChecked() {
-        int[] result = new int[getNumChecked()];
-        for(int i=0; i<mChecked.size(); i++)
-            result[i] = i;
-        return result;
-    }
-    
-    private int getNumChecked() {
-        int count = 0;
+        int[] result = new int[mChecked.size()];
         for(int i=0; i<mChecked.size(); i++){
-            if(mChecked.valueAt(i))
-                count++;
+            result[i] = mChecked.keyAt(i);
         }
-        return count;
+        return result;
     }
 
     /* View tag */

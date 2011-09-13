@@ -17,6 +17,7 @@
 
 package org.ale.scanner.zotero;
 
+import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Set;
 
@@ -210,8 +211,6 @@ public class MainActivity extends Activity {
         mPendingList.setVisibility(pendVis);
         redrawPendingList();
 
-        showOrHideUploadButton();
-
         // Display any dialogs we were displaying before being destroyed
         switch(Dialogs.displayedDialog) {
         case(Dialogs.DIALOG_ZXING):
@@ -385,8 +384,6 @@ public class MainActivity extends Activity {
                 mPendingAdapter.remove(isbn);
                 if(mPendingAdapter.getCount() == 0)
                     mPendingList.setVisibility(View.GONE);
-                if(mItemAdapter.getGroupCount() > 0)
-                    findViewById(R.id.upload).setVisibility(View.VISIBLE);
                 mItemAdapter.addItem(item);
                 redrawPendingList();
             }
@@ -396,17 +393,13 @@ public class MainActivity extends Activity {
     public void itemFailed(String isbn, Integer status){
         mPendingAdapter.setStatus(isbn, status);
     }
-    
+
     public void itemsUploaded(int[] dbrows){
+        mItemAdapter.setChecked(new int[0]);
         mItemAdapter.deleteItemsWithRowIds(dbrows);
         Toast.makeText(MainActivity.this,
                        "Items added successfully",
                        Toast.LENGTH_LONG).show();
-    }
-
-    public void showOrHideUploadButton(){
-       int vis = (mItemAdapter.getGroupCount() > 0) ? View.VISIBLE : View.GONE;
-       findViewById(R.id.upload_bar).setVisibility(vis);
     }
 
     @Override
@@ -497,9 +490,7 @@ public class MainActivity extends Activity {
             break;
         case R.id.ctx_delete:
             ExpandableListContextMenuInfo dinfo = (ExpandableListContextMenuInfo) item.getMenuInfo();
-            mItemAdapter.deleteItem((int) dinfo.id);
-            if(mItemAdapter.getGroupCount() == 0)
-                findViewById(R.id.upload).setVisibility(View.GONE);
+            mItemAdapter.deleteItem((BibItem) mItemAdapter.getGroup((int) dinfo.id));
             break;
         case R.id.ctx_cancel:
             AdapterContextMenuInfo cinfo = (AdapterContextMenuInfo) item.getMenuInfo();
@@ -513,7 +504,7 @@ public class MainActivity extends Activity {
             AdapterContextMenuInfo rinfo = (AdapterContextMenuInfo) item.getMenuInfo();
             String ident = mPendingAdapter.getItem(rinfo.position);
             if(mPendingAdapter.getStatus(ident) != PendingListAdapter.STATUS_LOADING){
-                mBooksAPI.isbnLookup(ident);
+                mGoogleBooksAPI.isbnLookup(ident);
                 mPendingAdapter.setStatus(ident, PendingListAdapter.STATUS_LOADING);
             }
         default:
@@ -612,9 +603,10 @@ public class MainActivity extends Activity {
 
     private final Button.OnClickListener uploadSelected = new Button.OnClickListener() {
         public void onClick(View v) {
-            ((Button)v).setClickable(false);
             int[] checked = mItemAdapter.getChecked();
             if(checked.length == 0) {
+                Toast.makeText(MainActivity.this, "No items selected",
+                        Toast.LENGTH_LONG).show();
                 return;
             }
             int[] rows = new int[checked.length];
@@ -622,17 +614,17 @@ public class MainActivity extends Activity {
             try {
                 items.put("items", new JSONArray());
                 for(int b=0; b<checked.length; b++){
-                    BibItem bib = (BibItem)mItemAdapter.getGroup(b);
+                    BibItem bib = (BibItem)mItemAdapter.getGroup(checked[b]);
                     rows[b] = bib.getId();
                     items.accumulate("items", bib.getSelectedInfo());
                 }
+                mZAPI.addItems(items, rows, mSelectedGroup);
             } catch (JSONException e) {
                 // TODO Prompt about failure
                 e.printStackTrace();
                 // Clear the selection
                 mItemAdapter.setChecked(new int[0]);
             }
-            mZAPI.addItems(items, rows, mSelectedGroup);
         }
     };
 
