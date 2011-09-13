@@ -4,13 +4,16 @@
     <item android:title="Refresh Groups"
           android:id="@+id/ctx_collection" 
           android:icon="@drawable/ic_menu_archive" />
+    <item android:title="Manual Entry" 
+          android:id="@+id/ctx_manual" 
+          android:icon="@drawable/ic_menu_add" />
+    <item android:title="Check All" 
+          android:id="@+id/ctx_check_all" 
+          android:icon="@drawable/ic_menu_mark" />
 <!--<item android:title="Settings"
           android:id="@+id/ctx_settings" 
           android:icon="@drawable/ic_menu_details" />-->
     <item android:title="Log out"
           android:id="@+id/ctx_logout" 
           android:icon="@drawable/ic_menu_logout" />
-    <item android:title="About" 
-          android:id="@+id/ctx_about" 
-          android:icon="@drawable/ic_menu_details" />
 </menu>

@@ -18,6 +18,7 @@
 package org.ale.scanner.zotero;
 
 import java.util.ArrayList;
+import java.util.List;
 
 import org.ale.scanner.zotero.data.Account;
 import org.ale.scanner.zotero.data.Database;
@@ -32,6 +33,8 @@ import android.net.Uri;
 import android.net.http.SslCertificate;
 import android.text.TextUtils;
 import android.view.KeyEvent;
+import android.view.LayoutInflater;
+import android.view.View;
 import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.EditText;
@@ -48,12 +51,13 @@ public class Dialogs {
     protected static final int DIALOG_ZXING = 4;
     protected static final int DIALOG_CREDENTIALS = 5;
     protected static final int DIALOG_NO_PERMS = 6;
+    protected static final int DIALOG_MANUAL_ENTRY = 7;
     // Used by GetApiKeyActivity
-    protected static final int DIALOG_SSL = 7;
-    protected static final int DIALOG_NO_KEYS = 8;
-    protected static final int DIALOG_FOUND_KEYS = 9;
+    protected static final int DIALOG_SSL = 8;
+    protected static final int DIALOG_NO_KEYS = 9;
+    protected static final int DIALOG_FOUND_KEYS = 10;
     // Used by ManageAccountsActivity
-    protected static final int DIALOG_RENAME_KEY = 10;
+    protected static final int DIALOG_RENAME_KEY = 11;
     
     protected static int displayedDialog = DIALOG_NO_DIALOG;
 
@@ -201,6 +205,57 @@ public class Dialogs {
 
         builder.setNeutralButton("Log out", clickListener);
         return builder.show();
+    }
+
+    // Manual ISBN lookup for books without barcodes
+    private static String curSearch = "";
+    protected static AlertDialog showManualEntryDialog(final MainActivity parent){
+        Dialogs.displayedDialog = Dialogs.DIALOG_MANUAL_ENTRY;
+
+        // Inflate manual entry layout
+        LayoutInflater factory = LayoutInflater.from(parent);
+        final View dview = factory.inflate(R.layout.manual_entry_field, null);
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(parent);
+
+        builder.setTitle(R.string.manual_entry_title);
+        builder.setView(dview);
+        
+        final AlertDialog dialog = builder.create();
+        final EditText tv = (EditText) dview.findViewById(R.id.edit_field);
+        
+        // This is ridiculous but otherwise we lose the query on orientation change
+        tv.append(Dialogs.curSearch);
+        dialog.setOnKeyListener(new AlertDialog.OnKeyListener(){
+            public boolean onKey(DialogInterface arg0, int arg1, KeyEvent arg2) {
+                curSearch = tv.getText().toString();
+                return false;
+            }
+        });
+
+        View.OnClickListener clickListener = new View.OnClickListener() {
+            public void onClick(View v) {
+                if(v.getId() == R.id.positive){
+                    String isbn = tv.getText().toString();
+                    if(!Util.isValidISBN(isbn)){
+                        tv.setError("Invalid ISBN");
+                        return; // avoid dismissing the dialog
+                    }else{
+                        parent.addToPendingList(isbn);
+                        parent.lookupISBN(isbn);
+                    }
+                }
+                Dialogs.curSearch = "";
+                dialog.dismiss();
+                Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
+            }
+        };
+
+        ((Button)dview.findViewById(R.id.positive)).setOnClickListener(clickListener);
+        ((Button)dview.findViewById(R.id.negative)).setOnClickListener(clickListener);
+        
+        dialog.show();
+        return dialog;
     }
 
     /* GetApiKeyActivity Dialogs */

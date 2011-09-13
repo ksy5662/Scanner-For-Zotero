@@ -223,6 +223,9 @@ public class MainActivity extends Activity {
         case(Dialogs.DIALOG_NO_PERMS):
             mAlertDialog = Dialogs.showNoPermissionsDialog(MainActivity.this);
             break;
+        case(Dialogs.DIALOG_MANUAL_ENTRY):
+            mAlertDialog = Dialogs.showManualEntryDialog(MainActivity.this);
+            break;
         }
     }
 
@@ -257,7 +260,7 @@ public class MainActivity extends Activity {
     public void refreshPermissions() {
         mZAPI.getPermissions();
     }
-    
+
     public void erasePermissions(){
         final int keyid = mAccount.getDbId();
         new Thread(new Runnable(){
@@ -414,19 +417,47 @@ public class MainActivity extends Activity {
     }
 
     @Override
+    public boolean onPrepareOptionsMenu(Menu menu){
+        MenuItem check_all = (MenuItem) menu.findItem(R.id.ctx_check_all);
+        if(mItemAdapter.getChecked().length == mItemAdapter.getGroupCount()){
+            // make it an uncheck all
+            check_all.setTitle(getString(R.string.uncheck_all));
+        }else{
+            check_all.setTitle(getString(R.string.check_all));
+        }
+        return true;
+    }
+
+    @Override
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle item selection
         switch (item.getItemId()) {
         case R.id.ctx_collection:
             refreshPermissions();
-            return true;
+            break;
+        case R.id.ctx_manual:
+            mAlertDialog = Dialogs.showManualEntryDialog(MainActivity.this);
+            break;
+        case R.id.ctx_check_all:
+            if(item.getTitle().equals(getString(R.string.uncheck_all))){
+                // Uncheck All
+                mItemAdapter.setChecked(new int[0]);
+            }else{
+                // Check All
+                int[] all = new int[mItemAdapter.getGroupCount()];
+                for(int i=0; i<all.length; i++)
+                    all[i] = i;
+                mItemAdapter.setChecked(all);
+            }
+            mItemAdapter.notifyDataSetChanged();
+            break;
         case R.id.ctx_logout:
             logout();
-            return true;
-        case R.id.ctx_about:
-            return true;
+            break;
+        default:
+            return super.onOptionsItemSelected(item);
         }
-        return super.onOptionsItemSelected(item);
+        return true;
     }
 
     @Override
@@ -495,9 +526,10 @@ public class MainActivity extends Activity {
         switch(requestCode){
             case RESULT_SCAN:
                 if (resultCode == RESULT_OK) {
-                    String contents = intent.getStringExtra("SCAN_RESULT"); // The scanned ISBN
+                    String content = intent.getStringExtra("SCAN_RESULT"); // The scanned ISBN
                     String format = intent.getStringExtra("SCAN_RESULT_FORMAT"); // "EAN 13"
-                    handleBarcode(contents, format);
+                    addToPendingList(content);
+                    handleBarcode(content, format);
                 }
                 break;
             case RESULT_EDIT:
@@ -515,38 +547,38 @@ public class MainActivity extends Activity {
         }
     }
 
-    private void handleBarcode(String content, String format){
+    protected void addToPendingList(String content){
         if(mPendingAdapter.hasItem(content)){
             Toast.makeText(
                     MainActivity.this,
                     "This item is already in your list.",
                     Toast.LENGTH_LONG).show();
-            return;
+        }else{
+            mPendingAdapter.add(content);
+            mPendingList.setVisibility(View.VISIBLE);
+            redrawPendingList();
         }
+    }
+
+    protected void handleBarcode(String content, String format){
         switch(Util.parseBarcode(content, format)) {
-            case(Util.SCAN_PARSE_ISBN):
-                // Don't do anything if we're still loading the item
-                // Otherwise, try looking it up again.
-                if(mPendingAdapter.hasItem(content)){
-                    if(mPendingAdapter.getStatus(content) == 
-                            PendingListAdapter.STATUS_LOADING)
-                    {
-                        break;
-                    }
-                }else{
-                    mPendingAdapter.add(content);
-                    mPendingList.setVisibility(View.VISIBLE); 
-                }
-                mBooksAPI.isbnLookup(content);
-                break;
-            case(Util.SCAN_PARSE_ISSN):
-                break;
-            default:
-                mPendingAdapter.add(content);
-                mPendingAdapter.setStatus(content, PendingListAdapter.STATUS_UNKNOWN_TYPE);
-                break;
+        case(Util.SCAN_PARSE_ISBN):
+            lookupISBN(content);
+            break;
+        case(Util.SCAN_PARSE_ISSN):
+            mPendingAdapter.setStatus(content, PendingListAdapter.STATUS_UNKNOWN_TYPE);
+            break;
+        default:
+            mPendingAdapter.setStatus(content, PendingListAdapter.STATUS_UNKNOWN_TYPE);
+            break;
         }
         redrawPendingList();
+    }
+
+    protected void lookupISBN(String isbn){
+        // Looks dumb, but this is here in case we ever add more ISBN lookup
+        // services.
+        mGoogleBooksAPI.isbnLookup(isbn);
     }
 
     private final AdapterView.OnItemSelectedListener spinnerListener = new AdapterView.OnItemSelectedListener(){
