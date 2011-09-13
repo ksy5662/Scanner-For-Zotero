@@ -167,8 +167,6 @@ public class MainActivity extends Activity {
         groupList.setAdapter(mGroupAdapter);
         mPendingList.setAdapter(mPendingAdapter);
 
-        mItemAdapter.fillFromDatabase(mAccount.getDbId());
-
         registerForContextMenu(bibItemList);
         registerForContextMenu(mPendingList);
 
@@ -194,6 +192,10 @@ public class MainActivity extends Activity {
     @Override
     public void onResume() {
         super.onResume();
+
+        if(mItemAdapter.getGroupCount() == 0) {
+            mItemAdapter.fillFromDatabase(mAccount.getDbId());
+        }
 
         APIHandler.globalBindActivity(MainActivity.this);
         BibItemDBHandler.getInstance().bindAdapter(mItemAdapter);
