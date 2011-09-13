@@ -28,8 +28,10 @@ public class GoogleBooksHandler extends APIHandler{
     private static GoogleBooksHandler mInstance = null;
 
     public static GoogleBooksHandler getInstance(){
-        if(mInstance == null)
+        if(mInstance == null) {
             mInstance = new GoogleBooksHandler();
+            APIHandler.HANDLERS.add(mInstance);
+        }
         return mInstance;
     }
 

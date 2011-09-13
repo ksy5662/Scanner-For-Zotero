@@ -42,12 +42,25 @@ public abstract class APIHandler extends Handler {
     protected ArrayList<Runnable> mUIThreadEvents = new ArrayList<Runnable>();
 
     protected static MainActivity MAIN = null;
+    protected static ArrayList<APIHandler> HANDLERS = new ArrayList<APIHandler>();
 
     protected abstract void onStart(APIRequest req);
     protected abstract void onProgress(APIRequest req, int percent);
     protected abstract void onStatusLine(APIRequest req, StatusLine reason);
     protected abstract void onException(APIRequest req, Exception exc);
     protected abstract void onSuccess(APIRequest req, String res);
+
+    public static void globalBindActivity(MainActivity activity) {
+        for(APIHandler handler : HANDLERS){
+            handler.bindActivity(activity);
+        }
+    }
+
+    public static void globalUnbindActivity() {
+        for(APIHandler handler : HANDLERS){
+            handler.unbindActivity();
+        }
+    }
 
     public synchronized void bindActivity(MainActivity activity){
         if(APIHandler.MAIN != null || activity == null)

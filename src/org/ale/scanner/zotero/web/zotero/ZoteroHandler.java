@@ -40,6 +40,7 @@ public class ZoteroHandler extends APIHandler {
     public static ZoteroHandler getInstance(){
         if(mInstance == null){
             mInstance = new ZoteroHandler();
+            APIHandler.HANDLERS.add(mInstance);
         }
         return mInstance;
     }

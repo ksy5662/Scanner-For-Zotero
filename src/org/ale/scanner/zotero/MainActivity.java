@@ -27,6 +27,7 @@ import org.ale.scanner.zotero.data.BibItem;
 import org.ale.scanner.zotero.data.BibItemDBHandler;
 import org.ale.scanner.zotero.data.Database;
 import org.ale.scanner.zotero.data.Group;
+import org.ale.scanner.zotero.web.APIHandler;
 import org.ale.scanner.zotero.web.googlebooks.GoogleBooksAPIClient;
 import org.ale.scanner.zotero.web.googlebooks.GoogleBooksHandler;
 import org.ale.scanner.zotero.web.zotero.ZoteroAPIClient;
@@ -80,7 +81,7 @@ public class MainActivity extends Activity {
     public static final String RC_GROUPS = "GROUPS";
 
     private ZoteroAPIClient mZAPI;
-    private GoogleBooksAPIClient mBooksAPI;
+    private GoogleBooksAPIClient mGoogleBooksAPI;
 
     private BibItemListAdapter mItemAdapter;
 
@@ -115,7 +116,7 @@ public class MainActivity extends Activity {
         mAccount = (Account) extras.getParcelable(INTENT_EXTRA_ACCOUNT);
 
         // Initialize Clients
-        mBooksAPI = new GoogleBooksAPIClient();
+        mGoogleBooksAPI = new GoogleBooksAPIClient();
         mZAPI = new ZoteroAPIClient();
         mZAPI.setAccount(mAccount);
 
@@ -180,8 +181,7 @@ public class MainActivity extends Activity {
     public void onPause() {
         super.onPause();
 
-        GoogleBooksHandler.getInstance().unbindActivity();
-        ZoteroHandler.getInstance().unbindActivity();
+        APIHandler.globalUnbindActivity();
         BibItemDBHandler.getInstance().unbindAdapter();
 
         if(mAlertDialog != null){
@@ -194,8 +194,7 @@ public class MainActivity extends Activity {
     public void onResume() {
         super.onResume();
 
-        GoogleBooksHandler.getInstance().bindActivity(MainActivity.this);
-        ZoteroHandler.getInstance().bindActivity(MainActivity.this);
+        APIHandler.globalBindActivity(MainActivity.this);
         BibItemDBHandler.getInstance().bindAdapter(mItemAdapter);
 
         if(mAccountAccess == null
