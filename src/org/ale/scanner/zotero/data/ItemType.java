@@ -15,6 +15,11 @@
  * along with ScannerForZotero.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// XXX: This is temporary, ultimately we should fetch all ItemTypes
+// through api.zotero.org/itemTypes?locale=xxx, and store the result in a db
+
+// We also only support "book" right now.
+
 package org.ale.scanner.zotero.data;
 
 public class ItemType {

@@ -15,19 +15,33 @@
  * along with ScannerForZotero.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+// XXX: This is temporary, ultimately we should fetch all ItemFields
+// through api.zotero.org/itemFields?locale=xxx, and store the result in a db
+
 package org.ale.scanner.zotero.data;
 
+import java.util.HashMap;
+
 public final class ItemField {
-    // These are for translating between other APIs, such as Google Books
-    // and Zotero's. The text for displaying each of these on screen is stored
-    // in a localized form in our database.
     public static final String creators = "creators";
     public static final String itemType = "itemType";
+    public static final String notes = "notes";
+    public static final String tags = "tags";
 
     public final class Creator {
         public static final String firstName = "firstName";
         public static final String lastName = "lastName";
         public static final String name = "name";
+    }
+
+    public final class Note {
+        public static final String note = "note";
+        public static final String itemType = "itemType";
+    }
+
+    public final class Tag {
+        public static final String tag = "tag";
+        public static final String type = "type";
     }
 
     public static final String numPages = "numPages";
@@ -131,4 +145,127 @@ public final class ItemField {
     public static final String volume = "volume";
     public static final String websiteTitle = "websiteTitle";
     public static final String websiteType = "websiteType";
+    
+    public static final HashMap<String, String> Localized;
+    static {
+        Localized = new HashMap<String, String>();
+
+        // Item Type
+        Localized.put("itemType", "Item Type");
+
+        // Item Fields
+        Localized.put("numPages","# of Pages");
+        Localized.put("numberOfVolumes","# of Volumes");
+        Localized.put("abstractNote","Abstract");
+        Localized.put("accessDate","Accessed");
+        Localized.put("applicationNumber","Application Number");
+        Localized.put("archive","Archive");
+        Localized.put("artworkSize","Artwork Size");
+        Localized.put("assignee","Assignee");
+        Localized.put("billNumber","Bill Number");
+        Localized.put("blogTitle","Blog Title");
+        Localized.put("bookTitle","Book Title");
+        Localized.put("callNumber","Call Number");
+        Localized.put("caseName","Case Name");
+        Localized.put("code","Code");
+        Localized.put("codeNumber","Code Number");
+        Localized.put("codePages","Code Pages");
+        Localized.put("codeVolume","Code Volume");
+        Localized.put("committee","Committee");
+        Localized.put("company","Company");
+        Localized.put("conferenceName","Conference Name");
+        Localized.put("country","Country");
+        Localized.put("court","Court");
+        Localized.put("DOI","DOI");
+        Localized.put("date","Date");
+        Localized.put("dateDecided","Date Decided");
+        Localized.put("dateEnacted","Date Enacted");
+        Localized.put("dictionaryTitle","Dictionary Title");
+        Localized.put("distributor","Distributor");
+        Localized.put("docketNumber","Docket Number");
+        Localized.put("documentNumber","Document Number");
+        Localized.put("edition","Edition");
+        Localized.put("encyclopediaTitle","Encyclopedia Title");
+        Localized.put("episodeNumber","Episode Number");
+        Localized.put("extra","Extra");
+        Localized.put("audioFileType","File Type");
+        Localized.put("filingDate","Filing Date");
+        Localized.put("firstPage","First Page");
+        Localized.put("audioRecordingFormat","Format");
+        Localized.put("videoRecordingFormat","Format");
+        Localized.put("forumTitle","Forum Title");
+        Localized.put("genre","Genre");
+        Localized.put("history","History");
+        Localized.put("ISBN","ISBN");
+        Localized.put("ISSN","ISSN");
+        Localized.put("institution","Institution");
+        Localized.put("issue","Issue");
+        Localized.put("issueDate","Issue Date");
+        Localized.put("issuingAuthority","Issuing Authority");
+        Localized.put("journalAbbreviation","Journal Abbr");
+        Localized.put("label","Label");
+        Localized.put("language","Language");
+        Localized.put("programmingLanguage","Language");
+        Localized.put("legalStatus","Legal Status");
+        Localized.put("legislativeBody","Legislative Body");
+        Localized.put("libraryCatalog","Library Catalog");
+        Localized.put("archiveLocation","Loc. in Archive");
+        Localized.put("interviewMedium","Medium");
+        Localized.put("artworkMedium","Medium");
+        Localized.put("meetingName","Meeting Name");
+        Localized.put("nameOfAct","Name of Act");
+        Localized.put("network","Network");
+        Localized.put("pages","Pages");
+        Localized.put("patentNumber","Patent Number");
+        Localized.put("place","Place");
+        Localized.put("postType","Post Type");
+        Localized.put("priorityNumbers","Priority Numbers");
+        Localized.put("proceedingsTitle","Proceedings Title");
+        Localized.put("programTitle","Program Title");
+        Localized.put("publicLawNumber","Public Law Number");
+        Localized.put("publicationTitle","Publication");
+        Localized.put("publisher","Publisher");
+        Localized.put("references","References");
+        Localized.put("reportNumber","Report Number");
+        Localized.put("reportType","Report Type");
+        Localized.put("reporter","Reporter");
+        Localized.put("reporterVolume","Reporter Volume");
+        Localized.put("rights","Rights");
+        Localized.put("runningTime","Running Time");
+        Localized.put("scale","Scale");
+        Localized.put("section","Section");
+        Localized.put("series","Series");
+        Localized.put("seriesNumber","Series Number");
+        Localized.put("seriesText","Series Text");
+        Localized.put("seriesTitle","Series Title");
+        Localized.put("session","Session");
+        Localized.put("shortTitle","Short Title");
+        Localized.put("studio","Studio");
+        Localized.put("subject","Subject");
+        Localized.put("system","System");
+        Localized.put("title","Title");
+        Localized.put("thesisType","Type");
+        Localized.put("mapType","Type");
+        Localized.put("manuscriptType","Type");
+        Localized.put("letterType","Type");
+        Localized.put("presentationType","Type");
+        Localized.put("url","URL");
+        Localized.put("university","University");
+        Localized.put("version","Version");
+        Localized.put("volume","Volume");
+        Localized.put("websiteTitle","Website Title");
+        Localized.put("websiteType","Website Type");
+        
+        // Creator fields
+        Localized.put("name", "Name");
+        Localized.put("firstName", "First");
+        Localized.put("lastName", "Last");
+
+        // Notes and Tags fields
+        Localized.put("note", "Note");
+        Localized.put("notes", "Notes");
+        Localized.put("tag", "Tag");
+        Localized.put("tags", "Tags");
+    }
+
 }

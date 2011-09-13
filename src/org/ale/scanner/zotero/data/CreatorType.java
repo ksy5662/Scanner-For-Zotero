@@ -17,15 +17,29 @@
 
 package org.ale.scanner.zotero.data;
 
+import java.util.ArrayList;
+
 public final class CreatorType {
 
     public static final String type = "creatorType";
+    
+    public static final ArrayList<String> Book;
+    static{
+        Book = new ArrayList<String>();
+        Book.add("author");
+        Book.add("contributor");
+        Book.add("editor");
+        Book.add("seriesEditor");
+        Book.add("translator");
+    }
 
-    public final class Book {
-        public static final String author = "author";
-        public static final String contributor = "contributor";
-        public static final String editor = "contributor";
-        public static final String seriesEditor = "seriesEditor";
-        public static final String translator = "translator";
+    public static final ArrayList<String> LocalizedBook;
+    static{
+        LocalizedBook = new ArrayList<String>();
+        LocalizedBook.add("Author");
+        LocalizedBook.add("Contributor");
+        LocalizedBook.add("Editor");
+        LocalizedBook.add("Series Editor");
+        LocalizedBook.add("Translator");
     }
 }

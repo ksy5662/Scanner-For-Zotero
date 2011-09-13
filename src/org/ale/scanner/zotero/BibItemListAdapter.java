@@ -232,10 +232,9 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         if(!item.hasCachedValues())
             item.cacheForViews();
 
-        vtag.tv_author_lbl.setText(mResources.getQuantityString(
-                                R.plurals.author, item.getCachedNumAuthors()));
+        vtag.tv_author_lbl.setText(item.getCachedCreatorLabel() + ":");
         Util.fillBibTextField(vtag.tv_title, item.getCachedTitleString());
-        Util.fillBibTextField(vtag.tv_author, item.getCachedAuthorString());
+        Util.fillBibTextField(vtag.tv_author, item.getCachedCreatorValue());
         return convert;
     }
 

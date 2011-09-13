@@ -38,7 +38,7 @@ import android.widget.TextView;
 public class BibDetailJSONAdapter extends BaseAdapter implements ListAdapter {
 
     private JSONObject mBacker;
-    private ArrayList<String> mNames;
+    private ArrayList<String> mLabels;
     private int mNumFilledFields;
 
     private final LayoutInflater mInflater;
@@ -50,31 +50,35 @@ public class BibDetailJSONAdapter extends BaseAdapter implements ListAdapter {
         setJSON(json);
     }
 
-    private void setNamesToDisplay(JSONObject obj){
-        mNames = new ArrayList<String>();
+    private void setLabelsToDisplay(JSONObject obj){
+        mLabels = new ArrayList<String>();
         try {
-            JSONArray names = obj.names();
-            if(names == null)
+            JSONArray labels = obj.names();
+            if(labels == null)
                 return;
-            for(int i=0; i < names.length(); i++){
-                String name = (String) names.get(i);
-                // Don't include creator or title fields
-                if(name.equals(ItemField.creators) || name.equals(ItemField.title))
-                    continue;
-                String entry = obj.optString(name);
+            for(int i=0; i < labels.length(); i++){
+                String label = (String) labels.get(i);
+                String entry = obj.optString(label);
                 if(!TextUtils.isEmpty(entry.trim())){
-                    mNames.add(name);
+                    mLabels.add(label);
                 }
             }
         } catch (JSONException e) {
             // XXX: There's bad data in the database!
         }
+
+        // Don't include creator/title/notes/tags/itemType fields
+        mLabels.remove(ItemField.creators);
+        mLabels.remove(ItemField.title);
+        mLabels.remove(ItemField.notes);
+        mLabels.remove(ItemField.tags);
+        mLabels.remove(ItemField.itemType);
     }
 
     public void setJSON(JSONObject replacement){
         mBacker = replacement;
-        setNamesToDisplay(replacement);
-        mNumFilledFields = mNames.size();
+        setLabelsToDisplay(replacement);
+        mNumFilledFields = mLabels.size();
     }
 
     public void fillLinearLayout(LinearLayout layout){
@@ -116,11 +120,11 @@ public class BibDetailJSONAdapter extends BaseAdapter implements ListAdapter {
         if(convertView == null){
             convertView = mInflater.inflate(R.layout.bib_entry, null);
         }
-        String name = mNames.get(position);
-        String value = mBacker.optString(name);
-        TextView tv_name = (TextView) convertView.findViewById(R.id.entry_lbl);
+        String label = mLabels.get(position);
+        String value = mBacker.optString(label);
+        TextView tv_label = (TextView) convertView.findViewById(R.id.entry_lbl);
         TextView tv_value = (TextView) convertView.findViewById(R.id.entry_content);
-        tv_name.setText(name);
+        tv_label.setText(ItemField.Localized.get(label) + ":");
         Util.fillBibTextField(tv_value, value);
         return convertView;
     }

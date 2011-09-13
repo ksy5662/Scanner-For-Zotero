@@ -56,9 +56,9 @@ public class BibItem implements BaseColumns, Parcelable {
     private int mAcctId;
     private int mSelected;
     
-    private int mCachedNumAuthors = -1;
-    private String mCachedAuthorString = null;
-    private String mCachedTitleString = null;
+    private String mCachedCreatorLabel = null;
+    private String mCachedCreatorValue = null;
+    private String mCachedTitleValue = null;
 
     public BibItem(int id, long date, int type, JSONObject json, int acct){
         mId = id;
@@ -190,46 +190,55 @@ public class BibItem implements BaseColumns, Parcelable {
 
     /* Caching for textviews */
     public boolean hasCachedValues(){
-        return (mCachedNumAuthors != -1) && (mCachedTitleString != null) 
-                    && (mCachedAuthorString != null);
+        return (mCachedTitleValue != null)
+            && (mCachedCreatorLabel != null)
+            && (mCachedCreatorValue != null);
     }
 
     public void cacheForViews() {
-        mCachedAuthorString = "";
-        mCachedTitleString = "";
-        mCachedNumAuthors = 0;
-
         JSONObject data = getSelectedInfo();
-        mCachedTitleString = data.optString(ItemField.title);
+        mCachedTitleValue = data.optString(ItemField.title);
+        mCachedCreatorLabel = null;
+        
         JSONArray creators = data.optJSONArray(ItemField.creators);
-        if(creators != null){
-            mCachedNumAuthors = creators.length();
-
-            ArrayList<String> creatorNames = new ArrayList<String>(mCachedNumAuthors);
-            try {
-                for(int i=0; i<creators.length(); i++){
-                    String name = ((JSONObject)creators.get(i)).optString(ItemField.Creator.name);
-                    if(!TextUtils.isEmpty(name))
-                        creatorNames.add(name);
+        if(creators != null && creators.length() > 0){
+            // Choose the creator label based on the first creator type
+            // then accumulate all creators with that type to be displayed
+            JSONObject jobj;
+            ArrayList<String> creatorNames = new ArrayList<String>();
+            for(int i=0; i<creators.length(); i++){
+                jobj = (JSONObject) creators.opt(i);
+                if(jobj == null) continue;
+                String type = jobj.optString(CreatorType.type);
+                if(TextUtils.isEmpty(mCachedCreatorLabel)){
+                    mCachedCreatorLabel = type;
+                }else if(!type.equals(mCachedCreatorLabel)){
+                    break;
                 }
-                mCachedAuthorString = TextUtils.join(", ", creatorNames);
-            } catch (JSONException e) {
-                mCachedAuthorString = "error";
+                String name = jobj.optString(ItemField.Creator.name);
+                if(!TextUtils.isEmpty(name))
+                    creatorNames.add(name);
             }
+            int indx = CreatorType.Book.indexOf(mCachedCreatorLabel);
+            mCachedCreatorLabel = CreatorType.LocalizedBook.get(indx < 0 ? 0 : indx);
+            mCachedCreatorValue = TextUtils.join(", ", creatorNames);
+        }else{
+            mCachedCreatorLabel = "";
+            mCachedCreatorValue = "";
         }
     }
     public void clearCache(){
-        mCachedNumAuthors = -1;
-        mCachedAuthorString = null;
-        mCachedTitleString = null;
+        mCachedCreatorLabel = null;
+        mCachedCreatorValue = null;
+        mCachedTitleValue = null;
     }
-    public int getCachedNumAuthors(){
-        return mCachedNumAuthors;
+    public String getCachedCreatorLabel(){
+        return mCachedCreatorLabel;
     }
-    public String getCachedAuthorString(){
-        return mCachedAuthorString;
+    public String getCachedCreatorValue(){
+        return mCachedCreatorValue;
     }
     public String getCachedTitleString(){
-        return mCachedTitleString;
+        return mCachedTitleValue;
     }
 }
