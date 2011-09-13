@@ -40,6 +40,7 @@ import android.widget.Button;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
+import android.widget.Toast;
 import android.widget.ViewFlipper;
 
 public class LoginActivity extends Activity {
@@ -177,8 +178,11 @@ public class LoginActivity extends Activity {
         boolean validId = validateUserId();       // These have side effects
         boolean validKey = validateApiKey();      // (error flags on textviews)
 
-        if(!(validId && validKey))
+        if(!(validId && validKey)){
+            Toast.makeText(LoginActivity.this, "Invalid credentials",
+                    Toast.LENGTH_LONG).show();
             return;
+        }
 
         // Try to find a matching account in the database
         int acctId = Account.NOT_IN_DATABASE;
