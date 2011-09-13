@@ -4,7 +4,9 @@
   android:id="@+id/edit_field"
   android:orientation="horizontal"
   android:layout_width="match_parent"
-  android:layout_height="match_parent">
+  android:layout_height="match_parent"
+  android:layout_marginBottom="1dp"
+  android:paddingTop="2dp">
 
     <TextView android:id="@+id/label"
               android:paddingLeft="5dp"
