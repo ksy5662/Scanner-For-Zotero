@@ -624,6 +624,8 @@ public class MainActivity extends Activity {
                 e.printStackTrace();
                 // Clear the selection
                 mItemAdapter.setChecked(new int[0]);
+            } catch (UnsupportedEncodingException e) {
+                e.printStackTrace();
             }
         }
     };

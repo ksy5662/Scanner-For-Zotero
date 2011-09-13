@@ -19,6 +19,7 @@ package org.ale.scanner.zotero.web.zotero;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
@@ -58,7 +59,7 @@ public class ZoteroAPIClient {
     public static final int PERMISSIONS = 3;
 
     public static final String EXTRA_REQ_TYPE = "RT";
-    public static final String EXTRA_ITEM_ROWS = "ROWS";
+    public static final String EXTRA_ITEM_IDS = "IDS";
 
     private static final String ZOTERO_BASE_URL = "https://api.zotero.org";
     private static final String ZOTERO_USERS_URL = ZOTERO_BASE_URL + "/users";
@@ -88,20 +89,24 @@ public class ZoteroAPIClient {
         return new APIRequest(mHandler, mHttpsClient);
     }
 
-    public void addItems(JSONObject items, int[] rows, int userOrGroupId) {
-        // https://apis.zotero.org/users/<userid>/items
+    public void addItems(JSONObject items, int[] rows, int userOrGroupId)
+            throws UnsupportedEncodingException {
+        // POST https://apis.zotero.org/users/<userid>/items
 
         // TODO: Allow no more than 50 items at a time
         APIRequest r = newRequest();
         r.setHttpMethod(APIRequest.POST);
+
         HashMap<String, String> queryTerms = new HashMap<String,String>();
         queryTerms.put("content", "json");
         queryTerms.put("key", mAccount.getKey());
         r.setURI(buildURI(queryTerms, String.valueOf(userOrGroupId), "items"));
+
         r.setContent(items.toString(), "application/json");
         r.addHeader(HDR_WRITE_TOKEN, newWriteToken());
+
         Bundle extra = new Bundle();
-        extra.putIntArray(EXTRA_ITEM_ROWS, rows);
+        extra.putIntArray(EXTRA_ITEM_IDS, rows);
         extra.putInt(EXTRA_REQ_TYPE, ZoteroAPIClient.ITEMS);
         r.setExtra(extra);
 
