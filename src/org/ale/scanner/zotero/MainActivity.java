@@ -29,9 +29,8 @@ import org.ale.scanner.zotero.data.Database;
 import org.ale.scanner.zotero.data.Group;
 import org.ale.scanner.zotero.web.APIHandler;
 import org.ale.scanner.zotero.web.googlebooks.GoogleBooksAPIClient;
-import org.ale.scanner.zotero.web.googlebooks.GoogleBooksHandler;
+import org.ale.scanner.zotero.web.worldcat.WorldCatAPIClient;
 import org.ale.scanner.zotero.web.zotero.ZoteroAPIClient;
-import org.ale.scanner.zotero.web.zotero.ZoteroHandler;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -82,6 +81,7 @@ public class MainActivity extends Activity {
 
     private ZoteroAPIClient mZAPI;
     private GoogleBooksAPIClient mGoogleBooksAPI;
+    private WorldCatAPIClient mWorldCatAPI;
 
     private BibItemListAdapter mItemAdapter;
 
@@ -117,6 +117,7 @@ public class MainActivity extends Activity {
 
         // Initialize Clients
         mGoogleBooksAPI = new GoogleBooksAPIClient();
+        mWorldCatAPI = new WorldCatAPIClient();
         mZAPI = new ZoteroAPIClient();
         mZAPI.setAccount(mAccount);
 
