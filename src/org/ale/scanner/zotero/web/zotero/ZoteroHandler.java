@@ -117,7 +117,7 @@ public class ZoteroHandler extends APIHandler {
             handleGroups(resp);
             break;
         case ZoteroAPIClient.ITEMS:
-            int[] rows = req.getExtra().getIntArray(ZoteroAPIClient.EXTRA_ITEM_ROWS);
+            int[] rows = req.getExtra().getIntArray(ZoteroAPIClient.EXTRA_ITEM_IDS);
             handleItems(rows, resp);
             break;
         case ZoteroAPIClient.PERMISSIONS:

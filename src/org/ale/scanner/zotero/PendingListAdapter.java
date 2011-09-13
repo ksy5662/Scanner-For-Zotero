@@ -36,6 +36,7 @@ public class PendingListAdapter extends ArrayAdapter<String> {
     public static final Integer STATUS_SERVER_ERROR = new Integer(R.string.pending_status_server_error);
     public static final Integer STATUS_QUOTA_EXCEEDED = new Integer(R.string.pending_status_quota_exceeded);
     public static final Integer STATUS_FAILED = new Integer(R.string.pending_status_failed);
+    public static final Integer STATUS_NOT_FOUND = new Integer(R.string.pending_status_not_found);
 
     private ArrayList<Integer> mPendingStatus;
     private Context mContext;

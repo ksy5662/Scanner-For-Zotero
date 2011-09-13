@@ -79,20 +79,18 @@ public class GoogleBooksAPIClient {
             String kind = jsonResp.optString("kind");
             JSONArray respItems = jsonResp.optJSONArray("items");
             if(kind == null || !kind.equals("books#volumes") || respItems == null) {
-                translation.put(ItemField.ISBN, isbn);
-                return translation;
+                return null;
             }
 
-            JSONArray transItems = new JSONArray();
+            translation.put("items", new JSONArray());
             for(int i=0; i < respItems.length(); i++){
                 // oItem is google's result, tItem is our translation of it
                 JSONObject orig = respItems.getJSONObject(i);
                 JSONObject volInfo = orig.optJSONObject("volumeInfo");
-                JSONObject trans = new JSONObject();
                 if(volInfo == null){
-                    transItems.put(trans);
                     continue;
                 }
+                JSONObject trans = new JSONObject();
 
                 /* Set the itemType XXX: Always 'book' */
                 trans.put(ItemType.type, ItemType.book);
@@ -134,7 +132,7 @@ public class GoogleBooksAPIClient {
                 JSONArray authors = volInfo.optJSONArray("authors");
                 for(int j=0; authors != null && j<authors.length(); j++){
                     JSONObject author = new JSONObject();
-                    author.put(CreatorType.type, CreatorType.Book.author);
+                    author.put(CreatorType.type, CreatorType.Book.get(0));
                     author.put(ItemField.Creator.name, authors.get(j));
                     creators.put(author);
                 }
@@ -142,16 +140,13 @@ public class GoogleBooksAPIClient {
                     trans.put(ItemField.creators, creators);
 
                 /* Get Other info  */
-                trans.put(ItemField.publisher, volInfo.optString("publisher"));
-                trans.put(ItemField.date, volInfo.optString("publishedDate"));
-                //tItem.put(ItemField.abstractNote, volInfo.optString("description"));
-                trans.put(ItemField.numPages, volInfo.optString("pageCount"));
-                trans.put(ItemField.language, volInfo.optString("language"));
-                transItems.put(trans);
+                trans.put(ItemField.publisher, volInfo.optString("publisher"))
+                     .put(ItemField.date, volInfo.optString("publishedDate"))
+                     .put(ItemField.numPages, volInfo.optString("pageCount"))
+                     .put(ItemField.language, volInfo.optString("language"));
+
+                translation.accumulate("items", trans);
             }
-            if(transItems.length() > 0){
-                translation.put("items", transItems);
-            } // Otherwise we're returning an empty JSONObject
         } catch (JSONException e) {
             e.printStackTrace();
             return null;
