@@ -28,6 +28,8 @@ import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.net.Uri;
 import android.net.http.SslCertificate;
@@ -147,19 +149,34 @@ public class Dialogs {
     /* Dialog for asking the user to install ZXing Scanner */
     protected static AlertDialog getZxingScanner(final MainActivity parent) {
         Dialogs.displayedDialog = Dialogs.DIALOG_ZXING;
+
+        // Places we can get ZXing:
+        final Uri market_uri = Uri.parse("market://search?q=pname:com.google.zxing.client.android");
+        final Uri gcode_uri = Uri.parse("https://code.google.com/p/zxing/downloads/detail?name=BarcodeScanner3.6.apk");
+
+        final Intent install;
+        Intent test = new Intent(Intent.ACTION_VIEW, market_uri);
+
+        // Query for activities that can handle market:// urls
+        List<ResolveInfo> marketApps = parent.getPackageManager()
+                .queryIntentActivities(test, PackageManager.MATCH_DEFAULT_ONLY);
+
+        if(marketApps.size() > 0){
+            install = test;
+        }else{ // If we don't have any such activities,
+               // send the user to the ZXing gcode page
+            install = new Intent(Intent.ACTION_VIEW, gcode_uri);
+        }
+
         AlertDialog.Builder downloadDialog = new AlertDialog.Builder(parent);
 
         DialogInterface.OnClickListener clickListener = new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int i) {
                 if(i == DialogInterface.BUTTON_POSITIVE){
-                    Uri uri = Uri.parse(parent.getString(R.string.zxing_uri));
-                    Intent intent = new Intent(Intent.ACTION_VIEW, uri);
-                    parent.startActivity(intent);
-                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
-                }else{
-                    dialog.dismiss();
-                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
+                    parent.startActivity(install);
                 }
+                // about to be dismissed
+                Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
             }
         };
 
