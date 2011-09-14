@@ -254,6 +254,10 @@ public class Dialogs {
             public void onClick(View v) {
                 if(v.getId() == R.id.positive){
                     String isbn = tv.getText().toString();
+                    if(isbn.length() == 9) {
+                        // User may have been unable to enter trailing X
+                        isbn += 'X';
+                    }
                     if(!Util.isValidISBN(isbn)){
                         tv.setError("Invalid ISBN");
                         return; // avoid dismissing the dialog

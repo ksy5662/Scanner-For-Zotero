@@ -4,11 +4,19 @@
               android:layout_height="match_parent"
               android:orientation="vertical">
 
+    <TextView android:layout_width="match_parent"
+              android:layout_height="wrap_content"
+              android:gravity="center"
+              android:text="Leave off any trailing X's"
+              android:textColor="#FFFFFFFF"
+              android:textAppearance="?android:attr/textAppearanceSmall" />
+
 	<EditText android:id="@+id/edit_field"
 			  android:layout_width="match_parent"
 			  android:layout_height="wrap_content"
 			  android:singleLine="true"
-			  android:inputType="number">		    
+			  android:inputType="number"
+			  android:digits="0123456789X">
 	</EditText>
 
 	<LinearLayout android:layout_width="match_parent"
