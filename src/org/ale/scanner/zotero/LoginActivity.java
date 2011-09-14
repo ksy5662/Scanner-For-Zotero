@@ -111,20 +111,20 @@ public class LoginActivity extends Activity {
         findViewById(R.id.userid_edittext).setOnFocusChangeListener(focusTextListener);
         findViewById(R.id.apikey_edittext).setOnFocusChangeListener(focusTextListener);
 
-        if (savedInstanceState != null){
-            // Set the displayed screen (login options or editables)
-            int curView = savedInstanceState.getInt(RECREATE_CURRENT_DISPLAY, 0);
-            ((ViewFlipper)findViewById(R.id.login_view_flipper))
-                .setDisplayedChild(curView);
-            setUserAndKey((Account) savedInstanceState.getParcelable(RECREATE_ACCOUNT));
-         }
-
         // If we're called from Main via "Log out", we need to clear the login info
         // (Main provides an extra telling us this)
         Bundle extras = getIntent().getExtras();
         if(extras != null && extras.getBoolean(INTENT_EXTRA_CLEAR_FIELDS, false)){
             setUserAndKey("","","");
             mLoggedIn = false;
+        }
+
+        if (savedInstanceState != null){
+            // Set the displayed screen (login options or editables)
+            int curView = savedInstanceState.getInt(RECREATE_CURRENT_DISPLAY, 0);
+            ((ViewFlipper)findViewById(R.id.login_view_flipper))
+                .setDisplayedChild(curView);
+            setUserAndKey((Account) savedInstanceState.getParcelable(RECREATE_ACCOUNT));
         }
     }
 
