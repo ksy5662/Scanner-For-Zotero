@@ -90,7 +90,6 @@ public class MainActivity extends Activity {
     public static final String RC_PEND_STAT = "STATUS";
     public static final String RC_CHECKED = "CHECKED";
     public static final String RC_ACCESS = "ACCESS";
-    public static final String RC_NEW_KEY = "NEWKEY";
     public static final String RC_GROUPS = "GROUPS";
     public static final String RC_UPLOADING = "UPLOADING";
 
@@ -118,8 +117,6 @@ public class MainActivity extends Activity {
 
     public Handler mUIThreadHandler;
 
-    private boolean mNewKey;
-    
     private int mUploadState;
 
     private SparseParcelableArrayAdapter<PString> mGroupAdapter;
@@ -168,7 +165,6 @@ public class MainActivity extends Activity {
             mPendingItems = new ArrayList<String>(2); // RC_PEND
             mPendingStatus = new ArrayList<Integer>(2); // RC_PEND_STAT
             checked = new int[0];
-            mNewKey = true;
             mUploadState = UPLOAD_STATE_WAIT;
             groups = new SparseArray<PString>();
         }else{ // Recreating activity
@@ -179,7 +175,6 @@ public class MainActivity extends Activity {
             // Set checked items
             checked = state.getIntArray(RC_CHECKED);
 
-            mNewKey = state.getBoolean(RC_NEW_KEY);
             mUploadState = state.getInt(RC_UPLOADING);
             groups = state.getSparseParcelableArray(RC_GROUPS);
         }
@@ -293,7 +288,6 @@ public class MainActivity extends Activity {
         state.putIntegerArrayList(RC_PEND_STAT, mPendingStatus);
         state.putIntArray(RC_CHECKED, mItemAdapter.getChecked());
         state.putParcelable(RC_ACCESS, mAccountAccess);
-        state.putBoolean(RC_NEW_KEY, mNewKey);
         state.putInt(RC_UPLOADING, mUploadState);
         state.putSparseParcelableArray(RC_GROUPS, mGroupAdapter.getData());
     }
@@ -508,13 +502,22 @@ public class MainActivity extends Activity {
 
     @Override
     public boolean onPrepareOptionsMenu(Menu menu){
+        super.onPrepareOptionsMenu(menu);
         MenuItem check_all = (MenuItem) menu.findItem(R.id.ctx_check_all);
-        if(mItemAdapter.getChecked().length == mItemAdapter.getGroupCount()){
-            // make it an uncheck all
-            check_all.setTitle(getString(R.string.uncheck_all));
-        }else{
-            check_all.setTitle(getString(R.string.check_all));
+
+        int numChecked = mItemAdapter.getChecked().length;
+        int groupCount = mItemAdapter.getGroupCount();
+
+        String title = getString(R.string.check_all);
+        // Set to "Uncheck All" if all are checked, or we're
+        // waiting for db to return bibitems. In the latter case we
+        // just assume all items are checked.
+        if((groupCount > 0 && numChecked == groupCount)
+                || (groupCount == 0 && numChecked > 0)) {
+            title = getString(R.string.uncheck_all);
         }
+
+        check_all.setTitle(title);
         return true;
     }
 
