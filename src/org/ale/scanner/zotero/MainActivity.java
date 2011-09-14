@@ -41,6 +41,7 @@ import android.app.AlertDialog;
 import android.content.ActivityNotFoundException;
 import android.content.ContentValues;
 import android.content.Intent;
+import android.content.SharedPreferences;
 import android.database.Cursor;
 import android.os.Bundle;
 import android.os.Handler;
@@ -80,6 +81,9 @@ public class MainActivity extends Activity {
     private static final int UPLOAD_STATE_PENDING = 1;
     private static final int UPLOAD_STATE_FAILURE = 2;
 
+    private static final int SERVICE_GOOGLE = 0;
+    private static final int SERVICE_WORLDCAT = 1;
+
     public static final String INTENT_EXTRA_ACCOUNT = "ACCOUNT";
 
     public static final String RC_PEND = "PENDING";
@@ -89,6 +93,9 @@ public class MainActivity extends Activity {
     public static final String RC_NEW_KEY = "NEWKEY";
     public static final String RC_GROUPS = "GROUPS";
     public static final String RC_UPLOADING = "UPLOADING";
+
+    public static final String PREF_GROUP = "GROUP";
+    public static final String PREF_SERVICE = "SERVICE";
 
     private ZoteroAPIClient mZAPI;
     private GoogleBooksAPIClient mGoogleBooksAPI;
@@ -118,6 +125,7 @@ public class MainActivity extends Activity {
     private SparseParcelableArrayAdapter<PString> mGroupAdapter;
     //private SparseParcelableArrayAdapter mCollectionAdapter;
     private int mSelectedGroup;
+    private int mISBNService;
 
     @Override
     public void onCreate(Bundle state) {
@@ -127,8 +135,14 @@ public class MainActivity extends Activity {
 
         mUIThreadHandler = new Handler();
 
-        // Logged in account
+        // Get the account we're logged in as
         mAccount = (Account) extras.getParcelable(INTENT_EXTRA_ACCOUNT);
+
+        // Load preferences
+        SharedPreferences prefs = getSharedPreferences(mAccount.getUid(), MODE_PRIVATE);
+        // The group we'll upload to (default to user's personal library)
+        mSelectedGroup = prefs.getInt(PREF_GROUP, Integer.parseInt(mAccount.getUid()));
+        mISBNService = prefs.getInt(PREF_SERVICE, SERVICE_GOOGLE);
 
         // Initialize Clients
         mGoogleBooksAPI = new GoogleBooksAPIClient();
@@ -219,6 +233,13 @@ public class MainActivity extends Activity {
             mAlertDialog.dismiss();
             mAlertDialog = null;
         }
+
+        // Commit preferences
+        SharedPreferences config = getSharedPreferences(mAccount.getUid(), MODE_PRIVATE);
+        SharedPreferences.Editor editor = config.edit();
+        editor.putInt(PREF_GROUP, mSelectedGroup);
+        editor.putInt(PREF_SERVICE, mISBNService);
+        editor.commit();
     }
 
     @Override
@@ -357,7 +378,7 @@ public class MainActivity extends Activity {
                 && mAccountAccess.canWriteLibrary()) {
             newGroupList.put(Group.GROUP_LIBRARY, new PString(getString(R.string.my_library)));
             mGroupAdapter.replaceData(newGroupList);
-            ((Spinner)findViewById(R.id.upload_group)).invalidate();
+            //((Spinner)findViewById(R.id.upload_group)).invalidate();
             return;
         }
         // Check that we have all the group titles
@@ -643,9 +664,14 @@ public class MainActivity extends Activity {
     }
 
     protected void lookupISBN(String isbn){
-        // Looks dumb, but this is here in case we ever add more ISBN lookup
-        // services.
-        mGoogleBooksAPI.isbnLookup(isbn);
+        switch(mISBNService){
+        case SERVICE_GOOGLE:
+            mGoogleBooksAPI.isbnLookup(isbn);
+            break;
+        case SERVICE_WORLDCAT:
+            mWorldCatAPI.isbnLookup(isbn);
+            break;
+        }
     }
 
     /*private final AdapterView.OnItemSelectedListener spinnerListener = new AdapterView.OnItemSelectedListener(){
