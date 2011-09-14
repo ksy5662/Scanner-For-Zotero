@@ -30,6 +30,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
+import org.ale.scanner.zotero.R;
 import org.ale.scanner.zotero.data.Access;
 import org.ale.scanner.zotero.data.Account;
 import org.ale.scanner.zotero.data.Group;
@@ -66,6 +67,12 @@ public class ZoteroAPIClient {
     private static final String ZOTERO_GROUPS_URL = ZOTERO_BASE_URL + "/groups";
 
     private static final String HDR_WRITE_TOKEN = "X-Zotero-Write-Token";
+
+    public static final Integer UPLOADING =  new Integer(R.string.uploading);
+    public static final Integer FAILURE_REASON_NETWORK = new Integer(R.string.failure_reason_network);
+    public static final Integer FAILURE_REASON_SERV_ERR = new Integer(R.string.failure_reason_serv_err);
+    public static final Integer FAILURE_REASON_BAD_DATA = new Integer(R.string.failure_reason_bad_data);
+    public static final Integer FAILURE_REASON_PERMISSION = new Integer(R.string.failure_reason_perm);
 
     private Account mAccount;
 

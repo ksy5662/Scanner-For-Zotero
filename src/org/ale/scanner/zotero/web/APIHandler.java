@@ -99,14 +99,14 @@ public abstract class APIHandler extends Handler {
         case APIHandler.START:
             onStart(req);
             break;
+        case APIHandler.STATUSLINE:
+            onStatusLine(req, (StatusLine)resp.getData());
+            break;
         case APIHandler.PROGRESS:
             onProgress(req, ((Integer)resp.getData()).intValue());
             break;
         case APIHandler.EXCEPTION:
             onException(req, (Exception)resp.getData());
-            break;
-        case APIHandler.STATUSLINE:
-            onStatusLine(req, (StatusLine)resp.getData());
             break;
         case APIHandler.SUCCESS:
             onSuccess(req, (String) resp.getData());

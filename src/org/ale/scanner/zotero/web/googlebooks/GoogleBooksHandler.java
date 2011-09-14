@@ -65,7 +65,7 @@ public class GoogleBooksHandler extends APIHandler{
                 errReason = PendingListAdapter.STATUS_FAILED;
                 break;
             }
-            APIHandler.MAIN.itemFailed(id, errReason);
+            APIHandler.MAIN.bibFetchFailure(id, errReason);
         }
     }
 
@@ -73,7 +73,7 @@ public class GoogleBooksHandler extends APIHandler{
         String id = req.getExtra().getString(GoogleBooksAPIClient.EXTRA_ISBN);
         exc.printStackTrace();
         //TODO: Be more helpful here, might not be a network issue
-        APIHandler.MAIN.itemFailed(id, PendingListAdapter.STATUS_NO_NETWORK);
+        APIHandler.MAIN.bibFetchFailure(id, PendingListAdapter.STATUS_NO_NETWORK);
     }
 
     protected void onSuccess(APIRequest req, final String res){
@@ -105,9 +105,9 @@ public class GoogleBooksHandler extends APIHandler{
                 checkActivityAndRun(new Runnable(){
                     public void run(){
                         if(failed){
-                            APIHandler.MAIN.itemFailed(id, reason);
+                            APIHandler.MAIN.bibFetchFailure(id, reason);
                         }else{
-                            APIHandler.MAIN.gotBibInfo(id, translated);
+                            APIHandler.MAIN.bibFetchSuccess(id, translated);
                         }
                     }
                 });

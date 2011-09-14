@@ -130,6 +130,7 @@ public class APIRequest implements Runnable {
                         APIHandler.SUCCESS, new APIResponse(this, dataAsString)));
             }
         } catch (Exception e) {
+            // TODO: list of all exceptions that could occur here
             mHandler.sendMessage(Message.obtain(mHandler,
                         APIHandler.EXCEPTION, new APIResponse(this, e)));
         } finally {

@@ -56,45 +56,62 @@ public class ZoteroHandler extends APIHandler {
     }
 
     protected void onStatusLine(APIRequest req, StatusLine status) {
-        int rt = req.getExtra().getInt(ZoteroAPIClient.EXTRA_REQ_TYPE);
-        switch(status.getStatusCode()){
+        int reqType = req.getExtra().getInt(ZoteroAPIClient.EXTRA_REQ_TYPE);
+        int code = status.getStatusCode();
+        switch(code){
+        case 400: // Bad Request
+            if(reqType == ZoteroAPIClient.ITEMS){
+                APIHandler.MAIN.uploadFailure(ZoteroAPIClient.FAILURE_REASON_BAD_DATA);
+            }
+            break;
         case 403: // Forbidden
-            if(rt != ZoteroAPIClient.PERMISSIONS) {
-                // Maybe the key permissions changed, do a refresh
-
-                APIHandler.MAIN.refreshPermissions();
-            }else{
+            if(reqType == ZoteroAPIClient.PERMISSIONS) {
                 // This shouldn't happen, but to avoid a permission checking
                 // loop in case it does, erase key permissions and log out
                 APIHandler.MAIN.erasePermissions();
                 APIHandler.MAIN.postAccountPermissions(null);
+            } else {
+                // Maybe the key permissions changed, do a refresh
+                APIHandler.MAIN.refreshPermissions();
+            }
+
+            if(reqType == ZoteroAPIClient.ITEMS) {
+                APIHandler.MAIN.uploadFailure(ZoteroAPIClient.FAILURE_REASON_PERMISSION);
             }
             break;
         case 404: // Not Found
-            if(rt == ZoteroAPIClient.PERMISSIONS) {
+            if(reqType == ZoteroAPIClient.PERMISSIONS) {
                 // The key wasn't found, wipe it out.
                 APIHandler.MAIN.erasePermissions();
                 APIHandler.MAIN.postAccountPermissions(null);
             }
+            break;
+        case 405: // Method Not Allowed
+            break;
         case 409: // Conflict (Target library locked)
         case 412: // Precondition failed (X-Zotero-Write-Token duplicate)
         case 413: // Request Entity Too Large
+            if(reqType == ZoteroAPIClient.ITEMS){
+                APIHandler.MAIN.uploadFailure(ZoteroAPIClient.FAILURE_REASON_BAD_DATA);
+            }
             break;
         case 500: // Internal Server Error
         case 503: // Service Unavailable
+            if(reqType == ZoteroAPIClient.ITEMS){
+                APIHandler.MAIN.uploadFailure(ZoteroAPIClient.FAILURE_REASON_SERV_ERR);
+            }
             Toast.makeText(
                     APIHandler.MAIN, 
-                    "Zotero server error, try again later.",
+                    code + ": Zotero server error, try again later.",
                     Toast.LENGTH_LONG).show();
             break;
+
         // We don't actually have to handle any of these, but I'm leaving them
         // here in case of future API changes.
         case 200: // OK
         case 201: // Created
         case 204: // No Content
         case 304: // Not Modified
-        case 400: // Bad Request
-        case 405: // Method Not Allowed
         default:
             break;
         }
@@ -102,10 +119,11 @@ public class ZoteroHandler extends APIHandler {
 
     protected void onException(APIRequest req, Exception exc) {
         int rt = req.getExtra().getInt(ZoteroAPIClient.EXTRA_REQ_TYPE);
-        //if(rt == ZoteroAPIClient.ITEMS)
-        //    APIHandler.MAIN.postItemResponse(null);
+        // XXX: Might not actually be a network error.
+        if(rt == ZoteroAPIClient.ITEMS){
+            APIHandler.MAIN.uploadFailure(ZoteroAPIClient.FAILURE_REASON_NETWORK);
+        }
         exc.printStackTrace();
-        Toast.makeText(APIHandler.MAIN, rt+" Exception", Toast.LENGTH_LONG).show();
     }
 
     protected void onSuccess(APIRequest req, String resp) {
@@ -182,7 +200,7 @@ public class ZoteroHandler extends APIHandler {
                 }
                 checkActivityAndRun(new Runnable(){
                     public void run(){
-                        APIHandler.MAIN.itemsUploaded(dbrows);
+                        APIHandler.MAIN.uploadSuccess(dbrows);
                     }
                 });
             }

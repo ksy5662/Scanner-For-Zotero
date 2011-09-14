@@ -61,7 +61,7 @@ public class WorldCatHandler extends APIHandler{
                 errReason = PendingListAdapter.STATUS_FAILED;
                 break;
             }
-            APIHandler.MAIN.itemFailed(id, errReason);
+            APIHandler.MAIN.bibFetchFailure(id, errReason);
         }
     }
 
@@ -69,7 +69,7 @@ public class WorldCatHandler extends APIHandler{
         String id = req.getExtra().getString(WorldCatAPIClient.EXTRA_ISBN);
         exc.printStackTrace();
         //TODO: Be more helpful here, might not be a network issue
-        APIHandler.MAIN.itemFailed(id, PendingListAdapter.STATUS_NO_NETWORK);
+        APIHandler.MAIN.bibFetchFailure(id, PendingListAdapter.STATUS_NO_NETWORK);
     }
 
     protected void onSuccess(APIRequest req, final String resp){
@@ -103,14 +103,14 @@ public class WorldCatHandler extends APIHandler{
                     }
                     toPost = new Runnable(){
                                  public void run(){
-                                     APIHandler.MAIN.itemFailed(id, reason);
+                                     APIHandler.MAIN.bibFetchFailure(id, reason);
                                  }
                              };
                 }else{
                     final JSONObject translated = tmpTrans;
                     toPost = new Runnable(){
                                  public void run(){
-                                     APIHandler.MAIN.gotBibInfo(id, translated);
+                                     APIHandler.MAIN.bibFetchSuccess(id, translated);
                                  }
                              };
                 }

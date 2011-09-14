@@ -47,8 +47,10 @@ import android.os.Handler;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.SparseArray;
+import android.view.animation.Animation;
 import android.view.ContextMenu;
 import android.view.ContextMenu.ContextMenuInfo;
+import android.view.animation.AnimationUtils;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -58,9 +60,12 @@ import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ExpandableListView;
 import android.widget.ListView;
+import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
 import android.widget.Spinner;
+import android.widget.TextView;
 import android.widget.Toast;
+import android.widget.ViewFlipper;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.ExpandableListView.ExpandableListContextMenuInfo;
 
@@ -71,6 +76,10 @@ public class MainActivity extends Activity {
     private static final int RESULT_SCAN = 0;
     private static final int RESULT_EDIT = 1;
 
+    private static final int UPLOAD_STATE_WAIT = 0;
+    private static final int UPLOAD_STATE_PENDING = 1;
+    private static final int UPLOAD_STATE_FAILURE = 2;
+
     public static final String INTENT_EXTRA_ACCOUNT = "ACCOUNT";
 
     public static final String RC_PEND = "PENDING";
@@ -79,6 +88,7 @@ public class MainActivity extends Activity {
     public static final String RC_ACCESS = "ACCESS";
     public static final String RC_NEW_KEY = "NEWKEY";
     public static final String RC_GROUPS = "GROUPS";
+    public static final String RC_UPLOADING = "UPLOADING";
 
     private ZoteroAPIClient mZAPI;
     private GoogleBooksAPIClient mGoogleBooksAPI;
@@ -93,6 +103,8 @@ public class MainActivity extends Activity {
     private PendingListAdapter  mPendingAdapter;
     private ListView mPendingList;
 
+    private Animation[] mAnimations;
+
     private Account mAccount;
 
     private Access mAccountAccess;
@@ -101,6 +113,8 @@ public class MainActivity extends Activity {
 
     private boolean mNewKey;
     
+    private int mUploadState;
+
     private SparseParcelableArrayAdapter<PString> mGroupAdapter;
     //private SparseParcelableArrayAdapter mCollectionAdapter;
     private int mSelectedGroup;
@@ -131,7 +145,7 @@ public class MainActivity extends Activity {
 
         mPendingList = (ListView) pendingListHolder.findViewById(R.id.pending_item_list);
         bibItemList.addHeaderView(pendingListHolder);
-        Spinner groupList = (Spinner) findViewById(R.id.upload_group);
+        //Spinner groupList = (Spinner) findViewById(R.id.upload_group);
 
         int[] checked;
         SparseArray<PString> groups;
@@ -141,6 +155,7 @@ public class MainActivity extends Activity {
             mPendingStatus = new ArrayList<Integer>(2); // RC_PEND_STAT
             checked = new int[0];
             mNewKey = true;
+            mUploadState = UPLOAD_STATE_WAIT;
             groups = new SparseArray<PString>();
         }else{ // Recreating activity
             // Rebuild pending list
@@ -151,6 +166,7 @@ public class MainActivity extends Activity {
             checked = state.getIntArray(RC_CHECKED);
 
             mNewKey = state.getBoolean(RC_NEW_KEY);
+            mUploadState = state.getInt(RC_UPLOADING);
             groups = state.getSparseParcelableArray(RC_GROUPS);
         }
 
@@ -165,16 +181,31 @@ public class MainActivity extends Activity {
                 mPendingStatus);
 
         bibItemList.setAdapter(mItemAdapter);
-        groupList.setAdapter(mGroupAdapter);
+        //groupList.setAdapter(mGroupAdapter);
         mPendingList.setAdapter(mPendingAdapter);
 
         registerForContextMenu(bibItemList);
         registerForContextMenu(mPendingList);
 
         // Listeners
-        groupList.setOnItemSelectedListener(spinnerListener);
+        //groupList.setOnItemSelectedListener(spinnerListener);
         findViewById(R.id.scan_isbn).setOnClickListener(scanIsbn);
         findViewById(R.id.upload).setOnClickListener(uploadSelected);
+
+        // Animations
+        mAnimations = new Animation[]{
+                AnimationUtils.loadAnimation(MainActivity.this, R.anim.slide_in_next),
+                AnimationUtils.loadAnimation(MainActivity.this, R.anim.slide_out_next),
+                AnimationUtils.loadAnimation(MainActivity.this, R.anim.slide_in_previous),
+                AnimationUtils.loadAnimation(MainActivity.this, R.anim.slide_out_previous)
+                };
+        
+        findViewById(R.id.upload_progress).setOnClickListener(dismissUploadStatus);
+        if(mUploadState == UPLOAD_STATE_PENDING){
+            showUploadInProgress();
+        }else{
+            resetUploadStatus();
+        }
     }
 
     @Override
@@ -242,6 +273,7 @@ public class MainActivity extends Activity {
         state.putIntArray(RC_CHECKED, mItemAdapter.getChecked());
         state.putParcelable(RC_ACCESS, mAccountAccess);
         state.putBoolean(RC_NEW_KEY, mNewKey);
+        state.putInt(RC_UPLOADING, mUploadState);
         state.putSparseParcelableArray(RC_GROUPS, mGroupAdapter.getData());
     }
 
@@ -377,29 +409,73 @@ public class MainActivity extends Activity {
         }).start();
     }
 
-    public void gotBibInfo(final String isbn, final JSONObject info){
-        mUIThreadHandler.post(new Runnable() {
-            public void run(){
-                BibItem item = new BibItem(BibItem.TYPE_BOOK, info, mAccount.getDbId());
-                mPendingAdapter.remove(isbn);
-                if(mPendingAdapter.getCount() == 0)
-                    mPendingList.setVisibility(View.GONE);
-                mItemAdapter.addItem(item);
-                redrawPendingList();
-            }
-        });
+    public void bibFetchSuccess(final String isbn, final JSONObject info){
+        BibItem item = new BibItem(BibItem.TYPE_BOOK, info, mAccount.getDbId());
+        mPendingAdapter.remove(isbn);
+        if(mPendingAdapter.getCount() == 0)
+            mPendingList.setVisibility(View.GONE);
+        mItemAdapter.addItem(item);
+        redrawPendingList();
     }
 
-    public void itemFailed(String isbn, Integer status){
+    public void bibFetchFailure(String isbn, Integer status){
         mPendingAdapter.setStatus(isbn, status);
     }
 
-    public void itemsUploaded(int[] dbrows){
+    public void uploadSuccess(int[] dbrows){
         mItemAdapter.setChecked(new int[0]);
         mItemAdapter.deleteItemsWithRowIds(dbrows);
         Toast.makeText(MainActivity.this,
                        "Items added successfully",
                        Toast.LENGTH_LONG).show();
+        showUploadButton();
+    }
+
+    public void uploadFailure(Integer reason) {
+        mUploadState = UPLOAD_STATE_FAILURE;
+        ProgressBar prog = (ProgressBar) findViewById(R.id.upload_progress_bar);
+        prog.setVisibility(View.GONE);
+
+        TextView error = (TextView) findViewById(R.id.upload_error);
+        error.setVisibility(View.VISIBLE);
+
+        TextView output = (TextView) findViewById(R.id.upload_output);
+        output.setText(getText(reason));
+    }
+
+    public void resetUploadStatus() {
+        ProgressBar prog = (ProgressBar) findViewById(R.id.upload_progress_bar);
+        prog.setVisibility(View.VISIBLE);
+
+        TextView error = (TextView) findViewById(R.id.upload_error);
+        error.setVisibility(View.GONE);
+
+        TextView output = (TextView) findViewById(R.id.upload_output);
+        output.setText(getText(ZoteroAPIClient.UPLOADING));
+    }
+
+    public void showUploadInProgress() {
+        mUploadState = UPLOAD_STATE_PENDING;
+        TextView output = (TextView) findViewById(R.id.upload_output);
+        output.setText(getText(ZoteroAPIClient.UPLOADING));
+
+        ViewFlipper vf = (ViewFlipper)findViewById(R.id.upload_flipper);
+        if(vf.getCurrentView().getId() == R.id.upload){
+            vf.setInAnimation(mAnimations[0]); // Slide in previous
+            vf.setOutAnimation(mAnimations[1]); // slide out previous
+            vf.showNext();
+        }
+    }
+
+    public void showUploadButton() {
+        mUploadState = UPLOAD_STATE_WAIT;
+        resetUploadStatus();
+        ViewFlipper vf = (ViewFlipper)findViewById(R.id.upload_flipper);
+        if(vf.getCurrentView().getId() == R.id.upload_progress){
+            vf.setInAnimation(mAnimations[2]); // slide in next
+            vf.setOutAnimation(mAnimations[3]); // slide out next
+            vf.showPrevious();
+        }
     }
 
     @Override
@@ -572,7 +648,7 @@ public class MainActivity extends Activity {
         mGoogleBooksAPI.isbnLookup(isbn);
     }
 
-    private final AdapterView.OnItemSelectedListener spinnerListener = new AdapterView.OnItemSelectedListener(){
+    /*private final AdapterView.OnItemSelectedListener spinnerListener = new AdapterView.OnItemSelectedListener(){
         @Override
         public void onItemSelected(AdapterView<?> parent, View v, int position, long id) {
             if((int)id == Group.GROUP_LIBRARY){
@@ -585,7 +661,7 @@ public class MainActivity extends Activity {
         public void onNothingSelected(AdapterView<?> parent) {
             
         }
-    };
+    };*/
 
     private final Button.OnClickListener scanIsbn = new Button.OnClickListener() {
         public void onClick(View v) {
@@ -619,6 +695,7 @@ public class MainActivity extends Activity {
                     items.accumulate("items", bib.getSelectedInfo());
                 }
                 mZAPI.addItems(items, rows, mSelectedGroup);
+                showUploadInProgress();
             } catch (JSONException e) {
                 // TODO Prompt about failure
                 e.printStackTrace();
@@ -626,6 +703,14 @@ public class MainActivity extends Activity {
                 mItemAdapter.setChecked(new int[0]);
             } catch (UnsupportedEncodingException e) {
                 e.printStackTrace();
+            }
+        }
+    };
+
+    private final Button.OnClickListener dismissUploadStatus = new Button.OnClickListener() {
+        public void onClick(View v) {
+            if(mUploadState == UPLOAD_STATE_FAILURE){
+                showUploadButton();
             }
         }
     };

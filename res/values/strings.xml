@@ -26,6 +26,11 @@
     <string name="lookup">Lookup</string>
     <string name="check_all">Check All</string>
     <string name="uncheck_all">Uncheck All</string>
+    <string name="failure_reason_perm">Insufficient permissions</string>
+    <string name="failure_reason_serv_err">Server error, try again later</string>
+    <string name="failure_reason_bad_data">Malformed request</string>
+    <string name="failure_reason_network">No connection</string>
+    <string name="uploading">Uploading...</string>
     
     
     

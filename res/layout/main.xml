@@ -2,7 +2,8 @@
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
                 android:id="@+id/s2z_home"
                 android:layout_height="match_parent"
-                android:layout_width="match_parent">
+                android:layout_width="match_parent"
+                android:background="@color/s2z_light_blue">
 
     <Button android:text="Scan New Item"
             android:id="@+id/scan_isbn"
@@ -12,31 +13,62 @@
             android:background="@drawable/fancy_selector"
             style="@style/ScanButton" />
 
-    <LinearLayout android:layout_width="match_parent"
-            android:layout_height="70dp"
-            android:orientation="horizontal"
-            android:id="@+id/upload_bar"
-            android:layout_alignParentBottom="true"
-            android:background="@drawable/upload_bar_gradient">
-            <Button android:text="Upload selected"
-                    android:id="@+id/upload"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1" />
-            <TextView android:layout_height="wrap_content"
-                      android:layout_width="wrap_content"
-                      android:text="to"/>
-            <Spinner android:id="@+id/upload_group"
+    <ViewFlipper android:layout_width="match_parent"
+		         android:layout_height="70dp"
+		         android:orientation="horizontal"
+		         android:id="@+id/upload_flipper"
+		         android:layout_alignParentBottom="true"
+		         android:background="@color/s2z_light_blue">
+        <Button android:text="Upload selected"
+                android:id="@+id/upload"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"/>
+
+	    <LinearLayout android:layout_width="match_parent"
+	                  android:layout_height="match_parent"
+	                  android:id="@+id/upload_progress"
+	                  android:orientation="horizontal"
+	                  android:background="@drawable/upload_bar">
+                <ProgressBar android:layout_width="80dp"
+                         android:layout_height="70dp"
+                         android:layout_gravity="center_vertical"
+                         android:paddingTop="15dp"
+                         android:paddingBottom="15dp"
+                         android:paddingLeft="20dp"
+                         android:paddingRight="20dp"
+                         android:indeterminate="true"
+                         android:id="@+id/upload_progress_bar">
+                </ProgressBar>
+                <TextView android:layout_width="80dp"
+                          android:layout_height="70dp"
+                          android:visibility="gone"
+                          android:gravity="center"
+                          android:textAppearance="?android:attr/textAppearanceMedium"
+                          android:text="Error!"
+                          android:id="@+id/upload_error"/>
+                <ImageView android:layout_width="2dip"
+						   android:layout_height="60dp"
+						   android:layout_gravity="center_vertical"
+						   android:background="#80505050"/>
+                <TextView android:layout_height="match_parent"
+                          android:layout_width="match_parent"
+                          android:id="@+id/upload_output"
+                          android:gravity="center"
+                          android:layout_weight="1"
+                          android:textAppearance="?android:attr/textAppearanceMedium"
+                          android:text="Stuff here"/>
+        </LinearLayout>
+    </ViewFlipper>
+
+
+            <!-- <Spinner android:id="@+id/upload_group"
                      android:layout_height="match_parent"
                      android:layout_width="match_parent" 
-                     android:layout_weight="1" />
-    </LinearLayout>
-          
-
+                     android:layout_weight="1" /> -->
     <ExpandableListView android:id="@+id/bib_items"
                         android:layout_height="wrap_content"
                         android:layout_width="match_parent"
-                        android:layout_above="@id/upload_bar"
+                        android:layout_above="@id/upload_flipper"
                         android:layout_below="@id/scan_isbn"
                         android:groupIndicator="@drawable/expander"
                         android:indicatorRight="?android:attr/expandableListPreferredItemPaddingLeft"
