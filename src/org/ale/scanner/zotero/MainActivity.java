@@ -138,7 +138,7 @@ public class MainActivity extends Activity {
         // Load preferences
         SharedPreferences prefs = getSharedPreferences(mAccount.getUid(), MODE_PRIVATE);
         // The group we'll upload to (default to user's personal library)
-        mSelectedGroup = prefs.getInt(PREF_GROUP, Integer.parseInt(mAccount.getUid()));
+        mSelectedGroup = prefs.getInt(PREF_GROUP, Group.GROUP_LIBRARY);
         mISBNService = prefs.getInt(PREF_SERVICE, SERVICE_GOOGLE);
 
         // Initialize Clients
@@ -546,7 +546,7 @@ public class MainActivity extends Activity {
             break;
         case R.id.ctx_library:
             mAlertDialog = Dialogs.showSelectLibraryDialog(MainActivity.this,
-                    mGroups, mGroups.indexOfKey(mSelectedGroup));
+                    mGroups, mSelectedGroup);
             break;
         case R.id.ctx_engine:
             mAlertDialog = Dialogs.showSearchEngineDialog(MainActivity.this,

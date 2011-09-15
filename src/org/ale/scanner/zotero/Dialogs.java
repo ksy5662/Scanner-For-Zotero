@@ -291,13 +291,13 @@ public class Dialogs {
             final int selected) {
 
         Dialogs.displayedDialog = Dialogs.DIALOG_SELECT_LIBRARY;
-        selectedLibrary = selected;
+        selectedLibrary = groups.indexOfKey(selected);
         AlertDialog.Builder builder = new AlertDialog.Builder(parent);
-        
+
         DialogInterface.OnClickListener clickListener = new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int i) {
                 if(i == DialogInterface.BUTTON_POSITIVE){
-                    int gid = groups.keyAt(selectedLibrary);
+                    int gid = groups.keyAt(Dialogs.selectedLibrary);
                     parent.setSelectedGroup(gid);
                     Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
                 }else if(i == DialogInterface.BUTTON_NEGATIVE){
