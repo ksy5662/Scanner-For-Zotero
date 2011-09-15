@@ -43,28 +43,44 @@ import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
 
+
+/**
+ * A static reference `displayedDialog` is kept to the currently displayed
+ * dialog in order that it may be recreated during onResume.
+ * 
+ * Activities which use any of the dialogs below are responsible for
+ * displaying and (in particular) dismissing dialogs at the appropriate
+ * time.
+ */
 public class Dialogs {
 
+    // The default displayedDialog value:
     protected static final int DIALOG_NO_DIALOG = -1;
-    // Used by LoginActivity
+    // Used by LoginActivity:
     protected static final int DIALOG_SAVED_KEYS = 0;
     protected static final int DIALOG_ZOTERO_LOGIN = 2;
     protected static final int DIALOG_LOGIN_HELP = 3;
-    // Used by MainActivity
+    // Used by MainActivity:
     protected static final int DIALOG_ZXING = 4;
     protected static final int DIALOG_CREDENTIALS = 5;
     protected static final int DIALOG_NO_PERMS = 6;
     protected static final int DIALOG_MANUAL_ENTRY = 7;
     protected static final int DIALOG_SELECT_LIBRARY = 8;
     protected static final int DIALOG_SEARCH_ENGINE = 9;
-    // Used by GetApiKeyActivity
+    // Used by GetApiKeyActivity:
     protected static final int DIALOG_SSL = 10;
     protected static final int DIALOG_NO_KEYS = 11;
     protected static final int DIALOG_FOUND_KEYS = 12;
-    // Used by ManageAccountsActivity
+    // Used by ManageAccountsActivity:
     protected static final int DIALOG_RENAME_KEY = 13;
-    
+
+
     protected static int displayedDialog = DIALOG_NO_DIALOG;
+
+    // Static state
+    private static String curSearch = "";
+    private static int selection;
+
 
     protected static DialogInterface.OnCancelListener ON_CANCEL = new DialogInterface.OnCancelListener(){
         public void onCancel(DialogInterface arg0) {
@@ -72,8 +88,13 @@ public class Dialogs {
         } 
     };
 
-    /* LoginActivity Dialogs */
-    /* Dialog to ask user if we may go to Zotero.org to manage API keys*/
+/* LoginActivity Dialogs */
+
+    /**
+     * Dialog which asks for permission to visit Zotero.org
+     * 
+     * @param parent  Context
+     */
     protected static AlertDialog informUserAboutLogin(final LoginActivity parent){
         Dialogs.displayedDialog = Dialogs.DIALOG_ZOTERO_LOGIN;
         AlertDialog.Builder builder = new AlertDialog.Builder(parent);
@@ -85,7 +106,6 @@ public class Dialogs {
                     parent.startActivityForResult(intent, LoginActivity.RESULT_APIKEY);
                     Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
                 }else{
-                    dialog.dismiss();
                     Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
                 }
             }
@@ -99,6 +119,11 @@ public class Dialogs {
         return builder.show();
     }
 
+    /**
+     * Provides the user with login instructions
+     * 
+     * @param parent  Context
+     */
     protected static AlertDialog showLoginHelp(final LoginActivity parent){
         Dialogs.displayedDialog = Dialogs.DIALOG_LOGIN_HELP;
         AlertDialog.Builder builder = new AlertDialog.Builder(parent);
@@ -109,9 +134,19 @@ public class Dialogs {
         return builder.show();
     }
 
-    /* Dialog to present the user with saved keys */
-    protected static AlertDialog promptToUseSavedKey(final LoginActivity parent, final Cursor c){
-        if(c.getCount() == 0){
+    /**
+     * Dialog to select a saved key from a list.
+     * 
+     * @param parent  Context
+     * @param cursor
+     *            Cursor to the Account db table used to extract aliases,
+     *            user IDs and api keys. The projection of the query which
+     *            created this cursor must include Account._ID,
+     *            Account.COL_ALIAS, Account.COL_UID, Account.COL_KEY
+     */
+    protected static AlertDialog promptToUseSavedKey(
+            final LoginActivity parent, final Cursor cursor) {
+        if(cursor.getCount() == 0){
             Toast.makeText(parent, "No saved keys", Toast.LENGTH_SHORT).show();
             return null;
         }
@@ -121,35 +156,40 @@ public class Dialogs {
         DialogInterface.OnClickListener clickListener = 
                     new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int i) {
-                if(i == DialogInterface.BUTTON_NEGATIVE){
-                    // User cancelled dialog
-                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
-                    dialog.dismiss();
-                }else{ // User selected a key
-                    c.moveToPosition(i);
-                    int dbid = c.getInt(Database.ACCOUNT_ID_INDEX);
-                    String alias = c.getString(Database.ACCOUNT_ALIAS_INDEX);
-                    String uid = c.getString(Database.ACCOUNT_UID_INDEX);
-                    String key = c.getString(Database.ACCOUNT_KEY_INDEX);
+                // All button choices result in immediate dismissal
+                if(i != DialogInterface.BUTTON_NEGATIVE){
+                    // User selected a key
+                    cursor.moveToPosition(i);
+                    int dbid = cursor.getInt(Database.ACCOUNT_ID_INDEX);
+                    String alias = cursor.getString(Database.ACCOUNT_ALIAS_INDEX);
+                    String uid = cursor.getString(Database.ACCOUNT_UID_INDEX);
+                    String key = cursor.getString(Database.ACCOUNT_KEY_INDEX);
                     Account acct = new Account(dbid, alias, uid, key);
                     parent.setUserAndKey(acct);
-                    dialog.dismiss();
                     parent.showNext();
-                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
+
+                    dialog.dismiss();
                 }
+                Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
             }
         };
 
         dialogBuilder.setTitle("Select a key");
         dialogBuilder.setNegativeButton(parent.getString(R.string.cancel), clickListener);
-        dialogBuilder.setSingleChoiceItems(c, -1, Account.COL_ALIAS, clickListener);
+        dialogBuilder.setSingleChoiceItems(cursor, -1, Account.COL_ALIAS, clickListener);
         dialogBuilder.setOnCancelListener(ON_CANCEL);
 
         return dialogBuilder.show();
     }
 
-    /* MainActivity Dialogs */
-    /* Dialog for asking the user to install ZXing Scanner */
+    
+/* MainActivity Dialogs */
+    /**
+     * Dialog to inform the user why they need ZXing, and where they can get it
+     * (market / google code), in the event that it is not already installed.
+     * 
+     * @param parent    Context
+     */
     protected static AlertDialog getZxingScanner(final MainActivity parent) {
         Dialogs.displayedDialog = Dialogs.DIALOG_ZXING;
 
@@ -192,7 +232,12 @@ public class Dialogs {
         return downloadDialog.show();
     }
 
-    // Checking the user's credentials
+    /**
+     * Progress dialog which informs the user that we're checking their library
+     * and group access.
+     * 
+     * @param parent    Context
+     */
     protected static AlertDialog showCheckingCredentialsDialog(final MainActivity parent){
         Dialogs.displayedDialog = Dialogs.DIALOG_CREDENTIALS;
 
@@ -207,6 +252,12 @@ public class Dialogs {
         return dialog;
     }
 
+    /**
+     * Notifies the user that they have insufficient permissions to access or
+     * write to any libraries before sending them back to the login screen.
+     * 
+     * @param parent    Context
+     */
     protected static AlertDialog showNoPermissionsDialog(final MainActivity parent){
         Dialogs.displayedDialog = Dialogs.DIALOG_NO_PERMS;
         AlertDialog.Builder builder = new AlertDialog.Builder(parent);
@@ -227,8 +278,14 @@ public class Dialogs {
         return builder.show();
     }
 
-    // Manual ISBN lookup for books without barcodes
-    private static String curSearch = "";
+    /**
+     * Allows the user to enter an ISBN manually.
+     * XXX: This validates the ISBN entered, and won't perform a lookup
+     * unless the checksum checks out. Unfortunately, many books have been
+     * printed with invalid ISBNs.
+     *
+     * @param parent    Context
+     */
     protected static AlertDialog showManualEntryDialog(final MainActivity parent){
         Dialogs.displayedDialog = Dialogs.DIALOG_MANUAL_ENTRY;
 
@@ -284,26 +341,34 @@ public class Dialogs {
         return dialog;
     }
 
-    private static int selectedLibrary = 0;
+    /**
+     * Allows the user to select from a list of available search engines.
+     * Currently: Google Books (0), WorldCat (1)
+     * 
+     * @param parent    Context
+     * @param groups    Sparse array mapping group IDs to group names.
+     *                  Note: Always maps Group.GROUP_LIBRARY to "My Library"
+     * @param selected  Group ID of currently selected group
+     */
     protected static AlertDialog showSelectLibraryDialog(
             final MainActivity parent,
             final SparseArray<PString> groups,
             final int selected) {
 
         Dialogs.displayedDialog = Dialogs.DIALOG_SELECT_LIBRARY;
-        selectedLibrary = groups.indexOfKey(selected);
+        Dialogs.selection = groups.indexOfKey(selected);
         AlertDialog.Builder builder = new AlertDialog.Builder(parent);
 
         DialogInterface.OnClickListener clickListener = new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int i) {
                 if(i == DialogInterface.BUTTON_POSITIVE){
-                    int gid = groups.keyAt(Dialogs.selectedLibrary);
+                    int gid = groups.keyAt(Dialogs.selection);
                     parent.setSelectedGroup(gid);
                     Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
                 }else if(i == DialogInterface.BUTTON_NEGATIVE){
                     Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
                 }else{
-                    Dialogs.selectedLibrary = i;
+                    Dialogs.selection = i;
                 }
             }
         };
@@ -314,7 +379,7 @@ public class Dialogs {
         for(int i=0; i < libraries.length; i++){
             libraries[i] = groups.get(groups.keyAt(i));
         }
-        builder.setSingleChoiceItems(libraries, Dialogs.selectedLibrary, clickListener);
+        builder.setSingleChoiceItems(libraries, Dialogs.selection, clickListener);
         builder.setPositiveButton("Use selected", clickListener);
         builder.setNegativeButton(R.string.cancel, clickListener);
         builder.setOnCancelListener(ON_CANCEL);
@@ -322,30 +387,36 @@ public class Dialogs {
         return builder.show();
     }
 
-    private static int searchEngine;
+    /**
+     * Allows the user to select from a list of available search engines.
+     * Currently: Google Books (0), WorldCat (1)
+     * 
+     * @param parent    Context
+     * @param curSearchEngine   Index of current search engine in R.array.search_engines
+     */
     protected static AlertDialog showSearchEngineDialog(
             final MainActivity parent,
             final int curSearchEngine) {
 
         Dialogs.displayedDialog = Dialogs.DIALOG_SEARCH_ENGINE;
-        searchEngine = curSearchEngine;
+        Dialogs.selection = curSearchEngine;
         AlertDialog.Builder builder = new AlertDialog.Builder(parent);
 
         DialogInterface.OnClickListener clickListener = new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int i) {
                 if(i == DialogInterface.BUTTON_POSITIVE){
-                    parent.setISBNService(Dialogs.searchEngine);
+                    parent.setISBNService(Dialogs.selection);
                     Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
                 }else if(i == DialogInterface.BUTTON_NEGATIVE){
                     Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
                 }else{
-                    Dialogs.searchEngine = i;
+                    Dialogs.selection = i;
                 }
             }
         };
 
         builder.setTitle("Select search engine");
-        builder.setSingleChoiceItems(R.array.search_engines, searchEngine, clickListener);
+        builder.setSingleChoiceItems(R.array.search_engines, selection, clickListener);
         builder.setPositiveButton("Use selected", clickListener);
         builder.setNegativeButton(R.string.cancel, clickListener);
         builder.setOnCancelListener(ON_CANCEL);
@@ -353,7 +424,12 @@ public class Dialogs {
         return builder.show();
     }
 
-    /* GetApiKeyActivity Dialogs */
+    /**
+     * Displays some basic information about the SSL certificate loaded in
+     * parent's webview. XXX: Android doesn't give us the fingerprint...
+     * 
+     * @param parent    Context
+     */
     protected static AlertDialog showSSLDialog(final GetApiKeyActivity parent){
         SslCertificate cert =
             ((WebView) parent.findViewById(R.id.webView)).getCertificate();
@@ -382,7 +458,6 @@ public class Dialogs {
         builder.setNeutralButton("Done", new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int i) {
                 Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
-                dialog.dismiss();
             }
         });
         builder.setOnCancelListener(ON_CANCEL);
@@ -391,8 +466,12 @@ public class Dialogs {
         return builder.show();
     }
 
-    // No keys were found, provide shortcut to key creation page on zotero.org
-    // or let the user abort.
+    /**
+     * When no keys are found on the 'Feeds/API' page, this provides a link to the
+     * key creation page.
+     * 
+     * @param parent    Context
+     */
     protected static AlertDialog showNoKeysDialog(final GetApiKeyActivity parent){
         Dialogs.displayedDialog = Dialogs.DIALOG_NO_KEYS;
         AlertDialog.Builder builder = new AlertDialog.Builder(parent);
@@ -407,7 +486,6 @@ public class Dialogs {
                     parent.finish();
                 }
                 Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
-                dialog.dismiss();
             }
         };
 
@@ -419,29 +497,35 @@ public class Dialogs {
         return builder.show();
     }
 
-    // One or more keys were found on the page, present the user with a list,
-    // by name, and let them pick the one they want to use.
-    private static int selectedNewKey = 0;
+    /**
+     * When one or more keys are found on the 'Feeds/API' page, present the user
+     * with a list of key aliases and let them pick the one they want to use.
+     * 
+     * @param parent    Context
+     * @param names     Key Aliases scraped from site
+     * @param ids       Key IDs scraped from site
+     * @param keys      API keys scraped from site
+     */
     protected static AlertDialog showSelectKeyDialog(final GetApiKeyActivity parent,
                                                      final ArrayList<String> names,
                                                      final ArrayList<String> ids,
                                                      final ArrayList<String> keys){
         Dialogs.displayedDialog = Dialogs.DIALOG_FOUND_KEYS;
+        Dialogs.selection = 0;
         AlertDialog.Builder builder = new AlertDialog.Builder(parent);
         
         DialogInterface.OnClickListener clickListener = new DialogInterface.OnClickListener() {
             public void onClick(DialogInterface dialog, int i) {
                 if(i >= 0){ // User clicked a key, but did not yet confirm their choice
-                    Dialogs.selectedNewKey = i;
-                }else{
+                    Dialogs.selection = i;
+                }else{ // Other buttons ultimately result in dismissal
                     Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
-                    dialog.dismiss();
                 }
 
                 if(i == DialogInterface.BUTTON_POSITIVE){
-                    String userName = names.get(Dialogs.selectedNewKey);
-                    String userId = ids.get(Dialogs.selectedNewKey);
-                    String userKey = keys.get(Dialogs.selectedNewKey);
+                    String userName = names.get(Dialogs.selection);
+                    String userId = ids.get(Dialogs.selection);
+                    String userKey = keys.get(Dialogs.selection);
                     if(!TextUtils.isEmpty(userId) && !TextUtils.isEmpty(userKey)){
                         Intent resultIntent = new Intent();
                         resultIntent.putExtra(GetApiKeyActivity.ACCOUNT, 
@@ -460,7 +544,7 @@ public class Dialogs {
         // Make radio buttons w/ key names and select first key
         CharSequence uglyHackNames[] = new CharSequence[names.size()];
         uglyHackNames = names.toArray(uglyHackNames);
-        builder.setSingleChoiceItems(uglyHackNames, Dialogs.selectedNewKey, clickListener);
+        builder.setSingleChoiceItems(uglyHackNames, Dialogs.selection, clickListener);
         builder.setPositiveButton("Use selected key", clickListener);
         builder.setNegativeButton("Create new key", clickListener);
         builder.setOnCancelListener(ON_CANCEL);
@@ -468,8 +552,16 @@ public class Dialogs {
         return builder.show();
     }
 
-    // One or more keys were found on the page, present the user with a list,
-    // by name, and let them pick the one they want to use.
+
+/* ManageAccountsActivity dialogs */
+
+    /**
+     * Allows the user to rename their saved keys
+     * 
+     * @param parent    the context
+     * @param original  Original key alias
+     * @param row       Database _ID of the key to edit
+     */
     protected static AlertDialog showRenameKeyDialog(final ManageAccountsActivity parent,
                                                      final String original,
                                                      final int row){
