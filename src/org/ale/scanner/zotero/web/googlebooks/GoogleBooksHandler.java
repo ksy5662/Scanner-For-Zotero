@@ -85,19 +85,23 @@ public class GoogleBooksHandler extends APIHandler{
                 final JSONObject translated =
                         GoogleBooksAPIClient.translateJsonResponse(id, res);
 
-                JSONArray items = translated.optJSONArray("items");
-
                 final boolean failed;
                 final int reason;
-                if(items == null){
-                    failed = true;
-                    reason = PendingListAdapter.STATUS_FAILED;
-                }else if(items.length() == 0){
+                if(translated == null) {
                     failed = true;
                     reason = PendingListAdapter.STATUS_NOT_FOUND;
-                }else{
-                    failed = false;
-                    reason = 0; // won't be used.
+                }else{    
+                    JSONArray items = translated.optJSONArray("items");
+                    if(items == null){
+                        failed = true;
+                        reason = PendingListAdapter.STATUS_FAILED;
+                    }else if(items.length() == 0){
+                        failed = true;
+                        reason = PendingListAdapter.STATUS_NOT_FOUND;
+                    }else{
+                        failed = false;
+                        reason = 0; // won't be used.
+                    }
                 }
 
                 // Since that might have taken some time, check that the 
