@@ -243,7 +243,13 @@ public class LoginActivity extends Activity {
         // run in a separate thread.
         new Thread(new Runnable() {
             public void run() {
-                Cursor cursor = getContentResolver().query(Database.ACCOUNT_URI, null, null, null, null);
+                String[] projection = new String[] { Account._ID,
+                        Account.COL_ALIAS, Account.COL_UID, Account.COL_KEY };
+
+                Cursor cursor = getContentResolver().query(
+                        Database.ACCOUNT_URI, projection, null, null,
+                        Account._ID + " ASC");
+
                 gotAccountCursor(cursor);
             }
         }).start();
