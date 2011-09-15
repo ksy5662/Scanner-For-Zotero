@@ -34,6 +34,7 @@ import android.database.Cursor;
 import android.net.Uri;
 import android.net.http.SslCertificate;
 import android.text.TextUtils;
+import android.util.SparseArray;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -54,12 +55,14 @@ public class Dialogs {
     protected static final int DIALOG_CREDENTIALS = 5;
     protected static final int DIALOG_NO_PERMS = 6;
     protected static final int DIALOG_MANUAL_ENTRY = 7;
+    protected static final int DIALOG_SELECT_LIBRARY = 8;
+    protected static final int DIALOG_SEARCH_ENGINE = 9;
     // Used by GetApiKeyActivity
-    protected static final int DIALOG_SSL = 8;
-    protected static final int DIALOG_NO_KEYS = 9;
-    protected static final int DIALOG_FOUND_KEYS = 10;
+    protected static final int DIALOG_SSL = 10;
+    protected static final int DIALOG_NO_KEYS = 11;
+    protected static final int DIALOG_FOUND_KEYS = 12;
     // Used by ManageAccountsActivity
-    protected static final int DIALOG_RENAME_KEY = 11;
+    protected static final int DIALOG_RENAME_KEY = 13;
     
     protected static int displayedDialog = DIALOG_NO_DIALOG;
 
@@ -237,11 +240,13 @@ public class Dialogs {
 
         builder.setTitle(R.string.manual_entry_title);
         builder.setView(dview);
-        
+
+        builder.setOnCancelListener(ON_CANCEL);
+
         final AlertDialog dialog = builder.create();
         final EditText tv = (EditText) dview.findViewById(R.id.edit_field);
         
-        // This is ridiculous but otherwise we lose the query on orientation change
+        // This is ridiculous but otherwise we lose the query contents on orientation changes
         tv.append(Dialogs.curSearch);
         dialog.setOnKeyListener(new AlertDialog.OnKeyListener(){
             public boolean onKey(DialogInterface arg0, int arg1, KeyEvent arg2) {
@@ -277,6 +282,75 @@ public class Dialogs {
         
         dialog.show();
         return dialog;
+    }
+
+    private static int selectedLibrary = 0;
+    protected static AlertDialog showSelectLibraryDialog(
+            final MainActivity parent,
+            final SparseArray<PString> groups,
+            final int selected) {
+
+        Dialogs.displayedDialog = Dialogs.DIALOG_SELECT_LIBRARY;
+        selectedLibrary = selected;
+        AlertDialog.Builder builder = new AlertDialog.Builder(parent);
+        
+        DialogInterface.OnClickListener clickListener = new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int i) {
+                if(i == DialogInterface.BUTTON_POSITIVE){
+                    int gid = groups.keyAt(selectedLibrary);
+                    parent.setSelectedGroup(gid);
+                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
+                }else if(i == DialogInterface.BUTTON_NEGATIVE){
+                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
+                }else{
+                    Dialogs.selectedLibrary = i;
+                }
+            }
+        };
+
+        builder.setTitle("Select upload destination");
+        // Make radio buttons w/ key names and select first key
+        CharSequence libraries[] = new CharSequence[groups.size()];
+        for(int i=0; i < libraries.length; i++){
+            libraries[i] = groups.get(groups.keyAt(i));
+        }
+        builder.setSingleChoiceItems(libraries, Dialogs.selectedLibrary, clickListener);
+        builder.setPositiveButton("Use selected", clickListener);
+        builder.setNegativeButton(R.string.cancel, clickListener);
+        builder.setOnCancelListener(ON_CANCEL);
+
+        return builder.show();
+    }
+
+    private static int searchEngine;
+    protected static AlertDialog showSearchEngineDialog(
+            final MainActivity parent,
+            final int curSearchEngine) {
+
+        Dialogs.displayedDialog = Dialogs.DIALOG_SEARCH_ENGINE;
+        searchEngine = curSearchEngine;
+        AlertDialog.Builder builder = new AlertDialog.Builder(parent);
+
+        DialogInterface.OnClickListener clickListener = new DialogInterface.OnClickListener() {
+            public void onClick(DialogInterface dialog, int i) {
+                if(i == DialogInterface.BUTTON_POSITIVE){
+                    parent.setISBNService(Dialogs.searchEngine);
+                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
+                }else if(i == DialogInterface.BUTTON_NEGATIVE){
+                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
+                }else{
+                    Dialogs.searchEngine = i;
+                }
+            }
+        };
+
+        builder.setTitle("Select search engine");
+        builder.setSingleChoiceItems(R.array.search_engines, searchEngine, clickListener);
+        builder.setPositiveButton("Use selected", clickListener);
+        builder.setNegativeButton(R.string.cancel, clickListener);
+        builder.setOnCancelListener(ON_CANCEL);
+
+        return builder.show();
     }
 
     /* GetApiKeyActivity Dialogs */

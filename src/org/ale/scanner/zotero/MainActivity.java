@@ -119,7 +119,7 @@ public class MainActivity extends Activity {
 
     private int mUploadState;
 
-    private SparseParcelableArrayAdapter<PString> mGroupAdapter;
+    private SparseArray<PString> mGroups;
     //private SparseParcelableArrayAdapter mCollectionAdapter;
     private int mSelectedGroup;
     private int mISBNService;
@@ -166,7 +166,7 @@ public class MainActivity extends Activity {
             mPendingStatus = new ArrayList<Integer>(2); // RC_PEND_STAT
             checked = new int[0];
             mUploadState = UPLOAD_STATE_WAIT;
-            groups = new SparseArray<PString>();
+            mGroups = new SparseArray<PString>();
         }else{ // Recreating activity
             // Rebuild pending list
             mAccountAccess = state.getParcelable(RC_ACCESS);
@@ -176,28 +176,24 @@ public class MainActivity extends Activity {
             checked = state.getIntArray(RC_CHECKED);
 
             mUploadState = state.getInt(RC_UPLOADING);
-            groups = state.getSparseParcelableArray(RC_GROUPS);
+            mGroups = state.getSparseParcelableArray(RC_GROUPS);
         }
 
         // Initialize list adapters
         mItemAdapter = new BibItemListAdapter(MainActivity.this);
         mItemAdapter.setChecked(checked);
 
-        mGroupAdapter = new SparseParcelableArrayAdapter<PString>(
-                MainActivity.this, groups);
         mPendingAdapter = new PendingListAdapter(MainActivity.this,
                 R.layout.pending_item, R.id.pending_item_id, mPendingItems,
                 mPendingStatus);
 
         bibItemList.setAdapter(mItemAdapter);
-        //groupList.setAdapter(mGroupAdapter);
         mPendingList.setAdapter(mPendingAdapter);
 
         registerForContextMenu(bibItemList);
         registerForContextMenu(mPendingList);
 
         // Listeners
-        //groupList.setOnItemSelectedListener(spinnerListener);
         findViewById(R.id.scan_isbn).setOnClickListener(scanIsbn);
         findViewById(R.id.upload).setOnClickListener(uploadSelected);
 
@@ -272,6 +268,14 @@ public class MainActivity extends Activity {
         case(Dialogs.DIALOG_MANUAL_ENTRY):
             mAlertDialog = Dialogs.showManualEntryDialog(MainActivity.this);
             break;
+        case(Dialogs.DIALOG_SELECT_LIBRARY):
+            mAlertDialog = Dialogs.showSelectLibraryDialog(MainActivity.this,
+                    mGroups, mSelectedGroup);
+            break;
+        case(Dialogs.DIALOG_SEARCH_ENGINE):
+            mAlertDialog = Dialogs.showSearchEngineDialog(MainActivity.this,
+                    mISBNService);
+            break;
         }
     }
 
@@ -289,7 +293,7 @@ public class MainActivity extends Activity {
         state.putIntArray(RC_CHECKED, mItemAdapter.getChecked());
         state.putParcelable(RC_ACCESS, mAccountAccess);
         state.putInt(RC_UPLOADING, mUploadState);
-        state.putSparseParcelableArray(RC_GROUPS, mGroupAdapter.getData());
+        state.putSparseParcelableArray(RC_GROUPS, mGroups);
     }
 
     public void postToUIThread(Runnable r) {
@@ -367,17 +371,16 @@ public class MainActivity extends Activity {
     }
 
     public void loadGroups(){
-        final SparseArray<PString> newGroupList = new SparseArray<PString>();
         if(mAccountAccess.getGroupCount() == 0
                 && mAccountAccess.canWriteLibrary()) {
-            newGroupList.put(Group.GROUP_LIBRARY, new PString(getString(R.string.my_library)));
-            mGroupAdapter.replaceData(newGroupList);
-            //((Spinner)findViewById(R.id.upload_group)).invalidate();
+            mGroups = new SparseArray<PString>();
+            mGroups.put(Group.GROUP_LIBRARY, new PString(getString(R.string.my_library)));
             return;
         }
         // Check that we have all the group titles
         new Thread(new Runnable(){
             public void run(){
+                final SparseArray<PString> newGroupList = new SparseArray<PString>();
                 Set<Integer> groups = mAccountAccess.getGroupIds();
                 if(mAccountAccess.canWriteLibrary()){
                     newGroupList.put(Group.GROUP_LIBRARY, new PString(getString(R.string.my_library)));
@@ -399,10 +402,10 @@ public class MainActivity extends Activity {
                     c.moveToNext();
                 }
                 c.close();
-                // Update the spinner
+                // Update the group list
                 mUIThreadHandler.post(new Runnable(){
                     public void run(){
-                        mGroupAdapter.replaceData(newGroupList);
+                        mGroups = newGroupList;
                     }
                 });
                 // If we have any unknown groups, do a group lookup.
@@ -525,9 +528,6 @@ public class MainActivity extends Activity {
     public boolean onOptionsItemSelected(MenuItem item) {
         // Handle item selection
         switch (item.getItemId()) {
-        case R.id.ctx_collection:
-            refreshPermissions();
-            break;
         case R.id.ctx_manual:
             mAlertDialog = Dialogs.showManualEntryDialog(MainActivity.this);
             break;
@@ -543,6 +543,14 @@ public class MainActivity extends Activity {
                 mItemAdapter.setChecked(all);
             }
             mItemAdapter.notifyDataSetChanged();
+            break;
+        case R.id.ctx_library:
+            mAlertDialog = Dialogs.showSelectLibraryDialog(MainActivity.this,
+                    mGroups, mGroups.indexOfKey(mSelectedGroup));
+            break;
+        case R.id.ctx_engine:
+            mAlertDialog = Dialogs.showSearchEngineDialog(MainActivity.this,
+                    mISBNService);
             break;
         case R.id.ctx_logout:
             logout();
@@ -604,7 +612,7 @@ public class MainActivity extends Activity {
             AdapterContextMenuInfo rinfo = (AdapterContextMenuInfo) item.getMenuInfo();
             String ident = mPendingAdapter.getItem(rinfo.position);
             if(mPendingAdapter.getStatus(ident) != PendingListAdapter.STATUS_LOADING){
-                mGoogleBooksAPI.isbnLookup(ident);
+                lookupISBN(ident);
                 mPendingAdapter.setStatus(ident, PendingListAdapter.STATUS_LOADING);
             }
         default:
@@ -677,6 +685,14 @@ public class MainActivity extends Activity {
         }
     }
 
+    protected void setISBNService(int sid) {
+        mISBNService = sid;
+    }
+
+    protected void setSelectedGroup(int gid) {
+        mSelectedGroup = gid;
+    }
+
     /*private final AdapterView.OnItemSelectedListener spinnerListener = new AdapterView.OnItemSelectedListener(){
         @Override
         public void onItemSelected(AdapterView<?> parent, View v, int position, long id) {
@@ -723,7 +739,9 @@ public class MainActivity extends Activity {
                     rows[b] = bib.getId();
                     items.accumulate("items", bib.getSelectedInfo());
                 }
-                mZAPI.addItems(items, rows, mSelectedGroup);
+                int dest = (mSelectedGroup == Group.GROUP_LIBRARY) ?
+                        Integer.parseInt(mAccount.getUid()) : mSelectedGroup;
+                mZAPI.addItems(items, rows, dest);
                 showUploadInProgress();
             } catch (JSONException e) {
                 // TODO Prompt about failure

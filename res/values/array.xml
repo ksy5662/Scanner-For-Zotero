@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="search_engines">
+        <item>Google Books</item>
+        <item>WorldCat</item>
+    </string-array>
+    
+</resources>

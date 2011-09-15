@@ -18,6 +18,7 @@
 package org.ale.scanner.zotero.web;
 
 import org.apache.http.HttpVersion;
+import org.apache.http.conn.scheme.PlainSocketFactory;
 import org.apache.http.conn.scheme.Scheme;
 import org.apache.http.conn.scheme.SchemeRegistry;
 import org.apache.http.conn.scheme.SocketFactory;
@@ -65,8 +66,12 @@ public class HttpsClient extends DefaultHttpClient {
     public static ThreadSafeClientConnManager setupSSLConnMan(HttpParams params){
         SchemeRegistry registry = new SchemeRegistry();
 
+        PlainSocketFactory pf = PlainSocketFactory.getSocketFactory();
         SSLSocketFactory sf = SSLSocketFactory.getSocketFactory();
-        sf.setHostnameVerifier(SSLSocketFactory.BROWSER_COMPATIBLE_HOSTNAME_VERIFIER);
+        sf.setHostnameVerifier(
+                SSLSocketFactory.BROWSER_COMPATIBLE_HOSTNAME_VERIFIER);
+        
+        registry.register(new Scheme("http", pf, 80));
         registry.register(new Scheme("https", (SocketFactory) sf, 443));
 
         return new ThreadSafeClientConnManager(params, registry);
