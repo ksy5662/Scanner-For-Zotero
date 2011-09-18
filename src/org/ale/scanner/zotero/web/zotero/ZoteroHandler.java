@@ -87,9 +87,10 @@ public class ZoteroHandler extends APIHandler {
             }
             break;
         case 405: // Method Not Allowed
-            break;
         case 409: // Conflict (Target library locked)
         case 412: // Precondition failed (X-Zotero-Write-Token duplicate)
+        case 417: // Expectation Failed
+            break;
         case 413: // Request Entity Too Large
             if(reqType == ZoteroAPIClient.ITEMS){
                 APIHandler.MAIN.uploadFailure(ZoteroAPIClient.FAILURE_REASON_BAD_DATA);
@@ -193,7 +194,9 @@ public class ZoteroHandler extends APIHandler {
     private void handleItems(final int[] dbrows, final String xml){
         new Thread(new Runnable(){
             public void run() {
-                final String itemIds = ZoteroAPIClient.parseItems(xml);
+                //TODO: Uncomment parseItems when we want to enable adding
+                //      items to collections
+                //final String itemIds = ZoteroAPIClient.parseItems(xml);
                 String[] srows = new String[dbrows.length];
                 for(int i=0; i<srows.length; i++){
                     srows[i] = String.valueOf(dbrows[i]);

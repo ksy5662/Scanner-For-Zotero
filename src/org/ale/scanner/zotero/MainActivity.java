@@ -57,13 +57,11 @@ import android.view.MenuInflater;
 import android.view.MenuItem;
 import android.view.View;
 import android.widget.AbsListView;
-import android.widget.AdapterView;
 import android.widget.Button;
 import android.widget.ExpandableListView;
 import android.widget.ListView;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
-import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
 import android.widget.AdapterView.AdapterContextMenuInfo;
@@ -152,13 +150,11 @@ public class MainActivity extends Activity {
         // Pending item list
         View pendingListHolder = getLayoutInflater().inflate(
                 R.layout.pending_item_list, bibItemList, false);
+        bibItemList.addHeaderView(pendingListHolder);
 
         mPendingList = (ListView) pendingListHolder.findViewById(R.id.pending_item_list);
-        bibItemList.addHeaderView(pendingListHolder);
-        //Spinner groupList = (Spinner) findViewById(R.id.upload_group);
 
         int[] checked;
-        SparseArray<PString> groups;
         if(state == null){ // Fresh activity
             mAccountAccess = null; // will check for permissions in onResume
             mPendingItems = new ArrayList<String>(2); // RC_PEND
@@ -181,22 +177,20 @@ public class MainActivity extends Activity {
         // Initialize list adapters
         mItemAdapter = new BibItemListAdapter(MainActivity.this);
         mItemAdapter.setChecked(checked);
+        bibItemList.setAdapter(mItemAdapter);
+        registerForContextMenu(bibItemList);
 
         mPendingAdapter = new PendingListAdapter(MainActivity.this,
                 R.layout.pending_item, R.id.pending_item_id, mPendingItems,
                 mPendingStatus);
-
-        bibItemList.setAdapter(mItemAdapter);
         mPendingList.setAdapter(mPendingAdapter);
-
-        registerForContextMenu(bibItemList);
         registerForContextMenu(mPendingList);
 
         // Listeners
         findViewById(R.id.scan_isbn).setOnClickListener(scanIsbn);
         findViewById(R.id.upload).setOnClickListener(uploadSelected);
 
-        // Animations
+        // Load animations
         mAnimations = new Animation[]{
                 AnimationUtils.loadAnimation(MainActivity.this, R.anim.slide_in_next),
                 AnimationUtils.loadAnimation(MainActivity.this, R.anim.slide_out_next),
@@ -204,12 +198,8 @@ public class MainActivity extends Activity {
                 AnimationUtils.loadAnimation(MainActivity.this, R.anim.slide_out_previous)
                 };
         
+        // Upload Bar
         findViewById(R.id.upload_progress).setOnClickListener(dismissUploadStatus);
-        if(mUploadState == UPLOAD_STATE_PENDING){
-            showUploadInProgress();
-        }else{
-            resetUploadStatus();
-        }
     }
 
     @Override
@@ -236,19 +226,30 @@ public class MainActivity extends Activity {
     public void onResume() {
         super.onResume();
 
+        APIHandler.globalBindActivity(MainActivity.this);
+        BibItemDBHandler.getInstance().bindAdapter(mItemAdapter);
+
+        // Try filling the item list from the database if it is currently
+        // empty. This is an easy workaround against double-loading the list,
+        // or failing to load it at all.
         if(mItemAdapter.getGroupCount() == 0) {
             mItemAdapter.fillFromDatabase(mAccount.getDbId());
         }
 
-        APIHandler.globalBindActivity(MainActivity.this);
-        BibItemDBHandler.getInstance().bindAdapter(mItemAdapter);
-
-        if(mAccountAccess == null
-                && Dialogs.displayedDialog != Dialogs.DIALOG_NO_PERMS){
-            Dialogs.displayedDialog = Dialogs.DIALOG_CREDENTIALS;
-            lookupAuthorizations();
+        // Show the correct upload bar
+        if(mUploadState == UPLOAD_STATE_PENDING){
+            showUploadInProgress();
+        }else{
+            resetUploadStatus();
         }
 
+        // Lookup account authorizations if necessary
+        if(mAccountAccess == null
+                && (Dialogs.displayedDialog != Dialogs.DIALOG_NO_PERMS)){
+            Dialogs.displayedDialog = Dialogs.DIALOG_CREDENTIALS;
+        }
+
+        // Draw the pending list
         int pendVis = mPendingAdapter.getCount() > 0 ? View.VISIBLE : View.GONE;
         mPendingList.setVisibility(pendVis);
         redrawPendingList();
@@ -259,7 +260,7 @@ public class MainActivity extends Activity {
             mAlertDialog = Dialogs.getZxingScanner(MainActivity.this);
             break;
         case(Dialogs.DIALOG_CREDENTIALS):
-            mAlertDialog = Dialogs.showCheckingCredentialsDialog(MainActivity.this);
+            lookupAuthorizations();
             break;
         case(Dialogs.DIALOG_NO_PERMS):
             mAlertDialog = Dialogs.showNoPermissionsDialog(MainActivity.this);
@@ -322,6 +323,7 @@ public class MainActivity extends Activity {
     }
 
     public void lookupAuthorizations() {
+        final MainActivity parent = this;
         new Thread(new Runnable(){
             @Override
             public void run() {
@@ -333,6 +335,11 @@ public class MainActivity extends Activity {
                                     null);
                 if(c.getCount() == 0) { // Found no permissions
                     // Will call postAccountPermissions in ZoteroHandler if successful
+                    postToUIThread(new Runnable(){
+                        public void run() {
+                            mAlertDialog = Dialogs.showCheckingCredentialsDialog(parent);
+                        }
+                    });
                     mZAPI.getPermissions();
                 }else{
                     Access access = Access.fromCursor(c, mAccount.getDbId());
@@ -696,21 +703,6 @@ public class MainActivity extends Activity {
     protected void setSelectedGroup(int gid) {
         mSelectedGroup = gid;
     }
-
-    /*private final AdapterView.OnItemSelectedListener spinnerListener = new AdapterView.OnItemSelectedListener(){
-        @Override
-        public void onItemSelected(AdapterView<?> parent, View v, int position, long id) {
-            if((int)id == Group.GROUP_LIBRARY){
-                mSelectedGroup = Integer.parseInt(mAccount.getUid());
-            }else{
-                mSelectedGroup = (int)id;
-            }
-        }
-        @Override
-        public void onNothingSelected(AdapterView<?> parent) {
-            
-        }
-    };*/
 
     private final Button.OnClickListener scanIsbn = new Button.OnClickListener() {
         public void onClick(View v) {

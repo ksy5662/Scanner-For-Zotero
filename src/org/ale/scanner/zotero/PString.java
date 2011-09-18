@@ -21,30 +21,48 @@ import android.os.Parcel;
 import android.os.Parcelable;
 
 public class PString implements Parcelable, CharSequence {
+
     String mValue;
+
     public PString(String s){
         mValue = s;
     }
+
     public int describeContents() {
         return 0;
     }
+
     @Override
     public void writeToParcel(Parcel p, int flags) {
         p.writeString(mValue);
     }
+
     public String toString(){
         return mValue;
     }
+
     @Override
     public char charAt(int index) {
         return mValue.charAt(index);
     }
+
     @Override
     public int length() {
         return mValue.length();
     }
+
     @Override
     public CharSequence subSequence(int start, int end) {
         return mValue.subSequence(start, end);
     }
+
+    public static final Creator<PString> CREATOR = new Creator<PString>() {
+        public PString createFromParcel(Parcel in) {
+            return new PString(in.readString());
+        }
+
+        public PString[] newArray(int size) {
+            return new PString[size];
+        }
+    };
 }

@@ -68,6 +68,8 @@ public class LoginActivity extends Activity {
 
     private boolean mRememberMe;
 
+    private boolean mParentPaused = false;
+
     private Cursor mAcctCursor = null;
 
     private AlertDialog mAlertDialog = null;
@@ -80,7 +82,6 @@ public class LoginActivity extends Activity {
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.login);
-
         mHandler = new Handler();
 
         // Query the database for saved keys (separate thread)
@@ -101,14 +102,6 @@ public class LoginActivity extends Activity {
         // and sets mRememberMe
         ((CheckBox)findViewById(R.id.save_login)).setOnCheckedChangeListener(cbListener);
         ((CheckBox)findViewById(R.id.save_login)).setChecked(mRememberMe);
-
-        // These update mAccount when an edittext changes
-        findViewById(R.id.userid_edittext).setOnKeyListener(editableTextListener);
-        findViewById(R.id.apikey_edittext).setOnKeyListener(editableTextListener);
-        
-        // These validate edittext content on focus change
-        findViewById(R.id.userid_edittext).setOnFocusChangeListener(focusTextListener);
-        findViewById(R.id.apikey_edittext).setOnFocusChangeListener(focusTextListener);
 
         // If we're called from Main via "Log out", we need to clear the login info
         // (Main provides an extra telling us this)
@@ -161,6 +154,7 @@ public class LoginActivity extends Activity {
             mAlertDialog.dismiss();
             mAlertDialog = null;
         }
+        mParentPaused = true;
     }
 
     @Override
@@ -173,7 +167,10 @@ public class LoginActivity extends Activity {
 
     private void doLogin(){ 
         // mAcctCursor MUST be open before this is called
-
+        if(mParentPaused) {
+            return;
+        }
+        extractCredentials();
         boolean validId = validateUserId();       // These have side effects
         boolean validKey = validateApiKey();      // (error flags on textviews)
 
@@ -324,6 +321,18 @@ public class LoginActivity extends Activity {
         validateApiKey();
     }
 
+    /**
+     * Extracts the user's id and key from the login form. Called from doLogin,
+     * so all login methods should take measures to ensure that the form is
+     * properly filled before calling doLogin, such as by calling setUserAndKey
+     */
+    private void extractCredentials() {
+        EditText uid_et = (EditText) findViewById(R.id.userid_edittext);
+        EditText key_et = (EditText) findViewById(R.id.apikey_edittext);
+        mAccount.setUid(uid_et.getText().toString());
+        mAccount.setKey(key_et.getText().toString());
+    }
+
     /* Input validation */
     private boolean validateUserId(){
         boolean valid = mAccount.hasValidUserId();
@@ -447,42 +456,6 @@ public class LoginActivity extends Activity {
         }
     };
 
-    private final View.OnKeyListener editableTextListener = new View.OnKeyListener() {
-        @Override
-        public boolean onKey(View v, int keyCode, KeyEvent event) {
-            switch(v.getId()){
-            case R.id.userid_edittext:
-                mAccount.setUid(((EditText)v).getText().toString());
-                if(mAccount.hasValidUserId()) // Doesn't use validateUserId so as
-                    ((EditText) v).setError(null); // to avoid setting a new error
-                break;
-            case R.id.apikey_edittext:
-                mAccount.setKey(((EditText)v).getText().toString());
-                if(mAccount.hasValidApiKey()) // Same deal
-                    ((EditText) v).setError(null);
-                break;
-            }
-            return false;
-        }
-    };
-
-    private final View.OnFocusChangeListener focusTextListener = new View.OnFocusChangeListener() {
-
-        @Override
-        public void onFocusChange(View v, boolean hasFocus) {
-            switch(v.getId()){
-            case R.id.userid_edittext:
-                mAccount.setUid(((EditText)v).getText().toString());
-                validateUserId();
-                break;
-            case R.id.apikey_edittext:
-                mAccount.setKey(((EditText)v).getText().toString());
-                validateApiKey();
-                break;
-            }
-        }
-    };
-    
     private final CheckBox.OnCheckedChangeListener cbListener = new CheckBox.OnCheckedChangeListener() {
         @Override
         public void onCheckedChanged(CompoundButton checkbox, boolean checked) {

@@ -342,8 +342,8 @@ public class Dialogs {
     }
 
     /**
-     * Allows the user to select from a list of available search engines.
-     * Currently: Google Books (0), WorldCat (1)
+     * Allows the user to select their upload destination, such as their
+     * personal library, or that of a group to which they have access.
      * 
      * @param parent    Context
      * @param groups    Sparse array mapping group IDs to group names.
@@ -357,6 +357,8 @@ public class Dialogs {
 
         Dialogs.displayedDialog = Dialogs.DIALOG_SELECT_LIBRARY;
         Dialogs.selection = groups.indexOfKey(selected);
+        if(Dialogs.selection < 0)
+            Dialogs.selection = 0;
         AlertDialog.Builder builder = new AlertDialog.Builder(parent);
 
         DialogInterface.OnClickListener clickListener = new DialogInterface.OnClickListener() {
