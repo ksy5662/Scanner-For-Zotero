@@ -66,7 +66,6 @@ import android.widget.RelativeLayout;
 import android.widget.Spinner;
 import android.widget.TextView;
 import android.widget.Toast;
-import android.widget.ViewFlipper;
 import android.widget.AdapterView.AdapterContextMenuInfo;
 import android.widget.ExpandableListView.ExpandableListContextMenuInfo;
 
@@ -482,7 +481,7 @@ public class MainActivity extends Activity {
         TextView output = (TextView) findViewById(R.id.upload_output);
         output.setText(getText(ZoteroAPIClient.UPLOADING));
 
-        ViewFlipper vf = (ViewFlipper)findViewById(R.id.upload_flipper);
+        SafeViewFlipper vf = (SafeViewFlipper)findViewById(R.id.upload_flipper);
         if(vf.getCurrentView().getId() == R.id.upload){
             vf.setInAnimation(mAnimations[0]); // Slide in previous
             vf.setOutAnimation(mAnimations[1]); // slide out previous
@@ -493,7 +492,7 @@ public class MainActivity extends Activity {
     public void showUploadButton() {
         mUploadState = UPLOAD_STATE_WAIT;
         resetUploadStatus();
-        ViewFlipper vf = (ViewFlipper)findViewById(R.id.upload_flipper);
+        SafeViewFlipper vf = (SafeViewFlipper)findViewById(R.id.upload_flipper);
         if(vf.getCurrentView().getId() == R.id.upload_progress){
             vf.setInAnimation(mAnimations[2]); // slide in next
             vf.setOutAnimation(mAnimations[3]); // slide out next

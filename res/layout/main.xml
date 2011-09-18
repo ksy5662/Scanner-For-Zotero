@@ -13,7 +13,8 @@
             android:background="@drawable/fancy_selector"
             style="@style/ScanButton" />
 
-    <ViewFlipper android:layout_width="match_parent"
+    <org.ale.scanner.zotero.SafeViewFlipper
+                 android:layout_width="match_parent"
 		         android:layout_height="70dp"
 		         android:orientation="horizontal"
 		         android:id="@+id/upload_flipper"
@@ -58,7 +59,7 @@
                           android:textAppearance="?android:attr/textAppearanceMedium"
                           android:text="Stuff here"/>
         </LinearLayout>
-    </ViewFlipper>
+    </org.ale.scanner.zotero.SafeViewFlipper>
 
 
             <!-- <Spinner android:id="@+id/upload_group"

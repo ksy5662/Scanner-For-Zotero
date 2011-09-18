@@ -25,7 +25,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ArrayAdapter;
 import android.widget.TextView;
-import android.widget.ViewFlipper;
 
 public class PendingListAdapter extends ArrayAdapter<String> {
 
@@ -94,7 +93,7 @@ public class PendingListAdapter extends ArrayAdapter<String> {
             int stat = mPendingStatus.get(position).intValue();
             String strstat = mContext.getString(stat);
             tv.setText(strstat);
-            ViewFlipper vf = (ViewFlipper)convertView.findViewById(R.id.pending_item_img);
+            SafeViewFlipper vf = (SafeViewFlipper)convertView.findViewById(R.id.pending_item_img);
             if(stat != R.string.pending_status_loading){
                 vf.setDisplayedChild(1);
             }else{

@@ -41,7 +41,6 @@ import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.EditText;
 import android.widget.Toast;
-import android.widget.ViewFlipper;
 
 public class LoginActivity extends Activity {
 
@@ -122,7 +121,7 @@ public class LoginActivity extends Activity {
         if (savedInstanceState != null){
             // Set the displayed screen (login options or editables)
             int curView = savedInstanceState.getInt(RECREATE_CURRENT_DISPLAY, 0);
-            ((ViewFlipper)findViewById(R.id.login_view_flipper))
+            ((SafeViewFlipper)findViewById(R.id.login_view_flipper))
                 .setDisplayedChild(curView);
             setUserAndKey((Account) savedInstanceState.getParcelable(RECREATE_ACCOUNT));
         }
@@ -132,7 +131,7 @@ public class LoginActivity extends Activity {
     public void onResume(){
         super.onResume();
         if(mLoggedIn){ // Might still be logged in from last session
-            ViewFlipper vf = (ViewFlipper)findViewById(R.id.login_view_flipper);
+            SafeViewFlipper vf = (SafeViewFlipper)findViewById(R.id.login_view_flipper);
             vf.setDisplayedChild(2);
             if(mAcctCursor != null){
                 doLogin();
@@ -168,7 +167,7 @@ public class LoginActivity extends Activity {
     public void onSaveInstanceState(Bundle state){
         super.onSaveInstanceState(state);
         state.putInt(RECREATE_CURRENT_DISPLAY, 
-             ((ViewFlipper)findViewById(R.id.login_view_flipper)).getDisplayedChild());
+             ((SafeViewFlipper)findViewById(R.id.login_view_flipper)).getDisplayedChild());
         state.putParcelable(RECREATE_ACCOUNT, mAccount);
     }
 
@@ -347,7 +346,7 @@ public class LoginActivity extends Activity {
 
     /* View Flipping */
     protected void showPrevious() {
-        ViewFlipper vf = (ViewFlipper)findViewById(R.id.login_view_flipper);
+        SafeViewFlipper vf = (SafeViewFlipper)findViewById(R.id.login_view_flipper);
         if(vf.getCurrentView().getId() == R.id.login_view_editables){
             vf.setInAnimation(AnimationUtils.loadAnimation(LoginActivity.this, R.anim.slide_in_previous));
             vf.setOutAnimation(AnimationUtils.loadAnimation(LoginActivity.this, R.anim.slide_out_previous));
@@ -356,7 +355,7 @@ public class LoginActivity extends Activity {
     }
 
     protected void showNext() {
-        ViewFlipper vf = (ViewFlipper)findViewById(R.id.login_view_flipper);
+        SafeViewFlipper vf = (SafeViewFlipper)findViewById(R.id.login_view_flipper);
         if(vf.getCurrentView().getId() == R.id.login_view_options){
             vf.setInAnimation(AnimationUtils.loadAnimation(LoginActivity.this, R.anim.slide_in_next));
             vf.setOutAnimation(AnimationUtils.loadAnimation(LoginActivity.this, R.anim.slide_out_next));
@@ -368,7 +367,7 @@ public class LoginActivity extends Activity {
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event)  {
         if (keyCode == KeyEvent.KEYCODE_BACK && event.getRepeatCount() == 0) {
-            ViewFlipper vf = ((ViewFlipper)findViewById(R.id.login_view_flipper));
+            SafeViewFlipper vf = ((SafeViewFlipper)findViewById(R.id.login_view_flipper));
             if(vf.getCurrentView().getId() == R.id.login_view_editables){
                 showPrevious();
                 return true;

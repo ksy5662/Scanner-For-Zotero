@@ -3,7 +3,7 @@
 	android:id="@+id/pending_item_row" android:layout_width="match_parent"
 	android:layout_height="wrap_content">
 
-    <ViewFlipper android:id="@+id/pending_item_img"
+    <org.ale.scanner.zotero.SafeViewFlipper android:id="@+id/pending_item_img"
         android:layout_width="wrap_content" android:layout_height="wrap_content"
         android:layout_centerVertical="true">
 	<ProgressBar android:id="@+id/pending_item_progress_indef"
@@ -12,7 +12,7 @@
 	<ImageView android:src="@drawable/ic_menu_logout" 
 		       android:layout_width="match_parent"
 		       android:layout_height="match_parent"/>
-    </ViewFlipper>
+    </org.ale.scanner.zotero.SafeViewFlipper>
 
 	<TextView android:id="@+id/pending_item_id"
 		android:layout_toRightOf="@+id/pending_item_img"

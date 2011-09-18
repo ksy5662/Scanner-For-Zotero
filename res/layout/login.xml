@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<org.ale.scanner.zotero.WorkaroundViewFlipper xmlns:android="http://schemas.android.com/apk/res/android"
+<org.ale.scanner.zotero.SafeViewFlipper xmlns:android="http://schemas.android.com/apk/res/android"
 	android:id="@+id/login_view_flipper"
 	android:layout_height="match_parent"
 	android:layout_width="match_parent">
@@ -114,4 +114,4 @@
 	</ScrollView>
 
 	<View android:layout_width="0dp" android:layout_height="0dp"/>
-</org.ale.scanner.zotero.WorkaroundViewFlipper>
+</org.ale.scanner.zotero.SafeViewFlipper>
