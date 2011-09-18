@@ -68,6 +68,8 @@ public class ZoteroAPIClient {
 
     private static final String HDR_WRITE_TOKEN = "X-Zotero-Write-Token";
 
+    public static final int MAX_UPLOAD_CNT = 50;
+
     public static final Integer UPLOADING =  new Integer(R.string.uploading);
     public static final Integer FAILURE_REASON_NETWORK = new Integer(R.string.failure_reason_network);
     public static final Integer FAILURE_REASON_SERV_ERR = new Integer(R.string.failure_reason_serv_err);
@@ -97,10 +99,13 @@ public class ZoteroAPIClient {
     }
 
     public void addItems(JSONObject items, int[] rows, int userOrGroupId)
-            throws UnsupportedEncodingException {
+            throws UnsupportedEncodingException, IllegalArgumentException {
         // POST https://apis.zotero.org/users/<userid>/items
 
-        // TODO: Allow no more than 50 items at a time
+        if(rows.length > ZoteroAPIClient.MAX_UPLOAD_CNT) {
+            throw new IllegalArgumentException("Maximum upload size exceeded");
+        }
+
         APIRequest r = newRequest();
         r.setHttpMethod(APIRequest.POST);
 

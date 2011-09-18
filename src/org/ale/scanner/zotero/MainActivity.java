@@ -428,10 +428,15 @@ public class MainActivity extends Activity {
     }
 
     public void bibFetchSuccess(final String isbn, final JSONObject info){
+        if(!mPendingAdapter.hasItem(isbn)){
+            // Item was deleted while pending
+            return;
+        }
         BibItem item = new BibItem(BibItem.TYPE_BOOK, info, mAccount.getDbId());
         mPendingAdapter.remove(isbn);
-        if(mPendingAdapter.getCount() == 0)
+        if(mPendingAdapter.getCount() == 0) {
             mPendingList.setVisibility(View.GONE);
+        }
         mItemAdapter.addItem(item);
         redrawPendingList();
     }
@@ -730,19 +735,34 @@ public class MainActivity extends Activity {
                         Toast.LENGTH_LONG).show();
                 return;
             }
-            int[] rows = new int[checked.length];
+
+            int dest = (mSelectedGroup == Group.GROUP_LIBRARY) ?
+                    Integer.parseInt(mAccount.getUid()) : mSelectedGroup;
+
+            int[] rows = new int[Math.min(checked.length, ZoteroAPIClient.MAX_UPLOAD_CNT)];
             JSONObject items = new JSONObject();
             try {
                 items.put("items", new JSONArray());
+                int row_indx = 0;
                 for(int b=0; b<checked.length; b++){
                     BibItem bib = (BibItem)mItemAdapter.getGroup(checked[b]);
-                    rows[b] = bib.getId();
+                    rows[row_indx] = bib.getId();
                     items.accumulate("items", bib.getSelectedInfo());
+                    row_indx++;
+                    if(row_indx == ZoteroAPIClient.MAX_UPLOAD_CNT) {
+                        // Upload the batch
+                        mZAPI.addItems(items, rows, dest);
+                        showUploadInProgress();
+                        row_indx = 0;
+                        items = new JSONObject();
+                    }
                 }
-                int dest = (mSelectedGroup == Group.GROUP_LIBRARY) ?
-                        Integer.parseInt(mAccount.getUid()) : mSelectedGroup;
-                mZAPI.addItems(items, rows, dest);
-                showUploadInProgress();
+                // As long as the batch size isn't perfectly divisible by 50, we
+                // need to upload the remaining items
+                if (checked.length % 50 != 0) {
+                    mZAPI.addItems(items, rows, dest);
+                    showUploadInProgress();
+                }
             } catch (JSONException e) {
                 // TODO Prompt about failure
                 e.printStackTrace();
