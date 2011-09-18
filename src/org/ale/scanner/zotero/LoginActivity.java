@@ -68,7 +68,7 @@ public class LoginActivity extends Activity {
 
     private boolean mRememberMe;
 
-    private boolean mParentPaused = false;
+    private boolean mPaused = false;
 
     private Cursor mAcctCursor = null;
 
@@ -123,6 +123,8 @@ public class LoginActivity extends Activity {
     @Override
     public void onResume(){
         super.onResume();
+        mPaused = false;
+
         if(mLoggedIn){ // Might still be logged in from last session
             SafeViewFlipper vf = (SafeViewFlipper)findViewById(R.id.login_view_flipper);
             vf.setDisplayedChild(2);
@@ -154,7 +156,7 @@ public class LoginActivity extends Activity {
             mAlertDialog.dismiss();
             mAlertDialog = null;
         }
-        mParentPaused = true;
+        mPaused = true;
     }
 
     @Override
@@ -167,7 +169,7 @@ public class LoginActivity extends Activity {
 
     private void doLogin(){ 
         // mAcctCursor MUST be open before this is called
-        if(mParentPaused) {
+        if(mPaused) {
             return;
         }
         extractCredentials();
@@ -450,8 +452,6 @@ public class LoginActivity extends Activity {
             case R.id.login_cancel:
                 setUserAndKey("", "", "");
                 break;
-
-            //TODO: case R.id.login_openid:
             }
         }
     };

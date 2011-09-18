@@ -22,12 +22,14 @@ import java.util.ArrayList;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
+import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Message;
+import android.text.Html;
 import android.text.TextUtils;
-import android.util.Log;
+import android.text.method.LinkMovementMethod;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -35,7 +37,7 @@ import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.Toast;
+import android.widget.TextView;
 
 public class GetApiKeyActivity extends Activity {
     public static final String CLASS_TAG = GetApiKeyActivity.class.getCanonicalName();
@@ -46,9 +48,20 @@ public class GetApiKeyActivity extends Activity {
         "(function tostr(table) { " +
             "var res = []; " +
             "for(var i=1, len = table.rows.length; i < len; i++) { " +
-                "res.push(table.rows[i].cells[0].innerHTML + '|' + table.rows[i].cells[2].childNodes[0]); " +
+                "res.push(table.rows[i].cells[0].innerHTML + '|' + " +
+                "table.rows[i].cells[2].childNodes[0]); " +
             "} return res; })" +
         "(document.getElementById('api-keys-table')).join(','));";
+
+    private static final String JS_SCROLL =
+        "javascript:window.scrollTo" +
+                    "(0, document.getElementById('content').offsetTop);";
+
+    private static final String JS_FOCUS_UID = 
+        "javascript:document.getElementById('username').focus()";
+
+    private static final String JS_CHECK_WRITE = 
+        "javascript:document.getElementById('write_access').checked=true";
 
     /* Intent extras */
     public static final String ACCOUNT = "ACCOUNT";
@@ -60,12 +73,17 @@ public class GetApiKeyActivity extends Activity {
     public static final String RECREATE_LOGIN = "RELOG";
 
     /* Zotero URLs */
-    public static final String URL_LOGIN = "zotero.org/user/login/";
-    public static final String URL_KEYS = "zotero.org/settings/keys";
+    public static final String URL_PROTO = "https://";
+    public static final String URL_HOST = "zotero.org";
+    public static final String URL_PATH_LOGIN = "/user/login";
+    public static final String URL_PATH_LOGOUT = "/user/logout";
+    public static final String URL_PATH_LOSTPASS = "/user/lostpassword";
+    public static final String URL_PATH_KEYS = "/settings/keys";
+    public static final String URL_PATH_REGISTER = "/user/register";
+    public static final String URL_PATH_EDIT_KEY = "/settings/keys/edit";
+    public static final String URL_PATH_NEW_KEY = "/settings/keys/new";
 
     /* State */
-    private boolean mLoggedIn = false;
-
     protected ArrayList<String> mFoundNames;
     protected ArrayList<String> mFoundIDs;
     protected ArrayList<String> mFoundKeys;
@@ -83,12 +101,14 @@ public class GetApiKeyActivity extends Activity {
            mFoundNames = state.getStringArrayList(RECREATE_FOUND_NAMES);
            mFoundIDs = state.getStringArrayList(RECREATE_FOUND_IDS);
            mFoundKeys = state.getStringArrayList(RECREATE_FOUND_KEYS);
-           mLoggedIn = state.getBoolean(RECREATE_LOGIN);
         }
 
         mProgressDialog = new ProgressDialog(this);
         mProgressDialog.setProgressStyle(ProgressDialog.STYLE_HORIZONTAL);
         mProgressDialog.setCancelable(false);
+
+        TextView help = (TextView) findViewById(R.id.help_text);
+        help.setMovementMethod(LinkMovementMethod.getInstance());
 
         WebView wv = (WebView) findViewById(R.id.webView);
         wv.setWebViewClient(getWebViewClient());
@@ -99,11 +119,7 @@ public class GetApiKeyActivity extends Activity {
         settings.setJavaScriptEnabled(true);
         settings.setBlockNetworkImage(true);
 
-        if(!mLoggedIn){
-            wv.loadUrl("https://"+URL_LOGIN);
-        }else{
-            wv.loadUrl("https://"+URL_KEYS);
-        }
+        wv.loadUrl(URL_PROTO+URL_HOST+URL_PATH_LOGIN);
     }
 
     @Override
@@ -147,7 +163,32 @@ public class GetApiKeyActivity extends Activity {
         outState.putStringArrayList(RECREATE_FOUND_NAMES, mFoundNames);
         outState.putStringArrayList(RECREATE_FOUND_IDS, mFoundIDs);
         outState.putStringArrayList(RECREATE_FOUND_KEYS, mFoundKeys);
-        outState.putBoolean(RECREATE_LOGIN, mLoggedIn);
+    }
+
+    @Override
+    public void onBackPressed() {
+        WebView wv = (WebView) findViewById(R.id.webView);
+        Uri target = Uri.parse(wv.getUrl());
+
+        String path = target.getPath();
+        boolean isEditKey = path.startsWith(URL_PATH_EDIT_KEY);
+        boolean isNewKey = path.startsWith(URL_PATH_NEW_KEY);
+        if(isEditKey || isNewKey){
+            wv.goBack();
+        }else{
+            super.onBackPressed();
+        }
+
+    }
+
+    @Override
+    public void onNewIntent(Intent intent){
+        Uri uri = intent.getData();
+        String scheme = uri.getScheme();
+        String toLoad = uri.toString();
+        toLoad = toLoad.replace(scheme, "https");
+        WebView wv = (WebView) findViewById(R.id.webView);
+        wv.loadUrl(toLoad);
     }
 
     /* Options menu -- entirely for SSL at the moment */
@@ -169,26 +210,36 @@ public class GetApiKeyActivity extends Activity {
 
     /* Web view and web chrome client initialization */
     private WebViewClient getWebViewClient(){
-        final GetApiKeyActivity parent = this;
-
         return new WebViewClient() {
             @Override
             public boolean shouldOverrideUrlLoading(WebView view, String url){
-                boolean isLoginPage = url.indexOf(URL_LOGIN) > 0;
-                boolean isKeyPage = url.indexOf(URL_KEYS) > 0;
-                boolean isZotero = url.indexOf("zotero.org") > 0;
+                Uri target = Uri.parse(url);
 
-                if(!isZotero) { // Keep them from leaving the Zotero site.
-                    Toast.makeText(parent,
-                            "This browser session is restricted to Zotero.org",
-                            Toast.LENGTH_LONG).show();
+                // Check if we're on zotero.org (or a subdomain like www.)
+                boolean isZotero = target.getHost().endsWith("zotero.org");
+                if(!isZotero) {
+                    // XXX: Allows user to go to arbitrary pages - we need this
+                    // for OpenID, but perhaps we could check if they clicked
+                    // the OpenID Login button before allowing them to leave
+                    // zotero.org
+                    return false;
+                }
+                
+                // Check if the page is white-listed
+                String path = target.getPath();
+                boolean isWhiteListed = false;
+                isWhiteListed |= path.startsWith(URL_PATH_LOGIN);
+                isWhiteListed |= path.startsWith(URL_PATH_LOGOUT); 
+                isWhiteListed |= path.startsWith(URL_PATH_KEYS);
+                // Edit and new are covered by URL_PATH_KEYS
+                isWhiteListed |= path.startsWith(URL_PATH_REGISTER);
+                isWhiteListed |= path.startsWith(URL_PATH_LOSTPASS);
+
+                // If we're not on a white-listed page, force the user
+                // to URL_PATH_KEYS
+                if (!isWhiteListed){
+                    view.loadUrl(URL_PROTO + URL_HOST + URL_PATH_KEYS);
                     return true;
-                }else if(!mLoggedIn && !isLoginPage){
-                    mLoggedIn = true;
-                    if(!isKeyPage) {
-                        view.loadUrl("https://"+URL_KEYS);
-                        return true;
-                    }
                 }
                 return false;
             }
@@ -196,13 +247,35 @@ public class GetApiKeyActivity extends Activity {
             @Override
             public void onPageFinished(WebView view, String url)  
             {
-                if(url.indexOf(URL_KEYS) > 0) {
-                    view.loadUrl("javascript:window.scrollTo(0, document.getElementById('content').offsetTop);");
-                    // XXX: condition causes js to load on key edit page as well  
+                TextView help = (TextView)findViewById(R.id.help_text);
+                help.setText("");
+
+                Uri target = Uri.parse(url);
+
+                String path = target.getPath();
+                boolean isKeyList = path.startsWith(URL_PATH_KEYS);
+                boolean isEditKey = path.startsWith(URL_PATH_EDIT_KEY);
+                boolean isNewKey = path.startsWith(URL_PATH_NEW_KEY);
+
+                if (isEditKey || isNewKey) {
+                    // Editing or creating a key
+                    help.setText(Html.fromHtml(getString(R.string.help_edit_key)));
+
+                    // Scroll down and check write access box
+                    view.loadUrl(JS_SCROLL);
+                    view.loadUrl(JS_CHECK_WRITE);
+                }else if(isKeyList){
+                    // Looking at list of keys
+                    help.setText(Html.fromHtml(getString(R.string.help_choose_key)));
+
+                    // Scroll down and scrape page for available keys
+                    view.loadUrl(JS_SCROLL);
                     view.loadUrl(JS_KEY_SCRAPE);
-                }else if(url.indexOf(URL_LOGIN) > 0) {
-                    mLoggedIn = false;
-                    view.loadUrl("javascript:document.getElementById('username').focus()");
+                }else if (path.startsWith(URL_PATH_LOGIN)) {
+                    help.setText(Html.fromHtml(getString(R.string.help_login)));
+
+                    // Scroll down to login box
+                    view.loadUrl(JS_FOCUS_UID);
                 }
             }
         };
@@ -217,6 +290,7 @@ public class GetApiKeyActivity extends Activity {
                 if(!progressDialog.isShowing()){
                     progressDialog.show();
                 }else if(progress == 100){
+                    progressDialog.setProgress(0);
                     progressDialog.dismiss();
                 }
             }
