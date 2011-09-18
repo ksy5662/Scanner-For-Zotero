@@ -62,7 +62,10 @@ public class ManageAccountsActivity extends ListActivity {
     }
 
     protected void updateList(){
-        mCursor = getContentResolver().query(Database.ACCOUNT_URI, null, null, null, null);
+        String[] projection = new String[] { Account._ID,
+                Account.COL_ALIAS, Account.COL_UID, Account.COL_KEY };
+        mCursor = getContentResolver().query(Database.ACCOUNT_URI, projection,
+                null, null, Account._ID + " ASC");
         startManagingCursor(mCursor);
 
         if(mAdapter == null){
@@ -107,7 +110,10 @@ public class ManageAccountsActivity extends ListActivity {
                                         ManageAccountsActivity.this, orig, row);
             break;
         case R.id.ctx_delete:
+            String uid = c.getString(Database.ACCOUNT_UID_INDEX);
             Account.purgeAccount(getContentResolver(), row);
+            deleteFile(uid); // Delete the user's shared preferences file
+
             updateList();
             if(mAdapter.getCount() == 0){
                 Toast.makeText(ManageAccountsActivity.this, "No more accounts", Toast.LENGTH_LONG).show();
