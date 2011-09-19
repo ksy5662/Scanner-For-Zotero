@@ -49,7 +49,6 @@ import org.xml.sax.SAXException;
 
 import android.os.Bundle;
 import android.text.TextUtils;
-import android.util.Log;
 
 public class ZoteroAPIClient {
     //private static final String CLASS_TAG = ZoteroAPIClient.class.getCanonicalName();
@@ -212,7 +211,6 @@ public class ZoteroAPIClient {
           <access group="all" write="1"/>
           </key>
          */
-        Log.d("APIClient", resp);
         Document doc = ZoteroAPIClient.parseXML(resp);
         if(doc == null) return null;
 

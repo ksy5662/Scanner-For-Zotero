@@ -46,7 +46,6 @@ import android.database.Cursor;
 import android.os.Bundle;
 import android.os.Handler;
 import android.text.TextUtils;
-import android.util.Log;
 import android.util.SparseArray;
 import android.view.animation.Animation;
 import android.view.ContextMenu;
@@ -69,7 +68,7 @@ import android.widget.ExpandableListView.ExpandableListContextMenuInfo;
 
 public class MainActivity extends Activity {
 
-    private static final String CLASS_TAG = MainActivity.class.getCanonicalName();
+    //private static final String CLASS_TAG = MainActivity.class.getCanonicalName();
 
     private static final int RESULT_SCAN = 0;
     private static final int RESULT_EDIT = 1;
@@ -651,8 +650,6 @@ public class MainActivity extends Activity {
                     mItemAdapter.replaceItem(index, replacement);
                 }
                 break;
-            default:
-                Log.d(CLASS_TAG, "Scan error");
         }
     }
 
