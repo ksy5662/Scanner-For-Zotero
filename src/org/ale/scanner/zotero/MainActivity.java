@@ -117,7 +117,6 @@ public class MainActivity extends Activity {
     private int mUploadState;
 
     private SparseArray<PString> mGroups;
-    //private SparseParcelableArrayAdapter mCollectionAdapter;
     private int mSelectedGroup;
     private int mISBNService;
 

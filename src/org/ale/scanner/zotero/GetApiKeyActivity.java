@@ -30,6 +30,7 @@ import android.os.Message;
 import android.text.Html;
 import android.text.TextUtils;
 import android.text.method.LinkMovementMethod;
+import android.view.KeyEvent;
 import android.view.Menu;
 import android.view.MenuInflater;
 import android.view.MenuItem;
@@ -165,7 +166,18 @@ public class GetApiKeyActivity extends Activity {
         outState.putStringArrayList(RECREATE_FOUND_KEYS, mFoundKeys);
     }
 
-    @Override
+    public boolean onKeyDown(int keyCode, KeyEvent event)  {
+        if (android.os.Build.VERSION.SDK_INT < 5 // android.os.Build.VERSION_CODES.ECLAIR
+                && keyCode == KeyEvent.KEYCODE_BACK
+                && event.getRepeatCount() == 0) {
+            // Take care of calling this method on earlier versions of
+            // the platform where it doesn't exist.
+            onBackPressed();
+        }
+
+        return super.onKeyDown(keyCode, event);
+    }
+
     public void onBackPressed() {
         WebView wv = (WebView) findViewById(R.id.webView);
         Uri target = Uri.parse(wv.getUrl());
@@ -176,9 +188,8 @@ public class GetApiKeyActivity extends Activity {
         if(isEditKey || isNewKey){
             wv.goBack();
         }else{
-            super.onBackPressed();
+            finish();
         }
-
     }
 
     @Override

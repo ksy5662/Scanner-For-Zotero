@@ -292,7 +292,7 @@ public class ZoteroAPIClient {
         if(totalResults.getLength() == 0)
             return null;
 
-        String trStr = totalResults.item(0).getTextContent();
+        String trStr = totalResults.item(0).getFirstChild().getNodeValue();
         if(trStr == null || !TextUtils.isDigitsOnly(trStr))
             return null;
 
@@ -310,8 +310,8 @@ public class ZoteroAPIClient {
             NodeList ids = ((Element) entries.item(i)).getElementsByTagName("id");
             if(titles.getLength() != 1 || ids.getLength() != 1)
                 return null;
-            String title = titles.item(0).getTextContent();
-            String idUri = ids.item(0).getTextContent();
+            String title = titles.item(0).getFirstChild().getNodeValue();
+            String idUri = ids.item(0).getFirstChild().getNodeValue();
             if(title == null || idUri == null)
                 return null;
             int lastSeg = idUri.lastIndexOf("/");
@@ -383,7 +383,7 @@ public class ZoteroAPIClient {
         if(totalResults.getLength() == 0)
             return null;
 
-        String trStr = totalResults.item(0).getTextContent();
+        String trStr = totalResults.item(0).getFirstChild().getNodeValue();
         if(trStr == null || !TextUtils.isDigitsOnly(trStr))
             return null;
 
@@ -401,8 +401,8 @@ public class ZoteroAPIClient {
             NodeList ids = ((Element) entries.item(i)).getElementsByTagName("id");
             if(titles.getLength() != 1 || ids.getLength() != 1)
                 return null;
-            String title = titles.item(0).getTextContent();
-            String idUri = ids.item(0).getTextContent();
+            String title = titles.item(0).getFirstChild().getNodeValue();
+            String idUri = ids.item(0).getFirstChild().getNodeValue();
             if(title == null || idUri == null)
                 return null;
             int lastSeg = idUri.lastIndexOf("/");

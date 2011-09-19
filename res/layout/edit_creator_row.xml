@@ -1,34 +1,34 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
               android:orientation="vertical"
-              android:layout_width="match_parent"
+              android:layout_width="fill_parent"
               android:layout_height="wrap_content"
               android:layout_marginBottom="1dp">
 	<LinearLayout
 	  android:orientation="horizontal"
-	  android:layout_width="match_parent"
+	  android:layout_width="fill_parent"
 	  android:layout_height="wrap_content">
 		<Spinner android:layout_width="150dp"
 	             android:paddingLeft="5dp"
 			     android:layout_height="wrap_content"
 			     android:id="@+id/creator_type"/>
 
-		<EditText android:layout_width="match_parent"
-				  android:layout_height="match_parent"
+		<EditText android:layout_width="fill_parent"
+				  android:layout_height="fill_parent"
 				  android:id="@+id/creator" />
 	</LinearLayout>
 
 	<LinearLayout android:orientation="horizontal"
-			      android:layout_width="match_parent"
+			      android:layout_width="fill_parent"
 				  android:layout_height="wrap_content"
 				  android:paddingLeft="151dp">
-        <Button android:layout_width="match_parent"
+        <Button android:layout_width="fill_parent"
                 android:layout_height="wrap_content"
                 android:layout_weight="1"
                 android:id="@+id/rm_creator"
                 android:drawableTop="@drawable/ic_delete"
                 android:drawablePadding="0dp"/>
-	    <Button android:layout_width="match_parent"
+	    <Button android:layout_width="fill_parent"
 	            android:layout_height="wrap_content"
 	            android:layout_weight="1"
 	            android:id="@+id/add_creator"

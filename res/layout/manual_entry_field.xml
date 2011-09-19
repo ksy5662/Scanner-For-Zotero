@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-              android:layout_width="match_parent"
-              android:layout_height="match_parent"
+              android:layout_width="fill_parent"
+              android:layout_height="fill_parent"
               android:orientation="vertical">
 
-    <TextView android:layout_width="match_parent"
+    <TextView android:layout_width="fill_parent"
               android:layout_height="wrap_content"
               android:gravity="center"
               android:text="Leave off any trailing X's"
@@ -12,26 +12,26 @@
               android:textAppearance="?android:attr/textAppearanceSmall" />
 
 	<EditText android:id="@+id/edit_field"
-			  android:layout_width="match_parent"
+			  android:layout_width="fill_parent"
 			  android:layout_height="wrap_content"
 			  android:singleLine="true"
 			  android:inputType="number"
 			  android:digits="0123456789X">
 	</EditText>
 
-	<LinearLayout android:layout_width="match_parent"
-	              android:layout_height="match_parent"
+	<LinearLayout android:layout_width="fill_parent"
+	              android:layout_height="fill_parent"
 	              android:orientation="horizontal"
 	              android:paddingLeft="5dp"
 	              android:paddingRight="5dp">
 		<Button android:id="@+id/positive"
 		        android:text="@string/lookup"
-		        android:layout_width="match_parent"
+		        android:layout_width="fill_parent"
 			    android:layout_height="wrap_content"
 			    android:layout_weight="1"/>
 		<Button android:id="@+id/negative"
 		        android:text="@string/cancel"
-		        android:layout_width="match_parent"
+		        android:layout_width="fill_parent"
 			    android:layout_height="wrap_content"
 			    android:layout_weight="1"/>
     </LinearLayout>

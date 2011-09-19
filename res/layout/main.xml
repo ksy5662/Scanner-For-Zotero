@@ -1,20 +1,20 @@
 <?xml version="1.0" encoding="utf-8"?> 
 <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
                 android:id="@+id/s2z_home"
-                android:layout_height="match_parent"
-                android:layout_width="match_parent"
+                android:layout_height="fill_parent"
+                android:layout_width="fill_parent"
                 android:background="@color/s2z_light_blue">
 
     <Button android:text="Scan New Item"
             android:id="@+id/scan_isbn"
-            android:layout_width="match_parent" 
+            android:layout_width="fill_parent" 
             android:layout_height="75dp"
             android:layout_alignParentTop="true"
             android:background="@drawable/fancy_selector"
             style="@style/ScanButton" />
 
     <org.ale.scanner.zotero.SafeViewFlipper
-                 android:layout_width="match_parent"
+                 android:layout_width="fill_parent"
 		         android:layout_height="70dp"
 		         android:orientation="horizontal"
 		         android:id="@+id/upload_flipper"
@@ -22,11 +22,11 @@
 		         android:background="@color/s2z_light_blue">
         <Button android:text="Upload selected"
                 android:id="@+id/upload"
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"/>
+                android:layout_width="fill_parent"
+                android:layout_height="fill_parent"/>
 
-	    <LinearLayout android:layout_width="match_parent"
-	                  android:layout_height="match_parent"
+	    <LinearLayout android:layout_width="fill_parent"
+	                  android:layout_height="fill_parent"
 	                  android:id="@+id/upload_progress"
 	                  android:orientation="horizontal"
 	                  android:background="@drawable/upload_bar">
@@ -51,8 +51,8 @@
 						   android:layout_height="60dp"
 						   android:layout_gravity="center_vertical"
 						   android:background="#80505050"/>
-                <TextView android:layout_height="match_parent"
-                          android:layout_width="match_parent"
+                <TextView android:layout_height="fill_parent"
+                          android:layout_width="fill_parent"
                           android:id="@+id/upload_output"
                           android:gravity="center"
                           android:layout_weight="1"
@@ -63,12 +63,12 @@
 
 
             <!-- <Spinner android:id="@+id/upload_group"
-                     android:layout_height="match_parent"
-                     android:layout_width="match_parent" 
+                     android:layout_height="fill_parent"
+                     android:layout_width="fill_parent" 
                      android:layout_weight="1" /> -->
     <ExpandableListView android:id="@+id/bib_items"
                         android:layout_height="wrap_content"
-                        android:layout_width="match_parent"
+                        android:layout_width="fill_parent"
                         android:layout_above="@id/upload_flipper"
                         android:layout_below="@id/scan_isbn"
                         android:groupIndicator="@drawable/expander"
