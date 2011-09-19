@@ -80,7 +80,7 @@ public class WorldCatHandler extends APIHandler{
                 int status = WorldCatAPIClient.getStatus(jsonresp);
                 JSONObject tmpTrans = WorldCatAPIClient.translateJsonResponse(id, jsonresp);
                 boolean failed = (status != WorldCatAPIClient.STATUS_OK)
-                                    && (tmpTrans != null);
+                                    || (tmpTrans == null);
                 
                 Runnable toPost;
                 // Since that might have taken some time, check that the 
