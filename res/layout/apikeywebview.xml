@@ -13,7 +13,7 @@
                   android:layout_height="wrap_content"
                   android:orientation="vertical"
                   android:background="#FFF0F0F0"
-                  android:layout_alignParentTop="true">
+                  android:layout_alignParentBottom="true">
             <TextView android:id="@+id/help_text"
                   android:textColor="#FF000000"
                   android:textAppearance="?android:attr/textAppearanceMedium"

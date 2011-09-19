@@ -8,8 +8,8 @@
     <string name="save">Save</string>
     <string name="proceed">Proceed</string><string name="pref_userid">userid</string>
     <string name="pref_apikey">apikey</string><string name="pref_alias">alias</string><string name="pref_savedkeys">savedkeys</string><string name="pref_loggedin">logged_in</string><string name="pref_rememberme">rememberme</string>
-    <string name="redirect_title">Redirecting you to Zotero.org</string><string name="redirect">Log in and follow the instructions to create a new API key or select an existing key.\n\nNote: The selected key must have write access to your library or to at least one group.</string>
-    <string name="login_instructions">To use Scanner For Zotero you need to enter your Zotero user ID and API key. These are different from your username and password, and allow you to finely control the level of access Scanner For Zotero has to your library.</string>
+    <string name="redirect_title">Redirecting you to Zotero.org</string><string name="redirect">Please log in and follow the instructions at the bottom of the screen.</string>
+    <string name="login_instructions">To use Scanner For Zotero you need to enter a Zotero user ID and API key. These are different from your username and password, and allow you to finely control the level of access Scanner For Zotero has to your library.</string>
     <string name="zxing_pkg">com.google.zxing.client.android</string>
     <string name="zxing_uri">market://search?q=pname:com.google.zxing.client.android</string>
     <string name="zxing_intent_scan">com.google.zxing.client.android.SCAN</string>
@@ -31,7 +31,8 @@
     <string name="failure_reason_bad_data">Malformed request</string>
     <string name="failure_reason_network">No connection</string>
     <string name="uploading">Uploading...</string>
-    <string name="help_login">Please log in, then go to &lt;a href=&quot;org.ale.scanner.zotero://zotero.org/settings/keys&quot;&gt;API Keys&lt;/a&gt;</string>
+    <string name="help_login">Please log in</string>
+    <string name="help_external">When you are done, return to &lt;a href=&quot;org.ale.scanner.zotero://zotero.org/settings/keys&quot;&gt;API Keys&lt;/a&gt;</string>
     <string name="help_edit_key">Your ScannerForZotero key must have write access to your library or at least one group.</string>
     <string name="help_choose_key">Please &lt;a href=&quot;org.ale.scanner.zotero://zotero.org/settings/keys&quot;&gt;select a key from this list&lt;/a&gt;, or &lt;a href=&quot;org.ale.scanner.zotero://zotero.org/settings/keys/new&quot;&gt;create a new key&lt;/a&gt;</string>
     

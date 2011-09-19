@@ -276,6 +276,8 @@ public class GetApiKeyActivity extends Activity {
 
                     // Scroll down to login box
                     view.loadUrl(JS_FOCUS_UID);
+                }else{
+                    help.setText(Html.fromHtml(getString(R.string.help_external)));
                 }
             }
         };
