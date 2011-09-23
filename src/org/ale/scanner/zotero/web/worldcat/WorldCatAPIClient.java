@@ -74,11 +74,19 @@ public class WorldCatAPIClient {
 
     public static JSONObject strToJSON(String resp){
         try{
+            // Try to create a JSONObject from resp
             return new JSONObject(resp);
         }catch(JSONException e){
-            return null;
+            // If that fails, try to indicate that there was an error
+            try{
+                return new JSONObject().put("stat", "badResponse"); 
+            }catch(JSONException e2){
+                // Or just return an empty JSONObject
+                return new JSONObject();
+            }
         }
     }
+
     public static int getStatus(JSONObject resp){
         try {
             String status = resp.getString("stat");

@@ -78,10 +78,14 @@ public class WorldCatHandler extends APIHandler{
             public void run(){
                 JSONObject jsonresp = WorldCatAPIClient.strToJSON(resp);
                 int status = WorldCatAPIClient.getStatus(jsonresp);
-                JSONObject tmpTrans = WorldCatAPIClient.translateJsonResponse(id, jsonresp);
-                boolean failed = (status != WorldCatAPIClient.STATUS_OK)
-                                    || (tmpTrans == null);
-                
+                boolean failed = (status != WorldCatAPIClient.STATUS_OK);
+
+                JSONObject tmpTrans = null;
+                if(!failed){
+                    tmpTrans = WorldCatAPIClient.translateJsonResponse(id, jsonresp);
+                    failed |= (tmpTrans == null);
+                }
+
                 Runnable toPost;
                 // Since that might have taken some time, check that the 
                 // activity is still around and post the BibInfo.
