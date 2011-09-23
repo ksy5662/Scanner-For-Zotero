@@ -60,21 +60,6 @@ public class BibItemDBHandler extends Handler {
 
     @SuppressWarnings("unchecked")
     public void handleMessage(Message msg){
-        /*if(mAdapter == null){
-            switch(msg.what) {
-            case BibItemListAdapter.FOUND_SAVED_ITEMS:
-                mToInsert.addAll((ArrayList<BibItem>) msg.obj);
-                break;
-            case BibItemListAdapter.INSERTED_ITEM:
-                mToInsert.add((BibItem) msg.obj);
-                break;
-            case BibItemListAdapter.REMOVED_ITEM:
-                mToRemove.add((BibItem) msg.obj);
-                break;
-            // Don't worry about replacements in this case since the activity
-            // will load the changes from the database when it is recreated.
-            }
-        }else{*/
         if(mAdapter != null){
             switch(msg.what) {
             case BibItemListAdapter.FOUND_SAVED_ITEMS:
