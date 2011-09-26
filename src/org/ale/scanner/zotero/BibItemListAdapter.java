@@ -94,7 +94,9 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
                     ArrayList<BibItem> toadd = new ArrayList<BibItem>(c.getCount());
                     c.moveToFirst();
                     while(!c.isAfterLast()){
-                        toadd.add(BibItem.fromCursor(c));
+                        BibItem fc = BibItem.fromCursor(c);
+                        if(fc != null)
+                            toadd.add(fc);
                         c.moveToNext();
                     }
                     mHandler.sendMessage(Message.obtain(mHandler, 

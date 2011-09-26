@@ -93,8 +93,7 @@ public class BibItem implements BaseColumns, Parcelable {
         try {
             data = new JSONObject(json);
         } catch (JSONException e) {
-            // XXX: Unparsable data in db, remove it and return null.
-            data = new JSONObject();
+            return null;
         }
         
         return new BibItem(id,date,type,data,acct);
