@@ -195,7 +195,7 @@ public class MainActivity extends Activity {
                 AnimationUtils.loadAnimation(MainActivity.this, R.anim.slide_in_previous),
                 AnimationUtils.loadAnimation(MainActivity.this, R.anim.slide_out_previous)
                 };
-        
+
         // Upload Bar
         findViewById(R.id.upload_progress).setOnClickListener(dismissUploadStatus);
     }
@@ -205,7 +205,9 @@ public class MainActivity extends Activity {
         super.onPause();
 
         APIHandler.globalUnbindActivity();
-        BibItemDBHandler.getInstance().unbindAdapter();
+        BibItemDBHandler bibdb = BibItemDBHandler.getInstance();
+        bibdb.unbindAdapter();
+        bibdb.removeMessages(BibItemListAdapter.FOUND_SAVED_ITEMS);
 
         if(mAlertDialog != null){
             mAlertDialog.dismiss();
@@ -227,9 +229,9 @@ public class MainActivity extends Activity {
         APIHandler.globalBindActivity(MainActivity.this);
         BibItemDBHandler.getInstance().bindAdapter(mItemAdapter);
 
-        // Try filling the item list from the database if it is currently
-        // empty. This is an easy workaround against double-loading the list,
-        // or failing to load it at all.
+        // FREE BEER: This is an ugly hack to prevent double-loading the
+        // list, or failing to load it at all. I don't feel like coming up with
+        // something more clever, so if you fix it I'll buy you a beer.
         if(mItemAdapter.getGroupCount() == 0) {
             mItemAdapter.fillFromDatabase(mAccount.getDbId());
         }
@@ -621,8 +623,8 @@ public class MainActivity extends Activity {
             AdapterContextMenuInfo rinfo = (AdapterContextMenuInfo) item.getMenuInfo();
             String ident = mPendingAdapter.getItem(rinfo.position);
             if(mPendingAdapter.getStatus(ident) != PendingListAdapter.STATUS_LOADING){
+                mPendingAdapter.remove(ident);
                 lookupISBN(ident);
-                mPendingAdapter.setStatus(ident, PendingListAdapter.STATUS_LOADING);
             }
         default:
             return super.onContextItemSelected(item);
@@ -642,11 +644,9 @@ public class MainActivity extends Activity {
             case RESULT_EDIT:
                 if (resultCode == RESULT_OK) {
                     Bundle extras = intent.getExtras();
-                    int index = extras
-                        .getInt(EditItemActivity.INTENT_EXTRA_INDEX);
                     BibItem replacement = extras
                         .getParcelable(EditItemActivity.INTENT_EXTRA_BIBITEM);
-                    mItemAdapter.replaceItem(index, replacement);
+                    mItemAdapter.replaceItem(replacement);
                 }
                 break;
         }

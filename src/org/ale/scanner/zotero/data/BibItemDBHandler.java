@@ -24,6 +24,13 @@ import org.ale.scanner.zotero.BibItemListAdapter;
 import android.os.Handler;
 import android.os.Message;
 
+/**
+ * BibItemDBHandler is for those cases where a database operation is made, the
+ * parent activity which initiated it is paused (orientation change, etc),
+ * and the parent activity is resumed before the db operation is finished.
+ *
+ * This happens a lot.
+ */
 public class BibItemDBHandler extends Handler {
 
     public static final int BIBITEM_ACTION_ID = 1000;
@@ -38,20 +45,10 @@ public class BibItemDBHandler extends Handler {
 
     private BibItemListAdapter mAdapter = null;
 
-    private ArrayList<BibItem> mToInsert = new ArrayList<BibItem>();
-
-    private ArrayList<BibItem> mToRemove = new ArrayList<BibItem>();
-
     public void bindAdapter(BibItemListAdapter adapter){
         if(mAdapter != null || adapter == null)
             return;
         mAdapter = adapter;
-        for(BibItem b : mToInsert)
-            mAdapter.finishAddItem(b);
-        for(BibItem b : mToRemove)
-            mAdapter.finishDeleteItem(b);
-        mToInsert.clear();
-        mToRemove.clear();
     }
 
     public void unbindAdapter(){
@@ -72,10 +69,9 @@ public class BibItemDBHandler extends Handler {
                 mAdapter.finishDeleteItem((BibItem) msg.obj);
                 break;
             case BibItemListAdapter.REPLACED_ITEM:
-                mAdapter.finishReplaceItem(msg.arg1, (BibItem) msg.obj);
+                mAdapter.finishReplaceItem((BibItem) msg.obj);
                 break;
             }
         }
-        //}
     }
 }

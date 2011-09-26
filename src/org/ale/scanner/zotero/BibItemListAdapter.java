@@ -89,7 +89,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
                                            null, 
                                            BibItem.COL_ACCT+"=?",
                                            new String[] {String.valueOf(acctId)},
-                                           BibItem.COL_DATE + " ASC");
+                                           BibItem.COL_DATE + " DESC");
                 if(c.getCount() > 0) {
                     ArrayList<BibItem> toadd = new ArrayList<BibItem>(c.getCount());
                     c.moveToFirst();
@@ -130,16 +130,16 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         }).start();
     }
 
-    public void replaceItem(final int indx, final BibItem replacement){
+    public void replaceItem(final BibItem replacement){
         final ContentResolver cr = mContext.getContentResolver();
         new Thread(new Runnable() {
             public void run(){
                 replacement.writeToDB(cr);
                 mHandler.sendMessage(Message.obtain(mHandler,
-                       BibItemListAdapter.REPLACED_ITEM, indx, 0, replacement));
+                       BibItemListAdapter.REPLACED_ITEM, replacement));
             }
         }).start();
-        finishReplaceItem(indx, replacement);
+        //finishReplaceItem(replacement);
     }
 
     public void deleteItemsWithRowIds(int[] dbid){
@@ -164,8 +164,19 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
     }
 
     public void finishAddItem(BibItem item){
-        mItems.add(item);
-        mAdapters.add(new BibDetailJSONAdapter(
+        // If the initial write of an item occurs during an orientation change,
+        // it's possible that the write succeeds, and that the new activity loads
+        // its bibitem list from the DB before finishAddItem is called. In this
+        // case, while the database only contains one copy of the bibitem, the
+        // list on screen will momentarily (until the next pause) display two.
+        // The bug is avoided here by comparing the ID of the item to add and
+        // that of the top item on the list, and ignoring the add if they match.
+        if(mItems.get(0).getId() == item.getId())
+            return;
+
+        shiftUpSelections(0);
+        mItems.add(0, item);
+        mAdapters.add(0, new BibDetailJSONAdapter(
                               mContext, item.getSelectedInfo()));
         notifyDataSetChanged();
     }
@@ -189,14 +200,16 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         notifyDataSetChanged();
     }
 
-    public void finishReplaceItem(int indx, BibItem item){
-        if(indx < 0 || indx >= mItems.size())
-            return;
-
-        mItems.set(indx, item);
-        mAdapters.set(indx, 
-             new BibDetailJSONAdapter(mContext, item.getSelectedInfo()));
-        notifyDataSetChanged();
+    public void finishReplaceItem(BibItem item){
+        for(int indx=0; indx<mItems.size(); indx++){
+            if(mItems.get(indx).getId() == item.getId()){
+                mItems.set(indx, item);
+                mAdapters.set(indx, 
+                     new BibDetailJSONAdapter(mContext, item.getSelectedInfo()));
+                notifyDataSetChanged();
+                break;
+            }
+        }
     }
 
     @Override

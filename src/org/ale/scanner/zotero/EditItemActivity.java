@@ -52,16 +52,15 @@ public class EditItemActivity extends Activity {
 
     private BibItem mTargetItem;
     private BibItem mWorkingItem;
-    private int mIndex;
 
     protected ArrayAdapter<String> mSpinnerAdapter;
 
     private LayoutInflater mInflater;
     private Resources mResources;
 
-    private LinearLayout mCreatorList; // XXX; pretty ugly hack.
-    private LinearLayout mNoteList; // XXX; pretty ugly hack.
-    private LinearLayout mTagList; // XXX; pretty ugly hack.
+    private LinearLayout mCreatorList;
+    private LinearLayout mNoteList;
+    private LinearLayout mTagList;
 
     @Override
     public void onCreate(Bundle state){
@@ -69,7 +68,6 @@ public class EditItemActivity extends Activity {
         setContentView(R.layout.edit);
 
         Bundle extras = getIntent().getExtras();
-        mIndex = extras.getInt(INTENT_EXTRA_INDEX);
         if(state != null){
             mTargetItem = state.getParcelable(RC_ORIG_BIBITEM);
             mWorkingItem = state.getParcelable(RC_WORKING_BIBITEM);
@@ -358,7 +356,6 @@ public class EditItemActivity extends Activity {
                     //Toast.makeText(this, "Could not save changes", Toast.LENGTH_LONG).show();
                 }
                 Intent result = new Intent();
-                result.putExtra(EditItemActivity.INTENT_EXTRA_INDEX, mIndex);
                 result.putExtra(EditItemActivity.INTENT_EXTRA_BIBITEM, mWorkingItem);
                 setResult(Activity.RESULT_OK, result);
                 finish();
