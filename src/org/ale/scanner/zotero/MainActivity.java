@@ -672,7 +672,7 @@ public class MainActivity extends Activity {
             lookupISBN(content);
             break;
         case(Util.SCAN_PARSE_ISSN):
-            mPendingAdapter.setStatus(content, PendingListAdapter.STATUS_UNKNOWN_TYPE);
+            lookupISSN(content);
             break;
         default:
             mPendingAdapter.setStatus(content, PendingListAdapter.STATUS_UNKNOWN_TYPE);
@@ -691,6 +691,18 @@ public class MainActivity extends Activity {
             break;
         }
     }
+
+    protected void lookupISSN(String issn){
+        //switch(mISBNService){
+        //case SERVICE_GOOGLE:
+        //    mGoogleBooksAPI.isbnLookup(isbn);
+        //    break;
+        //case SERVICE_WORLDCAT:
+        mWorldCatAPI.issnLookup(issn);
+        //    break;
+        //}
+    }
+
 
     protected void setISBNService(int sid) {
         mISBNService = sid;

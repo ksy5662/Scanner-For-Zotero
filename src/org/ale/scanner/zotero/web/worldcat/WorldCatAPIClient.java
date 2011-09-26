@@ -32,11 +32,17 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import android.os.Bundle;
+import android.util.Log;
 
 public class WorldCatAPIClient {
 
-    public static final String BOOK_SEARCH_BASE = "http://xisbn.worldcat.org/webservices/xid/isbn/";
-    public static final String BOOK_SEARCH_QUERY = "?method=getMetadata&fl=*&format=json&count=1";
+    public static final String
+            XISBN_SEARCH = "http://xisbn.worldcat.org/webservices/xid/isbn/%s"+
+                            "?method=getMetadata&fl=*&format=json&count=1";
+
+    public static final String
+            XISSN_SEARCH = "http://xissn.worldcat.org/webservices/xid/issn/%s"+
+                            "?method=getMetadata&fl=*&format=json&count=1";
 
     public static final String EXTRA_ISBN = "ISBN";
 
@@ -64,9 +70,20 @@ public class WorldCatAPIClient {
     public void isbnLookup(String isbn) {
         APIRequest r = newRequest();
         r.setHttpMethod(APIRequest.GET);
-        r.setURI(URI.create(BOOK_SEARCH_BASE+isbn+BOOK_SEARCH_QUERY));
+        r.setURI(URI.create(String.format(XISBN_SEARCH, isbn)));
         Bundle extra = new Bundle();
         extra.putString(WorldCatAPIClient.EXTRA_ISBN, isbn);
+        r.setExtra(extra);
+
+        mRequestQueue.enqueue(r);
+    }
+
+    public void issnLookup(String issn) {
+        APIRequest r = newRequest();
+        r.setHttpMethod(APIRequest.GET);
+        r.setURI(URI.create(String.format(XISSN_SEARCH, issn)));
+        Bundle extra = new Bundle();
+        extra.putString(WorldCatAPIClient.EXTRA_ISBN, issn);
         r.setExtra(extra);
 
         mRequestQueue.enqueue(r);
@@ -104,8 +121,17 @@ public class WorldCatAPIClient {
         }
     }
 
-    public static JSONObject translateJsonResponse(String isbn, JSONObject resp){
-        /* Example response:
+    public static JSONObject translateJsonResponse(String ident, JSONObject resp){
+        if(resp.has("list")){
+            return translateISBNResponse(ident, resp.optJSONArray("list"));
+        }else if(resp.has("group")){
+            return translateISSNResponse(ident, resp.optJSONArray("group"));
+        }
+        return null;
+    }
+
+    private static JSONObject translateISBNResponse(String isbn, JSONArray list){
+        /* Example ISBN response:
             { "stat":"ok",
              "list":[{
                 "url":["http://www.worldcat.org/oclc/177669176?referer=xid"],
@@ -124,7 +150,7 @@ public class WorldCatAPIClient {
 
         JSONObject translation = new JSONObject();
         try {
-            JSONObject oItem = resp.getJSONArray("list").getJSONObject(0);
+            JSONObject oItem = list.getJSONObject(0);
 
             JSONObject creator = new JSONObject()
                 .put(CreatorType.type, "author")
@@ -141,6 +167,41 @@ public class WorldCatAPIClient {
                 .put(ItemField.date, oItem.optString("year"))
                 .put(ItemField.publisher, oItem.optString("publisher"))
                 .put(ItemField.edition, oItem.optString("ed"));
+
+            translation.put("items", new JSONArray());
+            translation.accumulate("items", tItem);
+        } catch (JSONException e) {
+            return null;
+        }
+        return translation;
+    }
+
+    private static JSONObject translateISSNResponse(String isbn, JSONArray group){
+        /* Example ISSN response:
+             {"stat":"ok",
+             "group":[{
+                "rel":"this",
+                "list":[{
+                  "rssurl":"http://www.sciencemag.org/rss/current.xml",
+                  "publisher":"New York, N.Y. : s.n",
+                  "form":"JB",
+                  "peerreview":"Y",
+                  "rawcoverage":"Vol. 1, no. 1 (July 3, 1880)-v. 3, no. 82 (Mar. 4, 1882); [New ser.] Vol. 1, no. 1 (Feb. 9, 1883)-v. 23, no. 581 (Mar. 23, 1894); [2nd ser.] v. 1, no. 1 (Jan. 4, 1895)-",
+                  "title":"Science",
+                  "issn":"0036-8075",
+                  "oclcnum":["460357554",...,"320472675"],
+                  "issnl":"0036-8075"}]}]}
+         */
+        JSONObject translation = new JSONObject();
+        try {
+            JSONObject firstGroup = group.getJSONObject(0);
+            JSONArray list = firstGroup.getJSONArray("list");
+            JSONObject oItem = list.getJSONObject(0);
+
+            JSONObject tItem = new JSONObject()
+                .put(ItemType.type, ItemType.journalArticle) /* XXX: Always 'journalArticle' */
+                .put(ItemField.ISSN, isbn)
+                .put(ItemField.publicationTitle, oItem.optString("title"));
 
             translation.put("items", new JSONArray());
             translation.accumulate("items", tItem);

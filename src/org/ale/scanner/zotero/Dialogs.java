@@ -315,17 +315,21 @@ public class Dialogs {
         View.OnClickListener clickListener = new View.OnClickListener() {
             public void onClick(View v) {
                 if(v.getId() == R.id.positive){
-                    String isbn = tv.getText().toString();
-                    if(isbn.length() == 9) {
+                    String ident = tv.getText().toString();
+                    ident = ident.replaceAll("-","");
+                    if(ident.length() == 9) {
                         // User may have been unable to enter trailing X
-                        isbn += 'X';
+                        ident += 'X';
                     }
-                    if(!Util.isValidISBN(isbn)){
+                    if(Util.isValidISBN(ident)){
+                        parent.addToPendingList(ident);
+                        parent.lookupISBN(ident);
+                    }else if(Util.isValidISSN(ident)){
+                        parent.addToPendingList(ident);
+                        parent.lookupISSN(ident);
+                    }else{
                         tv.setError("Invalid ISBN");
                         return; // avoid dismissing the dialog
-                    }else{
-                        parent.addToPendingList(isbn);
-                        parent.lookupISBN(isbn);
                     }
                 }
                 Dialogs.curSearch = "";

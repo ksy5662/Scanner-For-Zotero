@@ -20,6 +20,7 @@ package org.ale.scanner.zotero;
 import org.ale.scanner.zotero.data.BibItem;
 import org.ale.scanner.zotero.data.CreatorType;
 import org.ale.scanner.zotero.data.ItemField;
+import org.ale.scanner.zotero.data.ItemType;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -121,13 +122,23 @@ public class EditItemActivity extends Activity {
         // Get the JSON we'll be working from.
         JSONObject info = mWorkingItem.getSelectedInfo();
 
-        // XXX: temporary hack. In-order list of fields
-        String[] fields = new String[]{
+        final String[] fields; // XXX: temporary hack. In-order list of fields
+        if(ItemType.book.equals(info.optString(ItemField.itemType))){
+            fields = new String[]{
                 "title", "creators", "abstractNote", "series", "seriesNumber",
                 "volume", "numberOfVolumes", "edition", "place", "publisher",
                 "date", "numPages", "language", "ISBN", "shortTitle", "url",
                 "accessDate", "archive", "archiveLocation", "libraryCatalog",
                 "callNumber", "rights", "extra", "notes", "tags"};
+        }else{ // XXX: Assumes journalArticle
+            fields = new String[]{
+                "title", "creators", "abstractNote", "publicationTitle",
+                "volume", "issue", "pages", "date", "series", "seriesTitle",
+                "seriesText", "journalAbbreviation", "language", "DOI", "ISSN",
+                "shortTitle", "url", "accessDate", "archive", "archiveLocation",
+                "libraryCatalog", "callNumber", "rights", "extra", "tags",
+                "notes"};
+        }
 
         LinearLayout row;
         LinearLayout crow;

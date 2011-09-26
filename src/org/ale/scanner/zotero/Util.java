@@ -28,6 +28,7 @@ public class Util {
     public static final int SCAN_PARSE_ISBN = 978;
     
     public static int parseBarcode(String content, String format){
+        content = content.replaceAll("-", "");
         if(format.equals("EAN_13")){
             return Util.parseEAN13(content);
         }else if(format.equals("CODE_128")){
@@ -79,10 +80,22 @@ public class Util {
         return (11 - (r2 % 11)) % 11;
     }
 
+    public static int checksumISSN(String issn) {
+        // Same as ISBN-10 except there are only 8 digits 
+        int r1 = 0;
+        int r2 = 0;
+        for(int i=0; i<=6; i++){
+            r1 += (int) issn.charAt(i) - '0';
+            r2 += r1;
+        }
+        r2 += r1;
+        return (11 - (r2 % 11)) % 11;
+    }
+
     public static boolean isValidISBN(String isbn){
         if(isbn.length() == 10){ // ISBN-10
             // Last character can be 'X' to denote the value 10
-            if(!TextUtils.isDigitsOnly(isbn.substring(0, 8)))
+            if(!TextUtils.isDigitsOnly(isbn.substring(0, 9)))
                 return false;
 
             int checksum = checksumISBN10(isbn);
@@ -120,6 +133,20 @@ public class Util {
         }
         // Have to ignore check digits in case we're comparing an 13 to a 10
         return isbn1.substring(0, 8).equals(isbn2.substring(0, 8));
+    }
+
+    public static boolean isValidISSN(String issn) {
+        if(!TextUtils.isDigitsOnly(issn.substring(0, 7)))
+            return false;
+
+        int checksum = checksumISSN(issn);
+        char expected = (checksum == 10) ? 'X' : Character.forDigit(checksum, 10);
+
+        char given = issn.charAt(7);
+        if(given == 'x') given = 'X'; // Just in case..
+
+        // Validate against the expected checksum
+        return (given == expected);
     }
 
     public static void fillBibTextField(TextView tv, String data){
