@@ -322,10 +322,8 @@ public class Dialogs {
                         ident += 'X';
                     }
                     if(Util.isValidISBN(ident)){
-                        parent.addToPendingList(ident);
                         parent.lookupISBN(ident);
                     }else if(Util.isValidISSN(ident)){
-                        parent.addToPendingList(ident);
                         parent.lookupISSN(ident);
                     }else{
                         tv.setError("Invalid ISBN");

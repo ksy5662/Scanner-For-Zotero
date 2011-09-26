@@ -636,7 +636,6 @@ public class MainActivity extends Activity {
                 if (resultCode == RESULT_OK) {
                     String content = intent.getStringExtra("SCAN_RESULT"); // The scanned ISBN
                     String format = intent.getStringExtra("SCAN_RESULT_FORMAT"); // "EAN 13"
-                    addToPendingList(content);
                     handleBarcode(content, format);
                 }
                 break;
@@ -672,9 +671,13 @@ public class MainActivity extends Activity {
             lookupISBN(content);
             break;
         case(Util.SCAN_PARSE_ISSN):
+            if(content.length() == 13){
+                content = Util.eanToISSN(content);
+            }
             lookupISSN(content);
             break;
         default:
+            addToPendingList(content);
             mPendingAdapter.setStatus(content, PendingListAdapter.STATUS_UNKNOWN_TYPE);
             break;
         }
@@ -682,6 +685,7 @@ public class MainActivity extends Activity {
     }
 
     protected void lookupISBN(String isbn){
+        addToPendingList(isbn);
         switch(mISBNService){
         case SERVICE_GOOGLE:
             mGoogleBooksAPI.isbnLookup(isbn);
@@ -693,6 +697,7 @@ public class MainActivity extends Activity {
     }
 
     protected void lookupISSN(String issn){
+        addToPendingList(issn);
         //switch(mISBNService){
         //case SERVICE_GOOGLE:
         //    mGoogleBooksAPI.isbnLookup(isbn);

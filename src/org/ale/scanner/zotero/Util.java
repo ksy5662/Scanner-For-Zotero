@@ -56,7 +56,7 @@ public class Util {
         return SCAN_PARSE_FAILURE;
     }
 
-    public static int checksumISBN13(String isbn){
+    public static int checksumEAN13(String isbn){
         // The check digit of an ISBN-13 is k such that
         // the sum of the even digits plus three times the sum
         // of the odd digits equals -k mod 10
@@ -80,7 +80,7 @@ public class Util {
         return (11 - (r2 % 11)) % 11;
     }
 
-    public static int checksumISSN(String issn) {
+    public static int checksumISSN8(String issn) {
         // Same as ISBN-10 except there are only 8 digits 
         int r1 = 0;
         int r2 = 0;
@@ -105,23 +105,19 @@ public class Util {
             if(given == 'x') given = 'X'; // Just in case..
 
             // Validate against the expected checksum
-            if(given != expected)
-                return false;
+            return (given == expected);
         }else if(isbn.length() == 13){ // ISBN-13
-            String ean = isbn.substring(0, 3);
-            if(!(ean.equals("978") || ean.equals("979")))
+            String gs1 = isbn.substring(0, 3);
+            if(!(gs1.equals("978") || gs1.equals("979")))
                 return false;
 
-            int checksum = checksumISBN13(isbn);
+            int checksum = checksumEAN13(isbn);
             char expected = Character.forDigit(checksum, 10);
 
             // Validate against the expected checksum
-            if(isbn.charAt(12) != expected)
-                return false;
-        }else{ // not an ISBN
-            return false;
+            return (isbn.charAt(12) == expected);
         }
-        return true;
+        return false;
     }
 
     public static boolean isbnMatch(String isbn1, String isbn2){
@@ -136,17 +132,37 @@ public class Util {
     }
 
     public static boolean isValidISSN(String issn) {
-        if(!TextUtils.isDigitsOnly(issn.substring(0, 7)))
-            return false;
+        if(issn.length() == 8){
+            if(!TextUtils.isDigitsOnly(issn.substring(0, 7)))
+                return false;
+    
+            int checksum = checksumISSN8(issn);
+            char expected = (checksum == 10) ? 'X' : Character.forDigit(checksum, 10);
+    
+            char given = issn.charAt(7);
+            if(given == 'x') given = 'X'; // Just in case..
+    
+            // Validate against the expected checksum
+            return (given == expected);
+        }else if(issn.length() == 13){
+            String gs1 = issn.substring(0, 3);
+            if(!gs1.equals("977"))
+                return false;
 
-        int checksum = checksumISSN(issn);
+            int checksum = checksumEAN13(issn);
+            char expected = Character.forDigit(checksum, 10);
+
+            // Validate against the expected checksum
+            return (issn.charAt(12) == expected);
+        }
+        return false;
+    }
+
+    public static String eanToISSN(String ean){
+        String issn = ean.substring(3,10);
+        int checksum = checksumISSN8(issn);
         char expected = (checksum == 10) ? 'X' : Character.forDigit(checksum, 10);
-
-        char given = issn.charAt(7);
-        if(given == 'x') given = 'X'; // Just in case..
-
-        // Validate against the expected checksum
-        return (given == expected);
+        return issn + expected;
     }
 
     public static void fillBibTextField(TextView tv, String data){
