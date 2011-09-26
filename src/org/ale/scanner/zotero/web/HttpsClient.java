@@ -33,10 +33,10 @@ import android.os.Build;
 
 public class HttpsClient extends DefaultHttpClient {
 
-    public static String USER_AGENT = "ScannerForZotero/0.1 Android/"+Build.VERSION.RELEASE;
+    public static String USER_AGENT = "ScannerForZotero/1.0.1 Android/"+Build.VERSION.RELEASE;
 
     private static HttpsClient mInstance;
-    
+
     public static HttpsClient getInstance() {
         if(mInstance == null){
             HttpParams mHttpParams = setupHttpParams();
