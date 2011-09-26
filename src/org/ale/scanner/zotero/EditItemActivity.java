@@ -248,6 +248,9 @@ public class EditItemActivity extends Activity {
                 for(int c=0; c<row.getChildCount(); c++){
                     crow = (LinearLayout) row.getChildAt(c);
                     EditText name = (EditText) crow.findViewById(R.id.creator);
+                    if(TextUtils.isEmpty(name.getText().toString())) {
+                        continue;
+                    }
                     Spinner sp = (Spinner) crow.findViewById(R.id.creator_type);
                     creator = new JSONObject();
                     int indx = CreatorType.LocalizedBook.indexOf((String) sp.getSelectedItem());

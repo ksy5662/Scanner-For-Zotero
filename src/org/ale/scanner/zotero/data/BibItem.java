@@ -198,7 +198,7 @@ public class BibItem implements BaseColumns, Parcelable {
         JSONObject data = getSelectedInfo();
         mCachedTitleValue = data.optString(ItemField.title);
         mCachedCreatorLabel = null;
-        
+
         JSONArray creators = data.optJSONArray(ItemField.creators);
         if(creators != null && creators.length() > 0){
             // Choose the creator label based on the first creator type
@@ -222,7 +222,7 @@ public class BibItem implements BaseColumns, Parcelable {
             mCachedCreatorLabel = CreatorType.LocalizedBook.get(indx < 0 ? 0 : indx);
             mCachedCreatorValue = TextUtils.join(", ", creatorNames);
         }else{
-            mCachedCreatorLabel = "";
+            mCachedCreatorLabel = CreatorType.LocalizedBook.get(0);
             mCachedCreatorValue = "";
         }
     }
