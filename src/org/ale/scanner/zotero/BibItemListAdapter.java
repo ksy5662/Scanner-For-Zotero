@@ -171,7 +171,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         // list on screen will momentarily (until the next pause) display two.
         // The bug is avoided here by comparing the ID of the item to add and
         // that of the top item on the list, and ignoring the add if they match.
-        if(mItems.get(0).getId() == item.getId())
+        if((mItems.size() > 0) && (mItems.get(0).getId() == item.getId()))
             return;
 
         shiftUpSelections(0);
