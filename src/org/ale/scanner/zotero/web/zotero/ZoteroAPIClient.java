@@ -69,11 +69,11 @@ public class ZoteroAPIClient {
 
     public static final int MAX_UPLOAD_CNT = 50;
 
-    public static final Integer UPLOADING =  new Integer(R.string.uploading);
-    public static final Integer FAILURE_REASON_NETWORK = new Integer(R.string.failure_reason_network);
-    public static final Integer FAILURE_REASON_SERV_ERR = new Integer(R.string.failure_reason_serv_err);
-    public static final Integer FAILURE_REASON_BAD_DATA = new Integer(R.string.failure_reason_bad_data);
-    public static final Integer FAILURE_REASON_PERMISSION = new Integer(R.string.failure_reason_perm);
+    public static final Integer UPLOADING =  Integer.valueOf(R.string.uploading);
+    public static final Integer FAILURE_REASON_NETWORK = Integer.valueOf(R.string.failure_reason_network);
+    public static final Integer FAILURE_REASON_SERV_ERR = Integer.valueOf(R.string.failure_reason_serv_err);
+    public static final Integer FAILURE_REASON_BAD_DATA = Integer.valueOf(R.string.failure_reason_bad_data);
+    public static final Integer FAILURE_REASON_PERMISSION = Integer.valueOf(R.string.failure_reason_perm);
 
     private Account mAccount;
 

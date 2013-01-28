@@ -61,6 +61,7 @@ public class ManageAccountsActivity extends ListActivity {
         }
     }
 
+    @SuppressWarnings("deprecation")
     protected void updateList(){
         String[] projection = new String[] { Account._ID,
                 Account.COL_ALIAS, Account.COL_UID, Account.COL_KEY };

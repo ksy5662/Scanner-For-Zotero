@@ -212,6 +212,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         }
     }
 
+    @SuppressWarnings("deprecation")
     @Override
     public View getChildView(
             int group, int child, boolean last, View convert, ViewGroup parent){
@@ -247,7 +248,7 @@ public class BibItemListAdapter extends BaseExpandableListAdapter {
         convert.setBackgroundDrawable(getRowDrawable(group));
 
         // The checkbox's click listener checks this tag
-        vtag.tv_checkbox.setTag(new Integer(group));
+        vtag.tv_checkbox.setTag(Integer.valueOf(group));
         vtag.tv_checkbox.setChecked(mChecked.get(group, false));
 
         BibItem item = mItems.get(group);

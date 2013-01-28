@@ -17,6 +17,15 @@
 
 package org.ale.scanner.zotero;
 
+import oauth.signpost.OAuthProvider;
+import oauth.signpost.basic.DefaultOAuthProvider;
+import oauth.signpost.commonshttp.CommonsHttpOAuthConsumer;
+import oauth.signpost.exception.OAuthCommunicationException;
+import oauth.signpost.exception.OAuthExpectationFailedException;
+import oauth.signpost.exception.OAuthMessageSignerException;
+import oauth.signpost.exception.OAuthNotAuthorizedException;
+import oauth.signpost.http.HttpParameters;
+
 import org.ale.scanner.zotero.data.Account;
 import org.ale.scanner.zotero.data.Database;
 
@@ -44,14 +53,29 @@ import android.widget.Toast;
 
 public class LoginActivity extends Activity {
 
-    //private static final String CLASS_TAG = LoginActivity.class.getCanonicalName();
-
     public static final String PREFS_NAME = "config";
 
+    public static final String INTENT_EXTRA_NEW_ACCT = "NEW_API_KEY";
     public static final String INTENT_EXTRA_CLEAR_FIELDS = "CLEAR_FIELDS";
 
     public static final String RECREATE_CURRENT_DISPLAY = "CURDISP";
     public static final String RECREATE_ACCOUNT = "ACCT";
+
+    // OAuth URLs
+    public static final String SCANNER_SCHEME = "zotero";
+    public static final String OAUTH_CLIENT_KEY = "1ec29cd0abcb23afe808";
+    public static final String OAUTH_CLIENT_SECRET = "80be334a594978d3ab87";
+    public static final String OAUTH_BASE_URL = "https://www.zotero.org";
+    public static final String OAUTH_PARAMS = 
+            "?library_access=1&notes_access=1&write_access=1&all_groups=write";
+    public static final String OAUTH_REQ_TOKEN_URL = 
+            OAUTH_BASE_URL + "/oauth/request" + OAUTH_PARAMS;
+    public static final String OAUTH_ACS_TOKEN_URL =
+            OAUTH_BASE_URL + "/oauth/access" + OAUTH_PARAMS;
+    public static final String OAUTH_AUTHORIZE_URL =
+            OAUTH_BASE_URL + "/oauth/authorize" + OAUTH_PARAMS;
+    public static final String OAUTH_CALLBACK_URL =
+            SCANNER_SCHEME + "://oauth";
 
     // Subactivity result codes
     public static final int RESULT_APIKEY = 0;
@@ -62,6 +86,10 @@ public class LoginActivity extends Activity {
     public static final int RECV_CURSOR_LOGIN = 1;
 
     // Transient state
+    private CommonsHttpOAuthConsumer mOAuthConsumer;
+    
+    private OAuthProvider mOAuthProvider;
+
     private Account mAccount;
 
     private boolean mLoggedIn;
@@ -103,14 +131,7 @@ public class LoginActivity extends Activity {
         ((CheckBox)findViewById(R.id.save_login)).setOnCheckedChangeListener(cbListener);
         ((CheckBox)findViewById(R.id.save_login)).setChecked(mRememberMe);
 
-        // If we're called from Main via "Log out", we need to clear the login info
-        // (Main provides an extra telling us this)
-        Bundle extras = getIntent().getExtras();
-        if(extras != null && extras.getBoolean(INTENT_EXTRA_CLEAR_FIELDS, false)){
-            setUserAndKey("","","");
-            mLoggedIn = false;
-        }
-
+        /*
         if (savedInstanceState != null){
             // Set the displayed screen (login options or editables)
             int curView = savedInstanceState.getInt(RECREATE_CURRENT_DISPLAY, 0);
@@ -118,16 +139,29 @@ public class LoginActivity extends Activity {
                 .setDisplayedChild(curView);
             setUserAndKey((Account) savedInstanceState.getParcelable(RECREATE_ACCOUNT));
         }
+        */
     }
 
     @Override
     public void onResume(){
         super.onResume();
+
         mPaused = false;
 
+        Intent intent = getIntent();
+        Uri uri = intent.getData();
+        Bundle extras = intent.getExtras();
+        if (uri != null){
+            handleOAuthCallback(uri);
+        }
+        if (extras != null) {
+            handleIntentExtras(extras);
+        }
+
+        if(!TextUtils.isEmpty(mAccount.getKey()))
+            showNext();
+
         if(mLoggedIn){ // Might still be logged in from last session
-            SafeViewFlipper vf = (SafeViewFlipper)findViewById(R.id.login_view_flipper);
-            vf.setDisplayedChild(2);
             if(mAcctCursor != null){
                 doLogin();
             }else{
@@ -151,6 +185,7 @@ public class LoginActivity extends Activity {
     @Override
     public void onPause(){
         super.onPause();
+
         saveConfig();
         if(mAlertDialog != null){ // Prevent dialog windows from leaking
             mAlertDialog.dismiss();
@@ -159,6 +194,107 @@ public class LoginActivity extends Activity {
         mPaused = true;
     }
 
+    private void fetchKeyOAuth() {
+        try {
+            mOAuthConsumer = new CommonsHttpOAuthConsumer(
+                OAUTH_CLIENT_KEY, OAUTH_CLIENT_SECRET);
+            
+            mOAuthProvider = new DefaultOAuthProvider(
+                OAUTH_REQ_TOKEN_URL, OAUTH_ACS_TOKEN_URL, OAUTH_AUTHORIZE_URL);
+    
+            String authUrl = mOAuthProvider.retrieveRequestToken(
+                mOAuthConsumer, OAUTH_CALLBACK_URL);
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(authUrl));
+            intent.addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
+            startActivity(intent);
+        } catch (OAuthMessageSignerException e) {
+            Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
+        } catch (OAuthNotAuthorizedException e) {
+            Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
+        } catch (OAuthExpectationFailedException e) {
+            Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
+        } catch (OAuthCommunicationException e) {
+            Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
+        }
+    }
+
+    private void handleOAuthCallback(Uri uri) {
+        if(uri == null)
+            return;
+
+        if (mOAuthConsumer == null || mOAuthProvider == null)
+            return;
+
+        if(!uri.getHost().equals("oauth"))
+            return;
+
+        final String verifier = uri
+                .getQueryParameter(oauth.signpost.OAuth.OAUTH_VERIFIER);
+
+        new Thread(new Runnable() {
+        public void run() {
+            try {
+                mOAuthProvider.retrieveAccessToken(mOAuthConsumer, verifier);
+                HttpParameters params = mOAuthProvider.getResponseParameters();
+                final String userID = params.getFirst("userID");
+                final String userName = params.getFirst("username");
+                final String userSecret =
+                        mOAuthConsumer.getTokenSecret();
+
+                Account acct = new Account(userName, userID, userSecret);
+                Intent intent = new Intent(LoginActivity.this, LoginActivity.class);
+                intent.putExtra(INTENT_EXTRA_NEW_ACCT, acct);
+                LoginActivity.this.startActivity(intent);
+                startActivity(intent);
+            } catch (OAuthMessageSignerException e) {
+                Toast.makeText(LoginActivity.this,
+                        e.getMessage(), Toast.LENGTH_LONG).show();
+            } catch (OAuthNotAuthorizedException e) {
+                Toast.makeText(LoginActivity.this,
+                        e.getMessage(), Toast.LENGTH_LONG).show();
+            } catch (OAuthExpectationFailedException e) {
+                Toast.makeText(LoginActivity.this,
+                        e.getMessage(), Toast.LENGTH_LONG).show();
+            } catch (OAuthCommunicationException e) {
+                Toast.makeText(LoginActivity.this,
+                        e.getMessage(), Toast.LENGTH_LONG).show();
+            }
+        }}).run();
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        if (intent == null)
+            return;
+
+        setIntent(intent);
+    }
+
+    private void handleIntentExtras(Bundle extras) {
+        boolean clearFields = false;
+        Account newAcct = null;
+
+        if(extras != null) {
+            newAcct = extras.getParcelable(INTENT_EXTRA_NEW_ACCT);
+            clearFields = extras.getBoolean(INTENT_EXTRA_CLEAR_FIELDS, false);
+        }
+
+        // If called from Main via "Log out", we need to clear the login info
+        if (clearFields) {
+            setUserAndKey("","","");
+            mLoggedIn = false;
+        }
+
+        // If called by OAuth callback we need to set the login info
+        if (newAcct != null) {
+            setUserAndKey(newAcct);
+            saveConfig();
+            showNext();
+            mLoggedIn = false;
+        }
+    }
+
+    /*
     @Override
     public void onSaveInstanceState(Bundle state){
         super.onSaveInstanceState(state);
@@ -166,6 +302,7 @@ public class LoginActivity extends Activity {
              ((SafeViewFlipper)findViewById(R.id.login_view_flipper)).getDisplayedChild());
         state.putParcelable(RECREATE_ACCOUNT, mAccount);
     }
+    */
 
     private void doLogin(){ 
         // mAcctCursor MUST be open before this is called
@@ -215,6 +352,8 @@ public class LoginActivity extends Activity {
 
         // Transition to Main activity
         Intent intent = new Intent(LoginActivity.this, MainActivity.class);
+        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK); 
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtra(MainActivity.INTENT_EXTRA_ACCOUNT, mAccount);
         LoginActivity.this.startActivity(intent);
         finish();
@@ -255,6 +394,7 @@ public class LoginActivity extends Activity {
 
     private void gotAccountCursor(final Cursor c){
         mHandler.post(new Runnable() {
+            @SuppressWarnings("deprecation")
             public void run() {
                 mAcctCursor = c;
                 startManagingCursor(mAcctCursor); 
@@ -433,7 +573,12 @@ public class LoginActivity extends Activity {
                 break;
 
             case R.id.login_by_web:
-                mAlertDialog = Dialogs.informUserAboutLogin(LoginActivity.this);
+                new Thread(new Runnable() {
+                        public void run() {
+                            fetchKeyOAuth();
+                        }
+                    }).start();
+                // mAlertDialog = Dialogs.informUserAboutLogin(LoginActivity.this);
                 break;
             
             case R.id.login_manually:
