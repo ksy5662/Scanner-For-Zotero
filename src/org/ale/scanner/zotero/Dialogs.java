@@ -17,13 +17,11 @@
 
 package org.ale.scanner.zotero;
 
-import java.util.ArrayList;
 import java.util.List;
 
 import org.ale.scanner.zotero.data.Account;
 import org.ale.scanner.zotero.data.Database;
 
-import android.app.Activity;
 import android.app.AlertDialog;
 import android.app.ProgressDialog;
 import android.content.DialogInterface;
@@ -32,13 +30,10 @@ import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.database.Cursor;
 import android.net.Uri;
-import android.net.http.SslCertificate;
-import android.text.TextUtils;
 import android.util.SparseArray;
 import android.view.KeyEvent;
 import android.view.LayoutInflater;
 import android.view.View;
-import android.webkit.WebView;
 import android.widget.Button;
 import android.widget.EditText;
 import android.widget.Toast;
@@ -89,35 +84,6 @@ public class Dialogs {
     };
 
 /* LoginActivity Dialogs */
-
-    /**
-     * Dialog which asks for permission to visit Zotero.org
-     * 
-     * @param parent  Context
-     */
-    protected static AlertDialog informUserAboutLogin(final LoginActivity parent){
-        Dialogs.displayedDialog = Dialogs.DIALOG_ZOTERO_LOGIN;
-        AlertDialog.Builder builder = new AlertDialog.Builder(parent);
-
-        DialogInterface.OnClickListener clickListener = new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int i) {
-                if(i == DialogInterface.BUTTON_POSITIVE){
-                    Intent intent = new Intent(parent, GetApiKeyActivity.class);
-                    parent.startActivityForResult(intent, LoginActivity.RESULT_APIKEY);
-                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
-                }else{
-                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
-                }
-            }
-        };
-
-        builder.setTitle(parent.getString(R.string.redirect_title));
-        builder.setMessage(parent.getString(R.string.redirect));
-        builder.setPositiveButton(parent.getString(R.string.proceed), clickListener);
-        builder.setNegativeButton(parent.getString(R.string.cancel), clickListener);
-        builder.setOnCancelListener(ON_CANCEL);
-        return builder.show();
-    }
 
     /**
      * Provides the user with login instructions
@@ -423,134 +389,6 @@ public class Dialogs {
         builder.setSingleChoiceItems(R.array.search_engines, selection, clickListener);
         builder.setPositiveButton("Use selected", clickListener);
         builder.setNegativeButton(R.string.cancel, clickListener);
-        builder.setOnCancelListener(ON_CANCEL);
-
-        return builder.show();
-    }
-
-    /**
-     * Displays some basic information about the SSL certificate loaded in
-     * parent's webview. XXX: Android doesn't give us the fingerprint...
-     * 
-     * @param parent    Context
-     */
-    protected static AlertDialog showSSLDialog(final GetApiKeyActivity parent){
-        SslCertificate cert =
-            ((WebView) parent.findViewById(R.id.webView)).getCertificate();
-        if(cert == null)
-            return null;
-        Dialogs.displayedDialog = Dialogs.DIALOG_SSL;
-        SslCertificate.DName issuer = cert.getIssuedBy();
-        SslCertificate.DName owner = cert.getIssuedTo();
-
-        String msg = (new StringBuilder())
-                        .append("Issued to:\n(CN)    ").append(owner.getCName())
-                        .append("\n(O)    ").append(owner.getOName())
-                        .append("\n(OU)    ").append(owner.getUName())
-                        .append("\n\nIssued By:\n(CN)    ").append(issuer.getCName())
-                        .append("\n(O)    ").append(issuer.getOName())
-                        .append("\n(OU)    ").append(issuer.getUName())
-                        .append("\n\nValidity:\nIssued On    ")
-                        .append(cert.getValidNotBefore().substring(0, 10))
-                        .append("\nExpires On    ")
-                        .append(cert.getValidNotAfter().substring(0, 10))
-                        .toString();
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(parent);
-
-        builder.setMessage(msg.toString());
-        builder.setNeutralButton("Done", new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int i) {
-                Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
-            }
-        });
-        builder.setOnCancelListener(ON_CANCEL);
-
-
-        return builder.show();
-    }
-
-    /**
-     * When no keys are found on the 'Feeds/API' page, this provides a link to the
-     * key creation page.
-     * 
-     * @param parent    Context
-     */
-    protected static AlertDialog showNoKeysDialog(final GetApiKeyActivity parent){
-        Dialogs.displayedDialog = Dialogs.DIALOG_NO_KEYS;
-        AlertDialog.Builder builder = new AlertDialog.Builder(parent);
-
-        DialogInterface.OnClickListener clickListener = new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int i) {
-                if(i == DialogInterface.BUTTON_POSITIVE){
-                    WebView wv = (WebView) parent.findViewById(R.id.webView);
-                    wv.loadUrl("https://zotero.org/settings/keys/new");
-                }else if(i == DialogInterface.BUTTON_NEGATIVE){
-                    parent.setResult(Activity.RESULT_CANCELED, null);
-                    parent.finish();
-                }
-                Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
-            }
-        };
-
-        builder.setTitle("No API Keys Found");
-        builder.setPositiveButton("Create a new key", clickListener);
-        builder.setNegativeButton(parent.getString(R.string.cancel), clickListener);
-        builder.setOnCancelListener(ON_CANCEL);
-
-        return builder.show();
-    }
-
-    /**
-     * When one or more keys are found on the 'Feeds/API' page, present the user
-     * with a list of key aliases and let them pick the one they want to use.
-     * 
-     * @param parent    Context
-     * @param names     Key Aliases scraped from site
-     * @param ids       Key IDs scraped from site
-     * @param keys      API keys scraped from site
-     */
-    protected static AlertDialog showSelectKeyDialog(final GetApiKeyActivity parent,
-                                                     final ArrayList<String> names,
-                                                     final ArrayList<String> ids,
-                                                     final ArrayList<String> keys){
-        Dialogs.displayedDialog = Dialogs.DIALOG_FOUND_KEYS;
-        Dialogs.selection = 0;
-        AlertDialog.Builder builder = new AlertDialog.Builder(parent);
-        
-        DialogInterface.OnClickListener clickListener = new DialogInterface.OnClickListener() {
-            public void onClick(DialogInterface dialog, int i) {
-                if(i >= 0){ // User clicked a key, but did not yet confirm their choice
-                    Dialogs.selection = i;
-                }else{ // Other buttons ultimately result in dismissal
-                    Dialogs.displayedDialog = Dialogs.DIALOG_NO_DIALOG;
-                }
-
-                if(i == DialogInterface.BUTTON_POSITIVE){
-                    String userName = names.get(Dialogs.selection);
-                    String userId = ids.get(Dialogs.selection);
-                    String userKey = keys.get(Dialogs.selection);
-                    if(!TextUtils.isEmpty(userId) && !TextUtils.isEmpty(userKey)){
-                        Intent resultIntent = new Intent();
-                        resultIntent.putExtra(GetApiKeyActivity.ACCOUNT, 
-                                new Account(userName, userId, userKey));
-                        parent.setResult(Activity.RESULT_OK, resultIntent);
-                        parent.finish();
-                    }
-                }else if(i == DialogInterface.BUTTON_NEGATIVE){
-                    WebView wv = (WebView) parent.findViewById(R.id.webView);
-                    wv.loadUrl("https://zotero.org/settings/keys/new");
-                }
-            }
-        };
-
-        builder.setTitle("Found API Keys");
-        // Make radio buttons w/ key names and select first key
-        CharSequence uglyHackNames[] = new CharSequence[names.size()];
-        uglyHackNames = names.toArray(uglyHackNames);
-        builder.setSingleChoiceItems(uglyHackNames, Dialogs.selection, clickListener);
-        builder.setPositiveButton("Use selected key", clickListener);
-        builder.setNegativeButton("Create new key", clickListener);
         builder.setOnCancelListener(ON_CANCEL);
 
         return builder.show();

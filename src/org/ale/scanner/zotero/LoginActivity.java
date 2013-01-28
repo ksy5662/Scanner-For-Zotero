@@ -17,9 +17,8 @@
 
 package org.ale.scanner.zotero;
 
-import oauth.signpost.OAuthProvider;
-import oauth.signpost.basic.DefaultOAuthProvider;
 import oauth.signpost.commonshttp.CommonsHttpOAuthConsumer;
+import oauth.signpost.commonshttp.CommonsHttpOAuthProvider;
 import oauth.signpost.exception.OAuthCommunicationException;
 import oauth.signpost.exception.OAuthExpectationFailedException;
 import oauth.signpost.exception.OAuthMessageSignerException;
@@ -67,7 +66,7 @@ public class LoginActivity extends Activity {
     public static final String OAUTH_CLIENT_SECRET = "80be334a594978d3ab87";
     public static final String OAUTH_BASE_URL = "https://www.zotero.org";
     public static final String OAUTH_PARAMS = 
-            "?library_access=1&notes_access=1&write_access=1&all_groups=write";
+            "?library_access=1&notes_access=0&write_access=1&all_groups=write";
     public static final String OAUTH_REQ_TOKEN_URL = 
             OAUTH_BASE_URL + "/oauth/request" + OAUTH_PARAMS;
     public static final String OAUTH_ACS_TOKEN_URL =
@@ -85,11 +84,10 @@ public class LoginActivity extends Activity {
     public static final int RECV_CURSOR_PROMPT = 0;
     public static final int RECV_CURSOR_LOGIN = 1;
 
-    // Transient state
-    private CommonsHttpOAuthConsumer mOAuthConsumer;
-    
-    private OAuthProvider mOAuthProvider;
+    private static String mOAuthToken = null;
+    private static String mOAuthTokenSecret = null;
 
+    // Transient state
     private Account mAccount;
 
     private boolean mLoggedIn;
@@ -131,7 +129,6 @@ public class LoginActivity extends Activity {
         ((CheckBox)findViewById(R.id.save_login)).setOnCheckedChangeListener(cbListener);
         ((CheckBox)findViewById(R.id.save_login)).setChecked(mRememberMe);
 
-        /*
         if (savedInstanceState != null){
             // Set the displayed screen (login options or editables)
             int curView = savedInstanceState.getInt(RECREATE_CURRENT_DISPLAY, 0);
@@ -139,7 +136,6 @@ public class LoginActivity extends Activity {
                 .setDisplayedChild(curView);
             setUserAndKey((Account) savedInstanceState.getParcelable(RECREATE_ACCOUNT));
         }
-        */
     }
 
     @Override
@@ -149,13 +145,15 @@ public class LoginActivity extends Activity {
         mPaused = false;
 
         Intent intent = getIntent();
-        Uri uri = intent.getData();
-        Bundle extras = intent.getExtras();
-        if (uri != null){
-            handleOAuthCallback(uri);
-        }
-        if (extras != null) {
-            handleIntentExtras(extras);
+        if(intent != null) {
+            Uri uri = intent.getData();
+            if (uri != null)
+                handleOAuthCallback(uri);
+
+            Bundle extras = intent.getExtras();
+            if (extras != null)
+                handleIntentExtras(extras);
+            setIntent(null);
         }
 
         if(!TextUtils.isEmpty(mAccount.getKey()))
@@ -172,9 +170,6 @@ public class LoginActivity extends Activity {
         // Display any dialogs we were displaying before being destroyed
         switch(Dialogs.displayedDialog) {
         case(Dialogs.DIALOG_NO_DIALOG):
-            break;
-        case(Dialogs.DIALOG_ZOTERO_LOGIN):
-            mAlertDialog = Dialogs.informUserAboutLogin(LoginActivity.this);
             break;
         case(Dialogs.DIALOG_SAVED_KEYS):
             mOnRecvCursor = RECV_CURSOR_PROMPT;
@@ -196,16 +191,23 @@ public class LoginActivity extends Activity {
 
     private void fetchKeyOAuth() {
         try {
-            mOAuthConsumer = new CommonsHttpOAuthConsumer(
+            CommonsHttpOAuthConsumer consumer = new CommonsHttpOAuthConsumer(
                 OAUTH_CLIENT_KEY, OAUTH_CLIENT_SECRET);
             
-            mOAuthProvider = new DefaultOAuthProvider(
+            CommonsHttpOAuthProvider provider = new CommonsHttpOAuthProvider(
                 OAUTH_REQ_TOKEN_URL, OAUTH_ACS_TOKEN_URL, OAUTH_AUTHORIZE_URL);
-    
-            String authUrl = mOAuthProvider.retrieveRequestToken(
-                mOAuthConsumer, OAUTH_CALLBACK_URL);
+            provider.setOAuth10a(true);
+
+            String authUrl = provider.retrieveRequestToken(
+                consumer, OAUTH_CALLBACK_URL);
+
+            mOAuthToken = consumer.getToken();
+            mOAuthTokenSecret = consumer.getTokenSecret();
+            saveConfig();
+
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(authUrl));
-            intent.addFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS);
+            intent.setFlags(Intent.FLAG_ACTIVITY_EXCLUDE_FROM_RECENTS
+                            | Intent.FLAG_ACTIVITY_NO_HISTORY);
             startActivity(intent);
         } catch (OAuthMessageSignerException e) {
             Toast.makeText(this, e.getMessage(), Toast.LENGTH_LONG).show();
@@ -222,26 +224,46 @@ public class LoginActivity extends Activity {
         if(uri == null)
             return;
 
-        if (mOAuthConsumer == null || mOAuthProvider == null)
-            return;
-
         if(!uri.getHost().equals("oauth"))
             return;
 
         final String verifier = uri
                 .getQueryParameter(oauth.signpost.OAuth.OAUTH_VERIFIER);
 
+        if(verifier == null)
+            return;
+        
         new Thread(new Runnable() {
         public void run() {
             try {
-                mOAuthProvider.retrieveAccessToken(mOAuthConsumer, verifier);
-                HttpParameters params = mOAuthProvider.getResponseParameters();
-                final String userID = params.getFirst("userID");
-                final String userName = params.getFirst("username");
-                final String userSecret =
-                        mOAuthConsumer.getTokenSecret();
+                CommonsHttpOAuthConsumer consumer = new CommonsHttpOAuthConsumer(
+                    OAUTH_CLIENT_KEY, OAUTH_CLIENT_SECRET);
+                CommonsHttpOAuthProvider provider = new CommonsHttpOAuthProvider(
+                    OAUTH_REQ_TOKEN_URL, OAUTH_ACS_TOKEN_URL, OAUTH_AUTHORIZE_URL);
+                provider.setOAuth10a(true);
+
+                if (mOAuthToken == null || mOAuthTokenSecret == null) {
+                    SharedPreferences prefs =
+                        getSharedPreferences(PREFS_NAME, MODE_PRIVATE);
+                    mOAuthToken =
+                        prefs.getString(getString(R.string.pref_token), "");
+                    mOAuthTokenSecret =
+                        prefs.getString(
+                            getString(R.string.pref_token_secret), "");
+                }
+
+                consumer.setTokenWithSecret(mOAuthToken, mOAuthTokenSecret);
+                provider.retrieveAccessToken(consumer, verifier);
+
+                HttpParameters params = provider.getResponseParameters();
+                String userSecret = consumer.getTokenSecret();
+                String userID = params.getFirst("userID");
+                String userName = params.getFirst("username") + " [" + userSecret.substring(0, 5) + "]";
 
                 Account acct = new Account(userName, userID, userSecret);
+                setUserAndKey(acct);
+                saveConfig();
+
                 Intent intent = new Intent(LoginActivity.this, LoginActivity.class);
                 intent.putExtra(INTENT_EXTRA_NEW_ACCT, acct);
                 LoginActivity.this.startActivity(intent);
@@ -281,12 +303,16 @@ public class LoginActivity extends Activity {
 
         // If called from Main via "Log out", we need to clear the login info
         if (clearFields) {
+            mOAuthToken = null;
+            mOAuthTokenSecret = null;
             setUserAndKey("","","");
             mLoggedIn = false;
         }
 
         // If called by OAuth callback we need to set the login info
         if (newAcct != null) {
+            mOAuthToken = null;
+            mOAuthTokenSecret = null;
             setUserAndKey(newAcct);
             saveConfig();
             showNext();
@@ -294,7 +320,6 @@ public class LoginActivity extends Activity {
         }
     }
 
-    /*
     @Override
     public void onSaveInstanceState(Bundle state){
         super.onSaveInstanceState(state);
@@ -302,7 +327,6 @@ public class LoginActivity extends Activity {
              ((SafeViewFlipper)findViewById(R.id.login_view_flipper)).getDisplayedChild());
         state.putParcelable(RECREATE_ACCOUNT, mAccount);
     }
-    */
 
     private void doLogin(){ 
         // mAcctCursor MUST be open before this is called
@@ -352,23 +376,10 @@ public class LoginActivity extends Activity {
 
         // Transition to Main activity
         Intent intent = new Intent(LoginActivity.this, MainActivity.class);
-        intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK); 
-        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+        intent.setFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         intent.putExtra(MainActivity.INTENT_EXTRA_ACCOUNT, mAccount);
         LoginActivity.this.startActivity(intent);
         finish();
-    }
-
-    public void onActivityResult(int requestCode, int resultCode, Intent intent) {
-        switch(requestCode){
-            case RESULT_APIKEY:
-                if (resultCode == RESULT_OK) {
-                    Account acct = (Account) intent.getParcelableExtra(GetApiKeyActivity.ACCOUNT);
-                    setUserAndKey(acct);
-                    showNext();
-                }
-                break;
-        }
     }
 
     private void getSavedKeys(){
@@ -430,6 +441,8 @@ public class LoginActivity extends Activity {
         String key = prefs.getString(getString(R.string.pref_apikey), "");
         mRememberMe = prefs.getBoolean(getString(R.string.pref_rememberme), true);
         mLoggedIn = prefs.getBoolean(getString(R.string.pref_loggedin), false);
+        mOAuthToken = prefs.getString(getString(R.string.pref_token), null);
+        mOAuthTokenSecret = prefs.getString(getString(R.string.pref_token_secret), null);
 
         setUserAndKey(alias, uid, key);
     }
@@ -445,6 +458,9 @@ public class LoginActivity extends Activity {
         editor.putBoolean(getString(R.string.pref_rememberme), mRememberMe);
 
         editor.putBoolean(getString(R.string.pref_loggedin), mLoggedIn);
+
+        editor.putString(getString(R.string.pref_token), mOAuthToken);
+        editor.putString(getString(R.string.pref_token_secret), mOAuthTokenSecret);
 
         editor.commit();
     }
@@ -573,6 +589,7 @@ public class LoginActivity extends Activity {
                 break;
 
             case R.id.login_by_web:
+                Toast.makeText(LoginActivity.this, "Please wait.", Toast.LENGTH_SHORT).show();
                 new Thread(new Runnable() {
                         public void run() {
                             fetchKeyOAuth();

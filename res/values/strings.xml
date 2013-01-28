@@ -35,6 +35,8 @@
     <string name="help_external">When you are done, return to &lt;a href=&quot;org.ale.scanner.zotero://zotero.org/settings/keys&quot;&gt;API Keys&lt;/a&gt;</string>
     <string name="help_edit_key">Your ScannerForZotero key must have write access to your library or at least one group.</string>
     <string name="help_choose_key">Please &lt;a href=&quot;org.ale.scanner.zotero://zotero.org/settings/keys&quot;&gt;select a key from this list&lt;/a&gt;, or &lt;a href=&quot;org.ale.scanner.zotero://zotero.org/settings/keys/new&quot;&gt;create a new key&lt;/a&gt;</string>
+    <string name="pref_token">oauth_token</string>
+    <string name="pref_token_secret">oauth_token_secret</string>
     
     
     
